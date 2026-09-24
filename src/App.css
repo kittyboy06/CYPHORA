@@ -11,7 +11,7 @@
   position: absolute;
   inset: -10%; 
   /* Surrounded by giant trees, sunlight piercing through leaves, ground level */
-  background: url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1920&q=80') no-repeat center center;
+  background: url('/bg-forest.jpg') no-repeat center center;
   background-size: cover;
   filter: blur(25px) brightness(0.02); /* Pitch black */
   transform: scale(1.3); 
@@ -23,7 +23,17 @@
 }
 .main-stage .bg-container {
   filter: blur(0px) brightness(0.9);
-  transform: scale(1);
+  animation: forestBreathe 28s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+/* Extremely subtle slow zoom-in/drift/zoom-out — barely perceptible, just enough to feel alive */
+@keyframes forestBreathe {
+  0%   { transform: scale(1.00) translate(0px,  0px);  }
+  25%  { transform: scale(1.03) translate(-8px, -4px); }
+  50%  { transform: scale(1.05) translate(0px,  -8px); }
+  75%  { transform: scale(1.03) translate(8px,  -4px); }
+  100% { transform: scale(1.00) translate(0px,  0px);  }
 }
 
 /* Light exposure adapting animation matching the eyelid blinks */
@@ -274,7 +284,7 @@
   transform: translateY(-2px);
 }
 
-/* ── Explorers button (top-right) ── */
+/* ── Explorers button — hides when panel opens ── */
 .explorers-btn {
   position: fixed;
   top: 1.5rem;
@@ -289,28 +299,27 @@
   letter-spacing: 1px;
   text-transform: uppercase;
   color: #dfb125;
-  background: rgba(10, 14, 8, 0.75);
-  border: 1px solid rgba(223,177,37,0.4);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(223,177,37,0.35);
   border-radius: 3px;
   padding: 0.6rem 1.1rem;
   cursor: pointer;
-  backdrop-filter: blur(8px);
-  transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: opacity 0.3s ease, transform 0.3s ease, background 0.25s;
 }
-.explorers-btn:hover,
-.explorers-btn.active {
-  background: rgba(223,177,37,0.15);
+.explorers-btn:hover {
+  background: rgba(223,177,37,0.1);
   border-color: #dfb125;
-  box-shadow: 0 0 14px rgba(223,177,37,0.25);
 }
-.explorers-btn .chevron {
-  transition: transform 0.3s ease;
-}
-.explorers-btn .chevron.rotated {
-  transform: rotate(180deg);
+/* Slide out and vanish when panel is open */
+.explorers-btn.active {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(16px);
 }
 
-/* ── Side Panel ── */
+/* ── Side Panel — matches round1/sympo terminal aesthetic ── */
 .explorer-panel {
   position: fixed;
   top: 0;
@@ -318,9 +327,18 @@
   height: 100vh;
   width: 300px;
   z-index: 290;
-  background: rgba(8, 12, 6, 0.92);
-  border-left: 1px solid rgba(223,177,37,0.25);
-  backdrop-filter: blur(14px);
+  /* Deep forest-green, same as round1 body + terminal card */
+  background: linear-gradient(
+    180deg,
+    rgba(14, 18, 12, 0.97) 0%,
+    rgba(8, 12, 6, 0.97) 100%
+  );
+  /* Subtle gold radial bloom at the top — matches sympo glow */
+  box-shadow: inset 0 0 60px rgba(223, 177, 37, 0.05);
+  border-left: 1px solid #735a11;
+  border-top: 0;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   transform: translateX(100%);
   transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
   display: flex;
@@ -335,70 +353,73 @@
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem 1.2rem 1rem;
-  border-bottom: 1px solid rgba(223,177,37,0.2);
+  /* Gold top accent + darker divider, same as terminal-bar border */
+  border-bottom: 1px solid rgba(223, 177, 37, 0.2);
+  border-top: 2px solid #dfb125;
 }
 .panel-header h3 {
   font-family: 'Cinzel', serif;
-  font-size: 1.1rem;
+  font-size: 1.0rem;
   color: #dfb125;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
   margin: 0;
 }
 .panel-close {
   background: none;
   border: none;
-  color: #888;
+  color: rgba(223,177,37,0.5);
   cursor: pointer;
   padding: 0.2rem;
   display: flex;
   align-items: center;
   transition: color 0.2s;
 }
-.panel-close:hover { color: #fff; }
+.panel-close:hover { color: #dfb125; }
 .panel-list {
   flex: 1;
   overflow-y: auto;
   padding: 0.75rem 0;
 }
-.panel-list::-webkit-scrollbar { width: 4px; }
+.panel-list::-webkit-scrollbar { width: 3px; }
 .panel-list::-webkit-scrollbar-track { background: transparent; }
 .panel-list::-webkit-scrollbar-thumb {
-  background: rgba(223,177,37,0.3);
+  background: rgba(223,177,37,0.25);
   border-radius: 2px;
 }
 .explorer-row {
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  padding: 0.7rem 1.2rem;
+  padding: 0.75rem 1.2rem;
   transition: background 0.2s;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(223, 177, 37, 0.07);
 }
-.explorer-row:hover { background: rgba(255,255,255,0.04); }
-.explorer-row.you   { background: rgba(223,177,37,0.08); }
+.explorer-row:hover { background: rgba(223,177,37,0.05); }
+.explorer-row.you   { background: rgba(223,177,37,0.1); }
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
 }
-.status-dot.active { background: #4caf50; box-shadow: 0 0 6px #4caf50; }
-.status-dot.idle   { background: #666; }
+.status-dot.active { background: #98c379; box-shadow: 0 0 5px #98c379; }
+.status-dot.idle   { background: #333; }
 .explorer-info {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.12rem;
   flex: 1;
 }
 .explorer-name {
-  font-size: 0.9rem;
-  color: #e8dfc8;
+  font-size: 0.88rem;
+  color: #eae0c8;
   font-weight: 500;
 }
 .explorer-row.you .explorer-name { color: #dfb125; }
 .explorer-standing {
-  font-size: 0.75rem;
-  color: #666;
+  font-size: 0.72rem;
+  color: #735a11;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
