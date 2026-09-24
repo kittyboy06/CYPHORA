@@ -409,3 +409,173 @@
   background: transparent;
 }
 
+/* ── Enter OS Button ── */
+.enter-os-btn {
+  margin-top: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, rgba(223, 177, 37, 0.22) 0%, rgba(180, 135, 20, 0.12) 100%);
+  color: #dfb125;
+  border: 1px solid #dfb125;
+  padding: 0.7rem 1.4rem;
+  border-radius: 4px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4), 0 0 10px rgba(223, 177, 37, 0.15);
+  width: 90%;
+}
+
+.enter-os-btn:hover {
+  background: #dfb125;
+  color: #0d120a;
+  box-shadow: 0 0 20px rgba(223, 177, 37, 0.6);
+  transform: translateY(-2px);
+}
+
+.enter-os-btn:active {
+  transform: translateY(0);
+}
+
+/* ── Team Name Modal ── */
+.team-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 350;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeInModal 0.3s ease-out;
+  padding: 1.5rem;
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.team-modal {
+  background: linear-gradient(180deg, rgba(20, 26, 16, 0.97) 0%, rgba(10, 14, 8, 0.98) 100%);
+  border: 1px solid #735a11;
+  border-top: 2px solid #dfb125;
+  border-radius: 6px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 35px rgba(223, 177, 37, 0.2);
+  padding: 2.5rem 2rem;
+  max-width: 440px;
+  width: 100%;
+  text-align: center;
+  position: relative;
+  animation: popInModal 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popInModal {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.team-modal h2 {
+  font-family: 'Cinzel', serif;
+  font-size: 1.8rem;
+  color: #dfb125;
+  letter-spacing: 2px;
+  margin-bottom: 0.75rem;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+}
+
+.team-modal p {
+  color: #c5bca8;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1.8rem;
+  letter-spacing: 0.5px;
+}
+
+.team-modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.team-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.team-input {
+  width: 100%;
+  padding: 0.9rem 1.2rem;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(223, 177, 37, 0.45);
+  border-radius: 4px;
+  color: #fff;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 1px;
+  outline: none;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.team-input:focus {
+  border-color: #dfb125;
+  box-shadow: 0 0 15px rgba(223, 177, 37, 0.4);
+  background: rgba(0, 0, 0, 0.85);
+}
+
+.team-input::placeholder {
+  color: #777;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.modal-submit-btn {
+  flex: 1;
+  padding: 0.9rem;
+  background: linear-gradient(135deg, #dfb125 0%, #b88f17 100%);
+  color: #0b0f08;
+  font-family: 'Cinzel', serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.modal-submit-btn:hover {
+  background: #f1c53b;
+  box-shadow: 0 0 20px rgba(223, 177, 37, 0.5);
+  transform: translateY(-1px);
+}
+
+.modal-skip-btn {
+  padding: 0.9rem 1.4rem;
+  background: transparent;
+  color: #888;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-skip-btn:hover {
+  color: #ccc;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+

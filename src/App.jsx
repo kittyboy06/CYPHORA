@@ -17,6 +17,8 @@ const EXPLORERS = [
 function App() {
   const [stage, setStage] = useState('initial'); // 'initial' | 'waking' | 'main'
   const [panelOpen, setPanelOpen] = useState(false);
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [teamInput, setTeamInput] = useState('');
   const [teamData, setTeamData] = useState({
     name: 'Wandering Nomad',
     standing: 'Unranked',
@@ -29,27 +31,59 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // e.g. ?team=Alpha&standing=1st&selected=true
+    // Read from query params or localStorage
     const params = new URLSearchParams(window.location.search);
-    const team = params.get('team');
-    if (team) {
-      setTeamData({
-        name: team,
-        standing: params.get('standing') || 'Unranked',
-        isSelected: params.get('selected') === 'true',
-      });
+    const paramTeam = params.get('team');
+    let savedTeam = '';
+    try {
+      savedTeam = localStorage.getItem('cyphora_team_name') || '';
+    } catch (err) {}
+
+    const initialName = paramTeam || savedTeam || 'Wandering Nomad';
+    setTeamData(prev => ({
+      ...prev,
+      name: initialName,
+      standing: params.get('standing') || prev.standing,
+      isSelected: params.get('selected') === 'true' || prev.isSelected,
+    }));
+    if (paramTeam || savedTeam) {
+      setTeamInput(paramTeam || savedTeam);
     }
   }, []);
 
-  const handleEnter = () => {
+  const handleBeginClick = () => {
+    setShowTeamModal(true);
+  };
+
+  const handleTeamSubmit = (e) => {
+    if (e) e.preventDefault();
+    const finalName = teamInput.trim() || teamData.name || 'Wandering Nomad';
+    setTeamData(prev => ({ ...prev, name: finalName }));
+    try {
+      localStorage.setItem('cyphora_team_name', finalName);
+    } catch (err) {}
+    setShowTeamModal(false);
+    setStage('waking');
+    wakeTimerRef.current = setTimeout(() => setStage('main'), 6000);
+  };
+
+  const handleSkip = () => {
+    setShowTeamModal(false);
     setStage('waking');
     wakeTimerRef.current = setTimeout(() => setStage('main'), 6000);
   };
 
   const handleLevelClick = (level, unlocked) => {
     if (!unlocked) return;
-    window.location.href = `../round${level}/index.html`;
+    window.location.href = `/round${level}/index.html`;
   };
+
+  const explorerList = EXPLORERS.some(e => e.name.toLowerCase() === teamData.name.toLowerCase())
+    ? EXPLORERS
+    : [
+        { name: teamData.name, standing: teamData.standing, status: 'active' },
+        ...EXPLORERS
+      ];
 
   return (
     <div className={`app-container ${stage === 'main' ? 'main-stage' : ''}`}>
@@ -67,7 +101,38 @@ function App() {
 
       {/* Initial screen */}
       {stage === 'initial' && (
-        <button className="enter-btn" onClick={handleEnter}>Begin Journey</button>
+        <button className="enter-btn" onClick={handleBeginClick}>Begin Journey</button>
+      )}
+
+      {/* Team Name Modal */}
+      {showTeamModal && (
+        <div className="team-modal-backdrop">
+          <div className="team-modal">
+            <h2>Identify Your Team</h2>
+            <p>Declare your team name to enter the CYPHORA expedition.</p>
+            <form onSubmit={handleTeamSubmit}>
+              <div className="team-input-wrapper">
+                <input
+                  type="text"
+                  className="team-input"
+                  placeholder="Enter Team Name..."
+                  value={teamInput}
+                  onChange={(e) => setTeamInput(e.target.value)}
+                  autoFocus
+                  maxLength={30}
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="submit" className="modal-submit-btn">
+                  Proceed
+                </button>
+                <button type="button" className="modal-skip-btn" onClick={handleSkip}>
+                  Skip
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Main landing */}
@@ -92,8 +157,8 @@ function App() {
               </button>
             </div>
             <div className="panel-list">
-              {EXPLORERS.map((e, i) => {
-                const isYou = e.name === teamData.name;
+              {explorerList.map((e, i) => {
+                const isYou = e.name.toLowerCase() === teamData.name.toLowerCase();
                 return (
                   <div key={i} className={`explorer-row ${isYou ? 'you' : ''}`}>
                     <span className={`status-dot ${e.status}`}></span>
@@ -117,7 +182,7 @@ function App() {
           {/* ── Main content ── */}
           <div className="main-ui">
             <div className="header-panel">
-              <h1>Symposium Expedition</h1>
+              <h1>CYPHORA</h1>
               <p className="team-name">Explorer: <span>{teamData.name}</span></p>
               <p className="standing">Standing: <span>{teamData.standing}</span></p>
               {!teamData.isSelected && (
@@ -132,6 +197,16 @@ function App() {
                 <h2>OS Navigation</h2>
                 <p>Stage 1</p>
                 <div className="status"><Unlock size={18} /> Available</div>
+                <button
+                  className="enter-os-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLevelClick(1, true);
+                  }}
+                >
+                  <span>Enter OS</span>
+                  <ChevronRight size={16} />
+                </button>
               </div>
 
               {/* Stage 2 — Image Regeneration */}
