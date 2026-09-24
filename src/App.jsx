@@ -14,14 +14,23 @@ const EXPLORERS = [
   { name: 'Team Blaze',   standing: '8th', status: 'idle' },
 ];
 
+const API_BASE = window.location.port === '5173' ? 'http://localhost:8000' : '';
+const WS_URL = window.location.port === '5173'
+  ? 'ws://localhost:8000/ws/live'
+  : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws/live`;
+
 function App() {
   const [stage, setStage] = useState('initial'); // 'initial' | 'waking' | 'main'
   const [panelOpen, setPanelOpen] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [teamInput, setTeamInput] = useState('');
+  const [pinInput, setPinInput] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [liveExplorers, setLiveExplorers] = useState([]);
   const [teamData, setTeamData] = useState({
     name: 'Wandering Nomad',
     standing: 'Unranked',
+    score: 0,
     isSelected: false,
   });
   const wakeTimerRef = useRef(null);
@@ -35,8 +44,10 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const paramTeam = params.get('team');
     let savedTeam = '';
+    let savedPin = '';
     try {
       savedTeam = localStorage.getItem('cyphora_team_name') || '';
+      savedPin = localStorage.getItem('cyphora_team_pin') || '';
     } catch (err) {}
 
     const initialName = paramTeam || savedTeam || 'Wandering Nomad';
@@ -49,19 +60,99 @@ function App() {
     if (paramTeam || savedTeam) {
       setTeamInput(paramTeam || savedTeam);
     }
+    if (savedPin) {
+      setPinInput(savedPin);
+    }
   }, []);
+
+  // WebSocket Live Stream for 100 Workstations
+  useEffect(() => {
+    if (stage !== 'main') return;
+
+    let socket;
+    let reconnectTimeout;
+
+    const connect = () => {
+      try {
+        socket = new WebSocket(WS_URL);
+        socket.onopen = () => {
+          console.log('[CYPHORA] Connected to live event stream');
+        };
+        socket.onmessage = (event) => {
+          try {
+            const payload = JSON.parse(event.data);
+            if (payload.event === 'LEADERBOARD_UPDATE' || payload.event === 'INITIAL_STATE') {
+              if (Array.isArray(payload.data) && payload.data.length > 0) {
+                setLiveExplorers(payload.data);
+                const self = payload.data.find(
+                  e => e.name.toLowerCase() === teamData.name.toLowerCase()
+                );
+                if (self) {
+                  setTeamData(prev => ({
+                    ...prev,
+                    standing: `${self.rank}`,
+                    score: self.score
+                  }));
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Failed to parse WS payload', e);
+          }
+        };
+        socket.onclose = () => {
+          reconnectTimeout = setTimeout(connect, 3000);
+        };
+      } catch (err) {
+        reconnectTimeout = setTimeout(connect, 5000);
+      }
+    };
+
+    connect();
+
+    return () => {
+      if (socket) socket.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
+  }, [stage, teamData.name]);
 
   const handleBeginClick = () => {
     setShowTeamModal(true);
   };
 
-  const handleTeamSubmit = (e) => {
+  const handleTeamSubmit = async (e) => {
     if (e) e.preventDefault();
-    const finalName = teamInput.trim() || teamData.name || 'Wandering Nomad';
-    setTeamData(prev => ({ ...prev, name: finalName }));
+    setAuthError('');
+    const finalName = teamInput.trim() || 'Wandering Nomad';
+    const finalPin = pinInput.trim() || '1234';
+
     try {
+      const res = await fetch(`${API_BASE}/api/auth/quick-join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: finalName, pin: finalPin })
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setAuthError(err.detail || 'Authentication failed');
+        return;
+      }
+      const data = await res.json();
+      localStorage.setItem('cyphora_token', data.token);
+      localStorage.setItem('cyphora_team_name', data.team.name);
+      localStorage.setItem('cyphora_team_pin', finalPin);
+      setTeamData(prev => ({
+        ...prev,
+        name: data.team.name,
+        standing: data.team.standing ? `${data.team.standing}` : 'Unranked',
+        score: data.team.score
+      }));
+    } catch (err) {
+      // Offline fallback
       localStorage.setItem('cyphora_team_name', finalName);
-    } catch (err) {}
+      setTeamData(prev => ({ ...prev, name: finalName }));
+    }
+
     setShowTeamModal(false);
     setStage('waking');
     wakeTimerRef.current = setTimeout(() => setStage('main'), 6000);
@@ -78,12 +169,20 @@ function App() {
     window.location.href = `/round${level}/index.html`;
   };
 
-  const explorerList = EXPLORERS.some(e => e.name.toLowerCase() === teamData.name.toLowerCase())
-    ? EXPLORERS
-    : [
-        { name: teamData.name, standing: teamData.standing, status: 'active' },
-        ...EXPLORERS
-      ];
+  const explorerList = liveExplorers.length > 0
+    ? liveExplorers.map(e => ({
+        name: e.name,
+        standing: `${e.rank}${e.rank === 1 ? 'st' : e.rank === 2 ? 'nd' : e.rank === 3 ? 'rd' : 'th'} (${e.score} pts)`,
+        status: e.status || 'active'
+      }))
+    : (
+      EXPLORERS.some(e => e.name.toLowerCase() === teamData.name.toLowerCase())
+        ? EXPLORERS
+        : [
+            { name: teamData.name, standing: teamData.standing, status: 'active' },
+            ...EXPLORERS
+          ]
+    );
 
   return (
     <div className={`app-container ${stage === 'main' ? 'main-stage' : ''}`}>
@@ -109,7 +208,7 @@ function App() {
         <div className="team-modal-backdrop">
           <div className="team-modal">
             <h2>Identify Your Team</h2>
-            <p>Declare your team name to enter the CYPHORA expedition.</p>
+            <p>Declare your team name and secret PIN to enter the CYPHORA expedition.</p>
             <form onSubmit={handleTeamSubmit}>
               <div className="team-input-wrapper">
                 <input
@@ -122,6 +221,19 @@ function App() {
                   maxLength={30}
                 />
               </div>
+              <div className="team-input-wrapper" style={{ marginTop: '0.8rem' }}>
+                <input
+                  type="password"
+                  className="team-input"
+                  placeholder="Secret Team PIN (e.g. 1234)..."
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value)}
+                  maxLength={8}
+                />
+              </div>
+              {authError && (
+                <p style={{ color: '#e06c75', fontSize: '0.85rem', marginTop: '0.5rem' }}>{authError}</p>
+              )}
               <div className="modal-actions">
                 <button type="submit" className="modal-submit-btn">
                   Proceed

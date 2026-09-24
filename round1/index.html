@@ -134,20 +134,85 @@
     <div class="terminal-body">
       <p>[SYSTEM] Initializing OS Navigation Environment...</p>
       <p>[SYSTEM] Booting simulated workstation interface.</p>
-      <p>[AUTH] Explorer credentials validated: <span class="highlight" id="teamDisplay">Explorer</span></p>
-      <p>[STATUS] Stage 1 tasks unlocked. Ready for instructions.</p>
-      <br>
-      <p>> Navigation module online. <span class="cursor"></span></p>
+      <p>[AUTH] Explorer: <span class="highlight" id="teamDisplay">Explorer</span> | Total Score: <span class="highlight" id="scoreDisplay">0</span> pts</p>
+      <p>[STATUS] Stage 1 tasks unlocked. Complete tasks to advance character:</p>
       
-      <div class="action-panel">
-        <a href="/" class="back-btn">&larr; Return to Expedition</a>
+      <div id="taskList" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.6rem;">
+        <p style="color: #666;">Loading mission tasks from server...</p>
+      </div>
+      
+      <div class="action-panel" style="margin-top: 1.5rem;">
+        <a href="/" class="back-btn">&larr; Return to Expedition Hub</a>
       </div>
     </div>
   </div>
 
   <script>
     const team = localStorage.getItem('cyphora_team_name') || 'Explorer';
+    const token = localStorage.getItem('cyphora_token') || '';
     document.getElementById('teamDisplay').innerText = team;
+
+    const API_BASE = window.location.port === '5173' ? 'http://localhost:8000' : '';
+
+    async function loadTasks() {
+      if (!token) {
+        document.getElementById('taskList').innerHTML = '<p style="color: #e5c07b;">Offline mode: Please register your team on the main screen to sync live points.</p>';
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/api/stage1/tasks`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Failed to load tasks');
+        const data = await res.json();
+        document.getElementById('scoreDisplay').innerText = data.team_score;
+
+        const container = document.getElementById('taskList');
+        container.innerHTML = '';
+        data.tasks.forEach(t => {
+          const div = document.createElement('div');
+          div.style.cssText = 'background: rgba(0,0,0,0.4); border: 1px solid rgba(223,177,37,0.25); padding: 0.8rem 1rem; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;';
+          div.innerHTML = `
+            <div>
+              <span style="color: #dfb125; font-weight: bold;">[+${t.points} pts]</span> 
+              <span style="color: #eae0c8; font-weight: 500; margin-left: 0.4rem;">${t.title}</span>
+              <p style="font-size: 0.8rem; color: #888; margin-top: 0.2rem;">${t.description}</p>
+            </div>
+            ${t.is_completed 
+              ? '<span style="color: #98c379; font-weight: bold;">&#10003; COMPLETED</span>'
+              : `<button onclick="submitTask('${t.key}')" style="background: rgba(223,177,37,0.2); border: 1px solid #dfb125; color: #dfb125; padding: 0.4rem 0.8rem; border-radius: 3px; cursor: pointer; font-family: monospace;">Submit Task</button>`
+            }
+          `;
+          container.appendChild(div);
+        });
+      } catch (err) {
+        document.getElementById('taskList').innerHTML = '<p style="color: #e06c75;">Could not reach local server. Ensure run_server.py is running.</p>';
+      }
+    }
+
+    async function submitTask(taskKey) {
+      try {
+        const res = await fetch(`${API_BASE}/api/stage1/submit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ task_key: taskKey })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          loadTasks();
+        } else {
+          alert(data.message || 'Error submitting task');
+        }
+      } catch (e) {
+        alert('Server connection error');
+      }
+    }
+
+    loadTasks();
   </script>
 </body>
 </html>
