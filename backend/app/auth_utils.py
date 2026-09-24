@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,14 +10,19 @@ from .config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from .database import get_db
 from .models import Team
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
+
 security = HTTPBearer(auto_error=False)
 
 def hash_pin(pin: str) -> str:
-    return pwd_context.hash(pin)
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(pin.encode("utf-8")[:72], salt).decode("utf-8")
 
 def verify_pin(plain_pin: str, hashed_pin: str) -> bool:
-    return pwd_context.verify(plain_pin, hashed_pin)
+    try:
+        return bcrypt.checkpw(plain_pin.encode("utf-8")[:72], hashed_pin.encode("utf-8"))
+    except Exception:
+        return False
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()

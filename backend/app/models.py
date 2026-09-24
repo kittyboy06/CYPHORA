@@ -14,6 +14,10 @@ class Team(Base):
     current_stage = Column(Integer, default=1)
     status = Column(String(20), default="active")  # 'active' | 'idle'
     last_ip = Column(String(45), nullable=True)
+    member1 = Column(String(64), nullable=True)
+    member2 = Column(String(64), nullable=True)
+    notes = Column(Text, nullable=True)
+    started_at = Column(DateTime, default=datetime.datetime.utcnow)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 

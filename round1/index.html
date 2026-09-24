@@ -152,7 +152,7 @@
     const token = localStorage.getItem('cyphora_token') || '';
     document.getElementById('teamDisplay').innerText = team;
 
-    const API_BASE = window.location.port === '5173' ? 'http://localhost:8000' : '';
+    const API_BASE = window.location.port === '5173' ? `http://${window.location.hostname}:8000` : '';
 
     async function loadTasks() {
       if (!token) {

@@ -358,6 +358,45 @@
   text-transform: uppercase;
   margin: 0;
 }
+.panel-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-family: monospace;
+}
+.live-badge.connected {
+  background: rgba(152, 195, 121, 0.12);
+  border: 1px solid rgba(152, 195, 121, 0.4);
+  color: #98c379;
+}
+.live-badge.syncing {
+  background: rgba(223, 177, 37, 0.12);
+  border: 1px solid rgba(223, 177, 37, 0.4);
+  color: #dfb125;
+}
+.live-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 5px currentColor;
+  animation: pulse-dot 1.8s infinite ease-in-out;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
 .panel-close {
   background: none;
   border: none;
@@ -591,5 +630,37 @@
 .modal-skip-btn:hover {
   color: #ccc;
   border-color: rgba(255, 255, 255, 0.35);
+}
+
+.explorer-crew {
+  font-size: 0.68rem;
+  color: #8c8268;
+  font-family: monospace;
+}
+
+.admin-shortcut-btn {
+  position: fixed;
+  bottom: 1.2rem;
+  right: 1.5rem;
+  z-index: 150;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(14, 18, 12, 0.7);
+  border: 1px solid rgba(223, 177, 37, 0.3);
+  color: #8c8268;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-decoration: none;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+  letter-spacing: 1px;
+}
+
+.admin-shortcut-btn:hover {
+  background: rgba(223, 177, 37, 0.15);
+  border-color: #dfb125;
+  color: #dfb125;
 }
 

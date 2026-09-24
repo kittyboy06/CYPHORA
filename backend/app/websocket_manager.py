@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import List
+from typing import List, Dict, Optional
 from fastapi import WebSocket
 from sqlalchemy.future import select
 from sqlalchemy import desc
@@ -10,18 +10,31 @@ logger = logging.getLogger("cyphora.ws")
 
 class WebSocketManager:
     def __init__(self):
-        # Active connections list (can comfortably handle 100+ concurrent connections)
+        # Active connections list (handles 100+ concurrent connections)
         self.active_connections: List[WebSocket] = []
+        self.connection_teams: Dict[WebSocket, str] = {}
 
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, websocket: WebSocket, team_name: Optional[str] = None):
         await websocket.accept()
         self.active_connections.append(websocket)
-        logger.info(f"WebSocket client connected. Active clients: {len(self.active_connections)}")
+        if team_name:
+            self.connection_teams[websocket] = team_name
+        logger.info(f"WebSocket client connected ({team_name or 'unidentified'}). Active clients: {len(self.active_connections)}")
 
-    def disconnect(self, websocket: WebSocket):
+    def register_team(self, websocket: WebSocket, team_name: str):
+        if websocket in self.active_connections:
+            self.connection_teams[websocket] = team_name
+            logger.info(f"WebSocket client identified as '{team_name}'")
+
+    def is_team_connected(self, team_name: str) -> bool:
+        return any(name.lower() == team_name.lower() for name in self.connection_teams.values())
+
+    def disconnect(self, websocket: WebSocket) -> Optional[str]:
+        team_name = self.connection_teams.pop(websocket, None)
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
-            logger.info(f"WebSocket client disconnected. Active clients: {len(self.active_connections)}")
+            logger.info(f"WebSocket client disconnected ({team_name or 'unidentified'}). Active clients: {len(self.active_connections)}")
+        return team_name
 
     async def send_personal(self, message: dict, websocket: WebSocket):
         try:
@@ -45,8 +58,7 @@ class WebSocketManager:
 
         # Cleanup any disconnected clients
         for dead in dead_connections:
-            if dead in self.active_connections:
-                self.active_connections.remove(dead)
+            self.disconnect(dead)
 
     async def broadcast_leaderboard(self, session):
         """Calculates current ranks and broadcasts to all clients."""
@@ -59,10 +71,17 @@ class WebSocketManager:
             team.standing = rank
             leaderboard_data.append({
                 "rank": rank,
+                "id": team.id,
                 "name": team.name,
+                "member1": team.member1,
+                "member2": team.member2,
                 "score": team.score,
                 "status": team.status,
-                "current_stage": team.current_stage
+                "current_stage": team.current_stage,
+                "notes": team.notes,
+                "last_ip": team.last_ip,
+                "started_at": team.started_at.isoformat() if team.started_at else None,
+                "updated_at": team.updated_at.isoformat() if team.updated_at else None,
             })
 
         await session.commit()

@@ -22,7 +22,9 @@ async def register_team(req: TeamRegisterRequest, request: Request, db: AsyncSes
     team = Team(
         name=clean_name,
         pin_hash=hash_pin(req.pin),
-        last_ip=client_ip
+        last_ip=client_ip,
+        member1=req.member1.strip() if req.member1 else None,
+        member2=req.member2.strip() if req.member2 else None,
     )
     db.add(team)
     await db.commit()
@@ -51,6 +53,9 @@ async def login_team(req: TeamLoginRequest, request: Request, db: AsyncSession =
     await db.commit()
     await db.refresh(team)
 
+    # Broadcast updated explorer list
+    await ws_manager.broadcast_leaderboard(db)
+
     token = create_access_token({"sub": str(team.id), "team": team.name})
     return AuthResponse(token=token, team=to_team_out(team))
 
@@ -68,14 +73,21 @@ async def quick_join(req: TeamRegisterRequest, request: Request, db: AsyncSessio
             raise HTTPException(status_code=401, detail="Team already exists with a different PIN.")
         team.last_ip = client_ip
         team.status = "active"
+        if req.member1:
+            team.member1 = req.member1.strip()
+        if req.member2:
+            team.member2 = req.member2.strip()
         await db.commit()
         await db.refresh(team)
+        await ws_manager.broadcast_leaderboard(db)
     else:
         team = Team(
             name=clean_name,
             pin_hash=hash_pin(req.pin),
             last_ip=client_ip,
-            status="active"
+            status="active",
+            member1=req.member1.strip() if req.member1 else None,
+            member2=req.member2.strip() if req.member2 else None,
         )
         db.add(team)
         await db.commit()
