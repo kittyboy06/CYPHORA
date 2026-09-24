@@ -202,7 +202,7 @@
   background: linear-gradient(135deg, rgba(30, 35, 25, 0.95), rgba(15, 20, 15, 0.95));
   border: 1px solid #444;
   padding: 2.5rem 2rem;
-  width: 260px;
+  width: 280px;
   border-radius: 6px;
   text-align: center;
   position: relative;
@@ -411,7 +411,7 @@
 
 /* ── Enter OS Button ── */
 .enter-os-btn {
-  margin-top: 1.25rem;
+  margin-top: 0.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;

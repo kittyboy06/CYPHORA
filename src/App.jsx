@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Lock, Unlock, Terminal, Image, Code2, Users, X, ChevronRight } from 'lucide-react';
+import { Terminal, Users, X, ChevronRight } from 'lucide-react';
 import './App.css';
 
 // Mock explorer data — replace with real API/backend data later
@@ -185,18 +185,14 @@ function App() {
               <h1>CYPHORA</h1>
               <p className="team-name">Explorer: <span>{teamData.name}</span></p>
               <p className="standing">Standing: <span>{teamData.standing}</span></p>
-              {!teamData.isSelected && (
-                <p className="notice">Awaiting Selection for Deep Stages</p>
-              )}
             </div>
 
             <div className="levels-container">
-              {/* Stage 1 — OS Navigation, always unlocked */}
+              {/* Stage 1 — OS Navigation */}
               <div className="level-card unlocked" onClick={() => handleLevelClick(1, true)}>
                 <div className="icon-container"><Terminal size={48} /></div>
                 <h2>OS Navigation</h2>
                 <p>Stage 1</p>
-                <div className="status"><Unlock size={18} /> Available</div>
                 <button
                   className="enter-os-btn"
                   onClick={(e) => {
@@ -207,36 +203,6 @@ function App() {
                   <span>Enter OS</span>
                   <ChevronRight size={16} />
                 </button>
-              </div>
-
-              {/* Stage 2 — Image Regeneration */}
-              <div
-                className={`level-card ${teamData.isSelected ? 'unlocked' : 'locked'}`}
-                onClick={() => handleLevelClick(2, teamData.isSelected)}
-              >
-                <div className="icon-container"><Image size={48} /></div>
-                <h2>Image Regen</h2>
-                <p>Stage 2</p>
-                <div className="status">
-                  {teamData.isSelected
-                    ? <><Unlock size={18} /> Unlocked</>
-                    : <><Lock   size={18} /> Locked</>}
-                </div>
-              </div>
-
-              {/* Stage 3 — Parsons Puzzle */}
-              <div
-                className={`level-card ${teamData.isSelected ? 'unlocked' : 'locked'}`}
-                onClick={() => handleLevelClick(3, teamData.isSelected)}
-              >
-                <div className="icon-container"><Code2 size={48} /></div>
-                <h2>Parsons Puzzle</h2>
-                <p>Stage 3</p>
-                <div className="status">
-                  {teamData.isSelected
-                    ? <><Unlock size={18} /> Unlocked</>
-                    : <><Lock   size={18} /> Locked</>}
-                </div>
               </div>
             </div>
           </div>
