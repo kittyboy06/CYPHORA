@@ -1,0 +1,126 @@
+.window-frame {
+  display: flex;
+  flex-direction: column;
+  background: rgba(14, 18, 14, 0.94);
+  border: 1px solid rgba(223, 177, 37, 0.3);
+  border-radius: 6px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75), 0 0 15px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.window-frame.window-focused {
+  border-color: #dfb125;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 25px rgba(223, 177, 37, 0.2);
+}
+
+.window-frame.window-maximized {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+}
+
+/* Titlebar */
+.window-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  background: rgba(22, 28, 20, 0.95);
+  border-bottom: 1px solid rgba(223, 177, 37, 0.2);
+  padding: 0 0.8rem;
+  cursor: grab;
+  user-select: none;
+}
+
+.window-frame.window-focused .window-titlebar {
+  background: rgba(26, 34, 24, 0.98);
+  border-bottom: 1px solid rgba(223, 177, 37, 0.35);
+}
+
+.window-titlebar:active {
+  cursor: grabbing;
+}
+
+.window-title-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.window-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #555;
+  transition: all 0.2s ease;
+}
+
+.window-frame.window-focused .window-status-dot {
+  background: #dfb125;
+  box-shadow: 0 0 8px rgba(223, 177, 37, 0.8);
+}
+
+.window-title-text {
+  font-family: 'Cinzel', 'Montserrat', serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: #dfb125;
+  text-transform: uppercase;
+}
+
+/* Controls */
+.window-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.win-ctrl-btn {
+  background: transparent;
+  border: none;
+  color: #889280;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.win-ctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #eae0c8;
+}
+
+.win-ctrl-btn.win-ctrl-close:hover {
+  background: #e06c75;
+  color: #fff;
+}
+
+/* Content */
+.window-content-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Resize handle */
+.window-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: se-resize;
+  background: linear-gradient(135deg, transparent 50%, rgba(223, 177, 37, 0.4) 50%);
+  border-bottom-right-radius: 4px;
+  z-index: 100;
+}

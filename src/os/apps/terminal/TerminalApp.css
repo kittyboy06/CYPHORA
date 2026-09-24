@@ -1,0 +1,138 @@
+.terminal-app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: #080c08;
+  color: #c9d1d9;
+  font-family: 'Fira Code', 'Courier New', Courier, monospace;
+  font-size: 0.88rem;
+  overflow: hidden;
+  user-select: text;
+}
+
+.terminal-output-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.8rem 1rem;
+  line-height: 1.55;
+}
+
+.terminal-line {
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-bottom: 0.15rem;
+}
+
+.line-info {
+  color: #dfb125;
+  font-weight: 500;
+}
+
+.line-text {
+  color: #b0c4b1;
+}
+
+.line-error {
+  color: #e06c75;
+}
+
+.line-dir {
+  color: #61afef;
+  font-weight: 600;
+}
+
+.line-file {
+  color: #98c379;
+}
+
+.prompt-line {
+  margin-top: 0.4rem;
+  margin-bottom: 0.2rem;
+}
+
+.prompt-active-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin-top: 0.3rem;
+}
+
+.terminal-user {
+  color: #dfb125;
+  font-weight: 600;
+}
+
+.terminal-colon {
+  color: #777;
+}
+
+.terminal-cwd {
+  color: #61afef;
+  font-weight: 600;
+}
+
+.terminal-dollar {
+  color: #98c379;
+  margin-right: 0.3rem;
+  font-weight: 700;
+}
+
+.terminal-cmd-text {
+  color: #eae0c8;
+}
+
+.terminal-input-element {
+  flex: 1;
+  min-width: 120px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #eae0c8;
+  font-family: 'Fira Code', 'Courier New', Courier, monospace;
+  font-size: 0.88rem;
+  caret-color: #dfb125;
+  padding: 0;
+  margin: 0;
+}
+
+.terminal-grid-output {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  margin: 0.3rem 0;
+}
+
+.terminal-entry {
+  font-weight: 500;
+}
+
+.dir-entry {
+  color: #61afef;
+  font-weight: 600;
+}
+
+.file-entry {
+  color: #98c379;
+}
+
+.hidden-entry {
+  opacity: 0.65;
+  font-style: italic;
+}
+
+/* Scrollbar */
+.terminal-output-area::-webkit-scrollbar {
+  width: 6px;
+}
+.terminal-output-area::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+.terminal-output-area::-webkit-scrollbar-thumb {
+  background: rgba(223, 177, 37, 0.3);
+  border-radius: 3px;
+}
+.terminal-output-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(223, 177, 37, 0.6);
+}

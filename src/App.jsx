@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Terminal, Users, X, ChevronRight } from 'lucide-react';
+import { BootScreen } from './os/boot/BootScreen.jsx';
+import { OSContainer } from './os/OSContainer.jsx';
 import './App.css';
 
 // Mock explorer data — replace with real API/backend data later
@@ -166,6 +168,13 @@ function App() {
 
   const handleLevelClick = (level, unlocked) => {
     if (!unlocked) return;
+    if (level === 1) {
+      if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+      setStage('os-boot');
+      return;
+    }
     window.location.href = `/round${level}/index.html`;
   };
 
@@ -188,7 +197,9 @@ function App() {
     <div className={`app-container ${stage === 'main' ? 'main-stage' : ''}`}>
 
       {/* Background */}
-      <div className={`bg-container ${stage === 'waking' ? 'waking-bg' : ''}`}></div>
+      {stage !== 'os-boot' && stage !== 'os-desktop' && (
+        <div className={`bg-container ${stage === 'waking' ? 'waking-bg' : ''}`}></div>
+      )}
 
       {/* Eye blink overlay */}
       {(stage === 'waking' || stage === 'main') && (
@@ -319,6 +330,22 @@ function App() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Stage 1 Virtual OS Boot Screen */}
+      {stage === 'os-boot' && (
+        <BootScreen
+          teamName={teamData.name}
+          onComplete={() => setStage('os-desktop')}
+        />
+      )}
+
+      {/* Stage 1 Virtual OS Desktop Environment */}
+      {stage === 'os-desktop' && (
+        <OSContainer
+          teamData={teamData}
+          onReturnToHub={() => setStage('main')}
+        />
       )}
     </div>
   );
