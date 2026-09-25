@@ -31,6 +31,36 @@ export const executeCode = async (code: string, gameRef: any, blocklyRef: any) =
       if (result === 'FAILED') isFailed = true;
       if (result === 'LEVEL_COMPLETE') throw new Error('LEVEL_COMPLETE');
       if (isFailed) throw new Error('Fell into gap');
+    },
+    attack: async (id: string) => {
+      if (isFailed) return;
+      blocklyRef.highlightBlock(id);
+      useGameStore.getState().incExecutedCommands();
+      const result = await gameRef.executeCommand({ type: 'ATTACK' });
+      if (result === 'FAILED') isFailed = true;
+      if (result === 'LEVEL_COMPLETE') throw new Error('LEVEL_COMPLETE');
+      if (isFailed) throw new Error('Attack failed');
+    },
+    defend: async (id: string) => {
+      if (isFailed) return;
+      blocklyRef.highlightBlock(id);
+      useGameStore.getState().incExecutedCommands();
+      const result = await gameRef.executeCommand({ type: 'DEFEND' });
+      if (result === 'FAILED') isFailed = true;
+      if (result === 'LEVEL_COMPLETE') throw new Error('LEVEL_COMPLETE');
+      if (isFailed) throw new Error('Defend failed');
+    },
+    isBeastVulnerable: async () => {
+      return await gameRef.isBeastVulnerable();
+    },
+    activateTotemStep: async (id: string) => {
+      if (isFailed) return;
+      blocklyRef.highlightBlock(id);
+      useGameStore.getState().incExecutedCommands();
+      const result = await gameRef.executeCommand({ type: 'ACTIVATE_TOTEM' });
+      if (result === 'FAILED') isFailed = true;
+      if (result === 'LEVEL_COMPLETE') throw new Error('LEVEL_COMPLETE');
+      if (isFailed) throw new Error('Activate Totem failed');
     }
   };
 

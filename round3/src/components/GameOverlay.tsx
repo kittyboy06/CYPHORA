@@ -1,9 +1,13 @@
 import React from 'react';
 import { useGameStore } from '../state/gameStore';
-import { Award, RefreshCcw } from 'lucide-react';
+import { RefreshCcw } from 'lucide-react';
 
-export const GameOverlay = () => {
-  const { status, score, executedCommands, totalCommands } = useGameStore();
+interface Props {
+  onRetry: () => void;
+}
+
+export const GameOverlay: React.FC<Props> = ({ onRetry }) => {
+  const { status, score, totalCommands, level, setLevel } = useGameStore();
 
   if (status === 'idle' || status === 'running') return null;
 
@@ -29,9 +33,19 @@ export const GameOverlay = () => {
             </div>
           </div>
 
-          <button className="w-full py-4 bg-[var(--accent-gold)] text-[var(--bg-dark)] font-bold tracking-widest hover:brightness-110 transition-all uppercase">
-            Continue Expedition
-          </button>
+          {level === 1 ? (
+            <button 
+              onClick={() => setLevel(2)}
+              className="w-full py-4 bg-[var(--accent-gold)] text-[var(--bg-dark)] font-bold tracking-widest hover:brightness-110 transition-all uppercase">
+              Next Level
+            </button>
+          ) : (
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full py-4 bg-[var(--accent-gold)] text-[var(--bg-dark)] font-bold tracking-widest hover:brightness-110 transition-all uppercase">
+              Continue Expedition
+            </button>
+          )}
         </div>
       )}
 
@@ -41,7 +55,7 @@ export const GameOverlay = () => {
           <p className="text-sm text-[var(--text-muted)] tracking-widest uppercase mb-8">Critical Failure</p>
 
           <button 
-            onClick={() => window.location.reload()}
+            onClick={onRetry}
             className="w-full py-4 border border-red-500 text-red-500 flex items-center justify-center gap-2 hover:bg-red-500/10 transition-all uppercase tracking-widest font-bold">
             <RefreshCcw size={18} /> Retry Level
           </button>
