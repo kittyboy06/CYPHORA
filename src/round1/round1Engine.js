@@ -30,37 +30,45 @@ export const ROUND_1_SETS = [
   }
 ];
 
-export const ROUND_1_TASKS = TASK_DEFINITIONS.map(def => ({
-  ...def,
-  acceptedEvents: ['TASK_ANSWER_SUBMITTED'],
-  validator: (payload = {}) => {
-    const rawInput = (payload.answer || '').toString();
-    let userVal = rawInput;
-    let expectedVal = (def.answer.expected || '').toString();
+export const ROUND_1_TASKS = TASK_DEFINITIONS.map(def => {
+  const parentSet = ROUND_1_SETS.find(s => s.tasks.includes(def.id));
+  return {
+    ...def,
+    setId: parentSet?.id || 'set1',
+    acceptedEvents: ['TASK_ANSWER_SUBMITTED'],
+    validator: (payload = {}) => {
+      const rawInput = (payload.answer || '').toString();
+      let userVal = rawInput;
+      let expectedVal = (def.answer.expected || '').toString();
 
-    if (def.answer.trimWhitespace !== false) {
-      userVal = userVal.trim();
-      expectedVal = expectedVal.trim();
+      if (def.answer.trimWhitespace !== false) {
+        userVal = userVal.trim();
+        expectedVal = expectedVal.trim();
+      }
+
+      if (!def.answer.caseSensitive) {
+        userVal = userVal.toUpperCase();
+        expectedVal = expectedVal.toUpperCase();
+      }
+
+      return userVal === expectedVal && userVal.length > 0;
     }
-
-    if (!def.answer.caseSensitive) {
-      userVal = userVal.toUpperCase();
-      expectedVal = expectedVal.toUpperCase();
-    }
-
-    return userVal === expectedVal && userVal.length > 0;
-  }
-}));
+  };
+});
 
 export function buildDefaultRound1State() {
-  const tasks = ROUND_1_TASKS.map((task, index) => ({
-    ...task,
-    status: index === 0 ? 'ACTIVE' : 'LOCKED',
-    completionTimestamp: null,
-    attemptCount: 0,
-    hintsUsed: 0,
-    actionSequence: []
-  }));
+  const tasks = ROUND_1_TASKS.map((task, index) => {
+    const parentSet = ROUND_1_SETS.find(s => s.tasks.includes(task.id));
+    return {
+      ...task,
+      setId: task.setId || parentSet?.id || 'set1',
+      status: index === 0 ? 'ACTIVE' : 'LOCKED',
+      completionTimestamp: null,
+      attemptCount: 0,
+      hintsUsed: 0,
+      actionSequence: []
+    };
+  });
 
   return {
     teamId: '',

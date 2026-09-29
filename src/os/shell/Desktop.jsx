@@ -15,12 +15,18 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
+import { SET_PRESENTATIONS } from '../../round1/taskContent.js';
+import { ROUND_1_SETS } from '../../round1/round1Engine.js';
 
 export function Desktop() {
-  const { vfs, openApp, closeStartMenu } = useOS();
+  const { vfs, openApp, closeStartMenu, round1State } = useOS();
   const [desktopFiles, setDesktopFiles] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
+
+  const activeTask = round1State?.tasks?.find(t => t.status === 'ACTIVE');
+  const currentSetId = activeTask?.setId || (activeTask ? ROUND_1_SETS.find(s => s.tasks.includes(activeTask.id))?.id : null) || round1State?.activeSet || 'set1';
+  const setPresentation = SET_PRESENTATIONS[currentSetId];
 
   const loadDesktopItems = () => {
     try {
@@ -191,6 +197,17 @@ export function Desktop() {
           </div>
         ))}
       </div>
+
+      {/* Desktop Journey HUD — sits directly on the desktop canvas, never overlapping open/fullscreen windows */}
+      {round1State?.round1StartedAt && (
+        <div className="desktop-journey-hud">
+          <span>JOURNEY</span>
+          <strong>{Math.round(round1State.journeyProgress || 0)}%</strong>
+          {setPresentation?.label && (
+            <small>{setPresentation.label} — {setPresentation.title}</small>
+          )}
+        </div>
+      )}
 
       {/* Right-click Context Menu */}
       {contextMenu && (

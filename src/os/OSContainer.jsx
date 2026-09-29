@@ -12,7 +12,7 @@ import { CompletionCelebration } from '../components/CompletionCelebration.jsx';
 import './OSContainer.css';
 
 function OSContent({ stage, setStage, teamData, round1State }) {
-  const { windows, openApp, showExitBanner, requestFullscreen, dismissExitBanner } = useOS();
+  const { windows, openApp, showExitBanner, exitReason, unlockGate } = useOS();
 
   useEffect(() => {
     if (stage === 'os-desktop' && windows.length === 0) {
@@ -42,10 +42,8 @@ function OSContent({ stage, setStage, teamData, round1State }) {
       )}
       {showExitBanner && (
         <BlueScreenGate
-          onUnlock={async () => {
-            dismissExitBanner();
-            await requestFullscreen();
-          }}
+          reason={exitReason}
+          onUnlock={unlockGate}
         />
       )}
     </div>

@@ -45,7 +45,11 @@ const formatOrdinal = (rank) => {
 const normalizeTeamName = (name) => (name || '').trim().toLowerCase();
 
 function App() {
-  const [stage, setStage] = useState('initial');
+  const [stage, setStage] = useState(() => (
+    typeof window !== 'undefined'
+      ? (new URLSearchParams(window.location.search).get('stage') || 'initial')
+      : 'initial'
+  ));
   const [panelOpen, setPanelOpen] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [teamInput, setTeamInput] = useState('');
@@ -96,6 +100,69 @@ function App() {
     return () => { if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current); };
   }, []);
 
+  // Strict full-webpage scroll lock for computer screen app (landing page & story page)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if (document.documentElement) {
+      document.documentElement.scrollTop = 0;
+      document.documentElement.scrollLeft = 0;
+    }
+    if (document.body) {
+      document.body.scrollTop = 0;
+      document.body.scrollLeft = 0;
+    }
+
+    const preventScroll = (e) => {
+      const target = e.target;
+      // Allow scrolling inside internal scrollable elements (e.g., explorer side panel list or OS app containers)
+      if (target && target.closest && target.closest('.panel-list, .terminal-body, .window-body, .start-menu-content, .virtual-file-list, .text-editor-textarea')) {
+        return;
+      }
+      if (e.type === 'wheel' || e.type === 'touchmove') {
+        e.preventDefault();
+      }
+      if (e.type === 'keydown') {
+        const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+        if (!isInput && [' ', 'PageUp', 'PageDown', 'End', 'Home', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    window.addEventListener('wheel', preventScroll, { passive: false });
+    window.addEventListener('touchmove', preventScroll, { passive: false });
+    window.addEventListener('keydown', preventScroll, { passive: false });
+
+    const handleWindowScroll = () => {
+      if (window.scrollX !== 0 || window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
+      const appContainer = document.querySelector('.app-container');
+      if (appContainer && (appContainer.scrollTop !== 0 || appContainer.scrollLeft !== 0)) {
+        appContainer.scrollTop = 0;
+        appContainer.scrollLeft = 0;
+      }
+    };
+
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('wheel', preventScroll);
+      window.removeEventListener('touchmove', preventScroll);
+      window.removeEventListener('keydown', preventScroll);
+      window.removeEventListener('scroll', handleWindowScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const container = document.querySelector('.app-container');
+    if (container) {
+      container.scrollTop = 0;
+      container.scrollLeft = 0;
+    }
+  }, [stage]);
+
   const fetchLeaderboard = async (currentTeamName) => {
     try {
       const res = await fetch(`${API_BASE}/api/teams/leaderboard`);
@@ -134,6 +201,11 @@ function App() {
       savedMember1 = localStorage.getItem('cyphora_member1') || '';
       savedMember2 = localStorage.getItem('cyphora_member2') || '';
     } catch (err) {}
+
+    const paramStage = params.get('stage');
+    if (paramStage && ['initial', 'prologue', 'main'].includes(paramStage)) {
+      setStage(paramStage);
+    }
 
     const initialName = paramTeam || savedTeam || 'Wandering Nomad';
     setTeamData(prev => ({

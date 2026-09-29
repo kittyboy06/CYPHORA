@@ -10,15 +10,22 @@ const SESSION_STORAGE_KEY = 'cyphora_os_session';
 export function OSProvider({ children, teamData, onReturnToHub, round1State, setRound1State }) {
   const [state, dispatch] = useReducer(osReducer, INITIAL_OS_STATE, (init) => {
     try {
-      const saved = localStorage.getItem(SESSION_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          ...init,
-          ...parsed,
-          isStartMenuOpen: false,
-          showExitBanner: false,
-        };
+      // Remove any lingering legacy localStorage session key so old sessions don't persist across restarts
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+
+      if (typeof sessionStorage !== 'undefined') {
+        const saved = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return {
+            ...init,
+            ...parsed,
+            isStartMenuOpen: false,
+            showExitBanner: false,
+          };
+        }
       }
     } catch (e) {
       console.warn('[OSProvider] Failed to restore session', e);
@@ -26,46 +33,166 @@ export function OSProvider({ children, teamData, onReturnToHub, round1State, set
     return init;
   });
 
-  // Persist session state to localStorage on state changes
+  // Persist session state to sessionStorage on state changes (persists on F5 in same tab, clears on tab/browser close)
   useEffect(() => {
     try {
-      const sessionToSave = {
-        windows: state.windows,
-        activeWindowId: state.activeWindowId,
-        nextZIndex: state.nextZIndex,
-        isMuted: state.isMuted
-      };
-      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionToSave));
+      if (typeof sessionStorage !== 'undefined') {
+        const sessionToSave = {
+          windows: state.windows,
+          activeWindowId: state.activeWindowId,
+          nextZIndex: state.nextZIndex,
+          isMuted: state.isMuted
+        };
+        sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionToSave));
+      }
     } catch (e) {
       console.error('[OSProvider] Failed to save session', e);
     }
   }, [state.windows, state.activeWindowId, state.nextZIndex, state.isMuted]);
 
-  // Track browser fullscreen events
+  const triggerLock = (reason = 'FULLSCREEN_EXIT') => {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('cyphora_os_locked', reason);
+      }
+    } catch (e) {}
+    dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: true, reason } });
+  };
+
+  const unlockGate = async () => {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem('cyphora_os_locked');
+      }
+    } catch (e) {}
+    dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
+    await requestFullscreen();
+  };
+
+  // Track security triggers: Fullscreen exit, Screenshots, Tab Switch, DevTools Inspector
   useEffect(() => {
+    // 1. Initial lock state recovery from sessionStorage or fullscreen check
+    let initialLock = null;
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        initialLock = sessionStorage.getItem('cyphora_os_locked');
+      }
+    } catch (e) {}
+
+    if (initialLock) {
+      triggerLock(initialLock);
+    } else if (!document.fullscreenElement) {
+      dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: false });
+      triggerLock('FULLSCREEN_EXIT');
+    } else {
+      dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: true });
+      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
+    }
+
+    // 2. Fullscreen monitor
     const handleFullscreenChange = () => {
       const isFull = !!document.fullscreenElement;
       dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: isFull });
-
       if (!isFull) {
-        dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: true });
-      } else {
-        dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: false });
+        triggerLock('FULLSCREEN_EXIT');
       }
     };
 
+    // 3. Tab switch / visibility monitor
+    const handleVisibilityChange = () => {
+      if (document.hidden || document.visibilityState === 'hidden') {
+        triggerLock('TAB_SWITCH');
+      }
+    };
+
+    // 4. Window blur monitor (switching to other apps or desktop)
+    const handleWindowBlur = () => {
+      triggerLock('TAB_SWITCH');
+    };
+
+    // 5. Screenshots and Inspector keyboard shortcuts
+    const handleSecurityKeyDown = (e) => {
+      // Screenshot shortcut: PrintScreen
+      if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerLock('SCREENSHOT_ATTEMPT');
+        return;
+      }
+
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+
+      // Screenshot shortcut: Win+Shift+S or Ctrl+Shift+S (Snipping Tool)
+      if ((e.key === 'S' || e.key === 's') && e.shiftKey && isCtrlOrMeta) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerLock('SCREENSHOT_ATTEMPT');
+        return;
+      }
+
+      // Mac screenshot: Cmd+Shift+3, 4, 5
+      if (e.metaKey && e.shiftKey && ['3', '4', '5'].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerLock('SCREENSHOT_ATTEMPT');
+        return;
+      }
+
+      // DevTools Inspector shortcut: F12
+      if (e.key === 'F12' || e.keyCode === 123) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerLock('INSPECTOR_DEVTOOLS');
+        return;
+      }
+
+      // DevTools Inspector shortcut: Ctrl+Shift+I, J, C (or Mac equivalents)
+      if (isCtrlOrMeta && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerLock('INSPECTOR_DEVTOOLS');
+        return;
+      }
+
+      // View Source shortcut: Ctrl+U
+      if (isCtrlOrMeta && (e.key === 'U' || e.key === 'u')) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerLock('INSPECTOR_DEVTOOLS');
+        return;
+      }
+    };
+
+    const handleSecurityKeyUp = (e) => {
+      if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
+        triggerLock('SCREENSHOT_ATTEMPT');
+      }
+    };
+
+    // 6. Docked DevTools dimension inspection detector
+    const checkDevTools = () => {
+      const threshold = 160;
+      const widthDiff = window.outerWidth - window.innerWidth > threshold;
+      const heightDiff = window.outerHeight - window.innerHeight > threshold;
+      if (widthDiff || heightDiff) {
+        triggerLock('INSPECTOR_DEVTOOLS');
+      }
+    };
+    const devtoolsInterval = setInterval(checkDevTools, 800);
+
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    // Initial check when OSProvider mounts
-    if (!document.fullscreenElement) {
-      dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: false });
-      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: true });
-    } else {
-      dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: true });
-      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: false });
-    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('keydown', handleSecurityKeyDown, true);
+    window.addEventListener('keyup', handleSecurityKeyUp, true);
 
     return () => {
+      clearInterval(devtoolsInterval);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('keydown', handleSecurityKeyDown, true);
+      window.removeEventListener('keyup', handleSecurityKeyUp, true);
     };
   }, []);
 
@@ -165,6 +292,8 @@ export function OSProvider({ children, teamData, onReturnToHub, round1State, set
     toggleMute,
     requestFullscreen,
     dismissExitBanner,
+    triggerLock,
+    unlockGate,
     onReturnToHub,
     round1State: round1State || null,
     setRound1State: setRound1State || (() => {})
