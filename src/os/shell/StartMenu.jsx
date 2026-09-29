@@ -7,7 +7,14 @@ import {
   LogOut,
   Shield,
   Layers,
-  HelpCircle
+  Settings,
+  RefreshCw,
+  Info,
+  QrCode,
+  Image as ImageIcon,
+  BarChart2,
+  GitCompare,
+  Volume2
 } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
 import { APP_REGISTRY } from '../apps/registry.js';
@@ -29,6 +36,14 @@ export function StartMenu() {
       case 'Terminal': return <Terminal size={20} className="start-app-icon" />;
       case 'Folder': return <Folder size={20} className="start-app-icon folder" />;
       case 'FileText': return <FileText size={20} className="start-app-icon text" />;
+      case 'Settings': return <Settings size={20} className="start-app-icon settings" />;
+      case 'RefreshCw': return <RefreshCw size={20} className="start-app-icon text" />;
+      case 'Info': return <Info size={20} className="start-app-icon" />;
+      case 'QrCode': return <QrCode size={20} className="start-app-icon text" />;
+      case 'Image': return <ImageIcon size={20} className="start-app-icon folder" />;
+      case 'BarChart2': return <BarChart2 size={20} className="start-app-icon" />;
+      case 'GitCompare': return <GitCompare size={20} className="start-app-icon text" />;
+      case 'Volume2': return <Volume2 size={20} className="start-app-icon settings" />;
       default: return <Layers size={20} className="start-app-icon" />;
     }
   };
@@ -57,7 +72,7 @@ export function StartMenu() {
 
       {/* Main Apps Area */}
       <div className="start-menu-content">
-        <div className="start-section-title">APPLICATIONS</div>
+        <div className="start-section-title">APPLICATIONS & TOOLS</div>
         <div className="start-apps-list">
           {filteredApps.map(app => (
             <button

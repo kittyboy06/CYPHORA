@@ -1,0 +1,187 @@
+.metadata-inspector-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  padding: 1.2rem;
+  gap: 1rem;
+  box-sizing: border-box;
+}
+
+.inspector-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.8rem;
+}
+
+.title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #79c0ff;
+}
+
+.inspector-sub {
+  margin: 0.2rem 0 0 0;
+  font-size: 0.82rem;
+  opacity: 0.7;
+}
+
+.inspector-controls {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+  min-width: 200px;
+}
+
+.control-group label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #8b949e;
+}
+
+.inspector-select {
+  background: #161b22;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.inspect-btn {
+  background: #1f6feb;
+  color: #ffffff;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.inspect-btn:hover {
+  background: #388bfd;
+}
+
+.upload-btn-wrapper input {
+  display: none;
+}
+
+.upload-label {
+  background: #21262d;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  padding: 0.5rem 0.85rem;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.upload-label:hover {
+  background: #30363d;
+}
+
+.metadata-results {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.metadata-results h3 {
+  margin: 0;
+  font-size: 0.88rem;
+  letter-spacing: 0.08rem;
+  color: #79c0ff;
+  border-bottom: 1px solid #30363d;
+  padding-bottom: 0.5rem;
+}
+
+.meta-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.85rem;
+}
+
+.meta-row .key {
+  color: #8b949e;
+}
+
+.meta-row .val {
+  color: #c9d1d9;
+  font-weight: 500;
+}
+
+.meta-row.highlight-row {
+  background: rgba(121, 192, 255, 0.1);
+  border: 1px solid rgba(121, 192, 255, 0.3);
+  border-radius: 4px;
+}
+
+.meta-row .val.highlight {
+  color: #7ee787;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.meta-action-bar {
+  margin-top: 0.6rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.submit-clue-btn {
+  background: #238636;
+  color: #ffffff;
+  border: none;
+  padding: 0.55rem 1.1rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.submit-clue-btn:hover {
+  background: #2ea043;
+}
+
+.meta-status-msg {
+  color: #7ee787;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: right;
+}

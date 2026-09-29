@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Terminal,
   Folder,
@@ -7,7 +7,8 @@ import {
   VolumeX,
   Wifi,
   AppWindow,
-  Compass
+  Compass,
+  Settings
 } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
 
@@ -20,26 +21,16 @@ export function Taskbar() {
     isStartMenuOpen,
     toggleStartMenu,
     isMuted,
-    toggleMute
+    toggleMute,
+    round1State
   } = useOS();
-
-  const [time, setTime] = useState('');
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const getTaskIcon = (appId) => {
     switch (appId) {
       case 'terminal': return <Terminal size={15} />;
       case 'file-manager': return <Folder size={15} />;
       case 'text-editor': return <FileText size={15} />;
+      case 'settings': return <Settings size={15} />;
       default: return <AppWindow size={15} />;
     }
   };
@@ -99,7 +90,7 @@ export function Taskbar() {
         </div>
 
         <div className="tray-clock">
-          <span>{time}</span>
+          <span>{round1State?.simulatedClock?.replace('CYPHORA-EXPEDITION-', '').replace('-', ' ') || 'UNSYNCED'}</span>
         </div>
       </div>
     </footer>

@@ -1,5 +1,6 @@
 /**
- * Default Virtual Filesystem (VFS) tree for CYPHORA OS Navigator
+ * Canonical Virtual Filesystem (VFS) tree for CYPHORA OS Navigator
+ * Configured for Round 1 Multi-App Technical Investigation Challenge (Tasks 1-12)
  */
 
 export const INITIAL_VFS = {
@@ -26,10 +27,10 @@ export const INITIAL_VFS = {
     parentId: 'desktop',
     path: '/Desktop/welcome.txt',
     mimeType: 'text/plain',
-    size: 420,
+    size: 512,
     content: `================================================
-CYPHORA EXPEDITION // OS NAVIGATOR TERMINAL
-STAGE 1: SYSTEM RECONNAISSANCE
+CYPHORA EXPEDITION // WORKSTATION TERMINAL
+ROUND 1: OS NAVIGATOR MULTI-APP SYSTEM
 ================================================
 
 Explorer,
@@ -37,41 +38,30 @@ Explorer,
 Welcome to the internal workstation terminal. You have accessed
 the forward relay system.
 
-Your mission in Stage 1 is to navigate the workstation, inspect
-encrypted system logs, and operate the terminal interpreter.
+Applications Available:
+1. Universal Converter — Multi-step data format transformer
+2. Metadata Inspector — Inspect hidden EXIF & file properties
+3. QR Scanner — Scan machine-readable codes & payloads
+4. Image Inspector — Examine visual dimensions & pixel data
+5. Text Analyzer — Analyze word frequency & line patterns
+6. File Comparison Tool — Identify document differences
+7. File Manager — Navigate folders & inspect file properties
+8. Terminal — Command line filesystem interaction
+9. Text Editor — Open and read text documents
 
-Tools at your disposal:
-1. File Manager: Explore visual directory trees.
-2. Terminal: Execute reconnaissance commands (ls, cat, cd, etc.).
-3. Text Editor: Read and draft decoded communications.
-
-Tip: Some system files are concealed. The terminal interpreter
-may reveal what the visual explorer conceals.
-
-Status: WORKSTATION SYNCHRONIZED
+Status: WORKSTATION OPERATIONAL
 `,
     updatedAt: new Date().toISOString()
   },
-  '/Desktop/instructions.txt': {
-    id: 'file_instructions',
-    name: 'instructions.txt',
+  '/Desktop/message.txt': {
+    id: 'file_desktop_message',
+    name: 'message.txt',
     type: 'file',
     parentId: 'desktop',
-    path: '/Desktop/instructions.txt',
+    path: '/Desktop/message.txt',
     mimeType: 'text/plain',
-    size: 260,
-    content: `SYSTEM DIRECTIVES:
--------------------
-1. Use standard CLI navigation:
-   - 'ls' to list directory entries
-   - 'ls -a' to display concealed items
-   - 'cd <directory>' to traverse folders
-   - 'cat <file>' to print file contents
-   - 'clear' to reset terminal view
-
-2. Double click any text document to open in Text Editor.
-3. Keep track of coordinates found in system records.
-`,
+    size: 40,
+    content: `01001000 01001001 01000100 01000101`,
     updatedAt: new Date().toISOString()
   },
   '/Documents': {
@@ -82,61 +72,233 @@ Status: WORKSTATION SYNCHRONIZED
     path: '/Documents',
     updatedAt: new Date().toISOString()
   },
-  '/Documents/mission_briefing.txt': {
-    id: 'file_mission',
-    name: 'mission_briefing.txt',
+  '/Documents/binary_message.txt': {
+    id: 'file_binary_message',
+    name: 'binary_message.txt',
     type: 'file',
     parentId: 'documents',
-    path: '/Documents/mission_briefing.txt',
+    path: '/Documents/binary_message.txt',
     mimeType: 'text/plain',
-    size: 340,
-    content: `CYPHORA DISPATCH // SECTOR 7G
-Subject: Forward Relay Outpost Assessment
-
-Telemetry from the perimeter relay has gone silent.
-The expedition command requires all workstations to verify
-integrity before the gate can unlock Stage 2.
-
-Observe system logs under /System and check the archive.
+    size: 40,
+    content: `01001000 01001001 01000100 01000101`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/access.log': {
+    id: 'file_access_log',
+    name: 'access.log',
+    type: 'file',
+    parentId: 'documents',
+    path: '/Documents/access.log',
+    mimeType: 'text/plain',
+    size: 140,
+    content: `[04:12] BLUE
+[04:07] RED
+[04:19] GREEN
+[04:03] YELLOW
+[04:15] WHITE
 `,
     updatedAt: new Date().toISOString()
   },
-  '/Documents/coordinates.log': {
-    id: 'file_coordinates',
-    name: 'coordinates.log',
+  '/Documents/pattern_log.txt': {
+    id: 'file_pattern_log',
+    name: 'pattern_log.txt',
     type: 'file',
     parentId: 'documents',
-    path: '/Documents/coordinates.log',
+    path: '/Documents/pattern_log.txt',
     mimeType: 'text/plain',
     size: 180,
-    content: `[SECTOR TELEMETRY LOG]
-RELAY_ALPHA:  37.7749 N, 122.4194 W [ONLINE]
-RELAY_BETA:   51.5074 N,  0.1278 W [OFFLINE]
-RELAY_GAMMA:  35.6762 N, 139.6503 E [ONLINE]
-GATE_VECTOR:  CYPHORA-994-OMEGA
+    content: `ALPHA
+BETA
+GAMMA
+ALPHA
+DELTA
+ALPHA
+BETA
 `,
     updatedAt: new Date().toISOString()
   },
-  '/Documents/archive': {
-    id: 'archive_dir',
-    name: 'archive',
-    type: 'dir',
+  '/Documents/message_old.txt': {
+    id: 'file_message_old',
+    name: 'message_old.txt',
+    type: 'file',
     parentId: 'documents',
-    path: '/Documents/archive',
+    path: '/Documents/message_old.txt',
+    mimeType: 'text/plain',
+    size: 240,
+    content: `[CYPHORA TRANSMISSION LOG v1.0]
+STATUS: ONLINE
+RETRY: 3
+KEY_VAL: 8492
+ENCLAVE_ID: EXPEDITION-ALPHA
+END_LOG
+`,
     updatedAt: new Date().toISOString()
   },
-  '/Documents/archive/old_comm.txt': {
-    id: 'file_old_comm',
-    name: 'old_comm.txt',
+  '/Documents/message_new.txt': {
+    id: 'file_message_new',
+    name: 'message_new.txt',
     type: 'file',
-    parentId: 'archive_dir',
-    path: '/Documents/archive/old_comm.txt',
+    parentId: 'documents',
+    path: '/Documents/message_new.txt',
     mimeType: 'text/plain',
-    size: 210,
-    content: `[TRANSCRIPT - 03:14:22]
-Relay Operator: Signal degradation confirmed.
-Control: Switch to local autonomous OS mode.
-Relay Operator: Initiating OS Navigator protocol.
+    size: 240,
+    content: `[CYPHORA TRANSMISSION LOG v1.0]
+STATUS: ONLINE
+RETRY: 3
+KEY_VAL: 9941
+ENCLAVE_ID: EXPEDITION-ALPHA
+END_LOG
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/data.txt': {
+    id: 'file_data_txt',
+    name: 'data.txt',
+    type: 'file',
+    parentId: 'documents',
+    path: '/Documents/data.txt',
+    mimeType: 'text/plain',
+    size: 30,
+    content: `01001001 01001110 01001011`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/binary_chain.txt': {
+    id: 'file_binary_chain',
+    name: 'binary_chain.txt',
+    type: 'file',
+    parentId: 'documents',
+    path: '/Documents/binary_chain.txt',
+    mimeType: 'text/plain',
+    size: 30,
+    content: `01001001 01001110 01001011`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/REPORT_17.txt': {
+    id: 'file_report_17',
+    name: 'REPORT_17.txt',
+    type: 'file',
+    parentId: 'documents',
+    path: '/Documents/REPORT_17.txt',
+    mimeType: 'text/plain',
+    size: 120,
+    content: `[EXPEDITION SECURITY REPORT #17]
+STATION_STATUS: OFFLINE
+The access code is 4812.
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/hex_stream.txt': {
+    id: 'file_hex_stream',
+    name: 'hex_stream.txt',
+    type: 'file',
+    parentId: 'documents',
+    path: '/Documents/hex_stream.txt',
+    mimeType: 'text/plain',
+    size: 20,
+    content: `48 45 4C 50`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/clues': {
+    id: 'dir_clues',
+    name: 'clues',
+    type: 'dir',
+    parentId: 'documents',
+    path: '/Documents/clues',
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/clues/numbers.txt': {
+    id: 'file_clues_numbers',
+    name: 'numbers.txt',
+    type: 'file',
+    parentId: 'dir_clues',
+    path: '/Documents/clues/numbers.txt',
+    mimeType: 'text/plain',
+    size: 80,
+    content: `17
+42
+17
+91
+63
+42
+17
+28
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/numbers.txt': {
+    id: 'file_numbers',
+    name: 'numbers.txt',
+    type: 'file',
+    parentId: 'documents',
+    path: '/Documents/numbers.txt',
+    mimeType: 'text/plain',
+    size: 80,
+    content: `17
+42
+17
+91
+63
+42
+17
+28
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/alpha.txt': {
+    id: 'file_alpha',
+    name: 'alpha.txt',
+    type: 'file',
+    parentId: 'documents',
+    path: '/Documents/alpha.txt',
+    mimeType: 'text/plain',
+    size: 160,
+    content: `[LOG RECORD ARCHIVE ALPHA]
+SYS_TIME: 10:45:00
+CHECKSUM: OK
+CHANGED_FIELD: 00 00 00 00
+END_RECORD
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/beta.txt': {
+    id: 'file_beta',
+    name: 'beta.txt',
+    type: 'file',
+    parentId: 'documents',
+    path: '/Documents/beta.txt',
+    mimeType: 'text/plain',
+    size: 160,
+    content: `[LOG RECORD ARCHIVE ALPHA]
+SYS_TIME: 10:45:00
+CHECKSUM: OK
+CHANGED_FIELD: 4A 55 4D 50
+END_RECORD
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/Archive_04.txt': {
+    id: 'file_archive_04',
+    name: 'Archive_04.txt',
+    type: 'file',
+    parentId: 'documents',
+    path: '/Documents/Archive_04.txt',
+    mimeType: 'text/plain',
+    size: 110,
+    content: `[RECOVERED ARCHIVE RECORD #04]
+ENCODED_MESSAGE: 53 48 49 46 54
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/final_cipher.txt': {
+    id: 'file_final_cipher',
+    name: 'final_cipher.txt',
+    type: 'file',
+    parentId: 'documents',
+    path: '/Documents/final_cipher.txt',
+    mimeType: 'text/plain',
+    size: 90,
+    content: `[MASTER WORKSTATION CLEARANCE CIPHER]
+ENCODED_VALUE: 53 59 4D 50 4F
 `,
     updatedAt: new Date().toISOString()
   },
@@ -148,15 +310,15 @@ Relay Operator: Initiating OS Navigator protocol.
     path: '/Downloads',
     updatedAt: new Date().toISOString()
   },
-  '/Downloads/patch_v1.0.tar': {
-    id: 'file_patch',
-    name: 'patch_v1.0.tar',
+  '/Downloads/recovered.dat': {
+    id: 'file_recovered_dat',
+    name: 'recovered.dat',
     type: 'file',
     parentId: 'downloads',
-    path: '/Downloads/patch_v1.0.tar',
-    mimeType: 'application/octet-stream',
-    size: 1048576,
-    content: '[BINARY CONTENT — ENCRYPTED ARCHIVE]',
+    path: '/Downloads/recovered.dat',
+    mimeType: 'text/plain',
+    size: 20,
+    content: `48 45 4C 50`,
     updatedAt: new Date().toISOString()
   },
   '/Pictures': {
@@ -167,15 +329,127 @@ Relay Operator: Initiating OS Navigator protocol.
     path: '/Pictures',
     updatedAt: new Date().toISOString()
   },
-  '/Pictures/station_map.png': {
-    id: 'file_station_map',
-    name: 'station_map.png',
+  '/Pictures/expedition_photo.png': {
+    id: 'file_expedition_photo',
+    name: 'expedition_photo.png',
     type: 'file',
     parentId: 'pictures',
-    path: '/Pictures/station_map.png',
+    path: '/Pictures/expedition_photo.png',
     mimeType: 'image/png',
-    size: 2457600,
-    content: '[IMAGE FILE: STATION SCHEMATICS]',
+    author: 'Dr. Arlo Vance',
+    software: 'Expedition Cam v2',
+    description: 'Field Outpost Survey',
+    createdDate: '2026-09-24T09:12:00.000Z',
+    modifiedDate: '2026-09-24T10:15:00.000Z',
+    dimensions: '1920x1080',
+    size: 1845000,
+    content: '[IMAGE FILE: EXPEDITION PHOTO (Author: Dr. Arlo Vance)]',
+    updatedAt: new Date().toISOString()
+  },
+  '/Pictures/evidence.jpg': {
+    id: 'file_evidence_jpg',
+    name: 'evidence.jpg',
+    type: 'file',
+    parentId: 'pictures',
+    path: '/Pictures/evidence.jpg',
+    mimeType: 'image/jpeg',
+    author: 'Dr. Arlo Vance',
+    software: 'Field Camera',
+    description: 'REPORT_17',
+    dimensions: '1280x720',
+    size: 980000,
+    content: '[IMAGE FILE: EVIDENCE JPG (Author: Dr. Arlo Vance, Description: REPORT_17)]',
+    updatedAt: new Date().toISOString()
+  },
+  '/Pictures/poster.png': {
+    id: 'file_poster_png',
+    name: 'poster.png',
+    type: 'file',
+    parentId: 'pictures',
+    path: '/Pictures/poster.png',
+    mimeType: 'image/png',
+    qrPayload: 'SECTOR-7',
+    dimensions: '512x512',
+    size: 420000,
+    content: '[QR CODE IMAGE — PAYLOAD: SECTOR-7]',
+    updatedAt: new Date().toISOString()
+  },
+  '/Pictures/sector_qr.png': {
+    id: 'file_sector_qr',
+    name: 'sector_qr.png',
+    type: 'file',
+    parentId: 'pictures',
+    path: '/Pictures/sector_qr.png',
+    mimeType: 'image/png',
+    qrPayload: 'SECTOR-7',
+    dimensions: '512x512',
+    size: 420000,
+    content: '[QR CODE IMAGE — PAYLOAD: SECTOR-7]',
+    updatedAt: new Date().toISOString()
+  },
+  '/Pictures/archive_map.png': {
+    id: 'file_archive_map_png',
+    name: 'archive_map.png',
+    type: 'file',
+    parentId: 'pictures',
+    path: '/Pictures/archive_map.png',
+    mimeType: 'image/png',
+    qrPayload: '/Documents/clues/numbers.txt',
+    dimensions: '512x512',
+    size: 490000,
+    content: '[QR CODE IMAGE — PAYLOAD: /Documents/clues/numbers.txt]',
+    updatedAt: new Date().toISOString()
+  },
+  '/Pictures/location_qr.png': {
+    id: 'file_location_qr',
+    name: 'location_qr.png',
+    type: 'file',
+    parentId: 'pictures',
+    path: '/Pictures/location_qr.png',
+    mimeType: 'image/png',
+    qrPayload: '/Documents/numbers.txt',
+    dimensions: '512x512',
+    size: 490000,
+    content: '[QR CODE IMAGE — PAYLOAD: /Documents/numbers.txt]',
+    updatedAt: new Date().toISOString()
+  },
+  '/Pictures/photo.png': {
+    id: 'file_photo_png',
+    name: 'photo.png',
+    type: 'file',
+    parentId: 'pictures',
+    path: '/Pictures/photo.png',
+    mimeType: 'image/png',
+    author: 'ARCHIVIST',
+    software: 'Capture Pro',
+    description: 'ARCHIVE_04',
+    dimensions: '1920x1080',
+    size: 1650000,
+    content: '[IMAGE FILE: PHOTO PNG (Metadata Description: ARCHIVE_04)]',
+    updatedAt: new Date().toISOString()
+  },
+  '/.hidden': {
+    id: 'dir_hidden',
+    name: '.hidden',
+    type: 'dir',
+    parentId: 'root',
+    path: '/.hidden',
+    hidden: true,
+    updatedAt: new Date().toISOString()
+  },
+  '/.hidden/enclave_beacon.png': {
+    id: 'file_enclave_beacon',
+    name: 'enclave_beacon.png',
+    type: 'file',
+    parentId: 'dir_hidden',
+    path: '/.hidden/enclave_beacon.png',
+    mimeType: 'image/png',
+    hidden: true,
+    author: 'SYSTEM OPERATOR',
+    description: 'Beacon QR payload inside /System/logs/beacon_scan.png',
+    dimensions: '1024x1024',
+    size: 780000,
+    content: '[CONCEALED IMAGE FILE — METADATA DESCRIPTION: Beacon QR payload inside /System/logs/beacon_scan.png]',
     updatedAt: new Date().toISOString()
   },
   '/System': {
@@ -186,73 +460,37 @@ Relay Operator: Initiating OS Navigator protocol.
     path: '/System',
     updatedAt: new Date().toISOString()
   },
-  '/System/config.sys': {
-    id: 'file_config_sys',
-    name: 'config.sys',
-    type: 'file',
-    parentId: 'system',
-    path: '/System/config.sys',
-    mimeType: 'text/plain',
-    size: 190,
-    locked: true,
-    content: `KERNEL_VERSION=CYPHORA-OS-6.4.12
-SECURITY_LEVEL=STANDARD
-TERMINAL_INTERPRETER=BASH_COMPAT_V1
-NETWORK_STATUS=ONLINE_WEBSOCKET_LINKED
-STORAGE_BACKEND=BROWSER_INDEXED_VFS
-`,
-    updatedAt: new Date().toISOString()
-  },
-  '/System/kernel.log': {
-    id: 'file_kernel_log',
-    name: 'kernel.log',
-    type: 'file',
-    parentId: 'system',
-    path: '/System/kernel.log',
-    mimeType: 'text/plain',
-    size: 275,
-    content: `[0.000000] Booting CYPHORA OS Navigator v1.0.4
-[0.001240] Initializing VFS memory driver... OK
-[0.002810] Loading window manager compositor... OK
-[0.003920] Mounting /Desktop, /Documents, /System... OK
-[0.004100] Team session verified. Station ready.
-`,
-    updatedAt: new Date().toISOString()
-  },
-  '/System/.security_key': {
-    id: 'file_sec_key',
-    name: '.security_key',
-    type: 'file',
-    parentId: 'system',
-    path: '/System/.security_key',
-    mimeType: 'text/plain',
-    hidden: true,
-    size: 72,
-    content: `CYPHORA{VFS_SHADOW_KEY_8492_ALPHA}`,
-    updatedAt: new Date().toISOString()
-  },
-  '/Users': {
-    id: 'users',
-    name: 'Users',
+  '/System/logs': {
+    id: 'system_logs',
+    name: 'logs',
     type: 'dir',
-    parentId: 'root',
-    path: '/Users',
+    parentId: 'system',
+    path: '/System/logs',
     updatedAt: new Date().toISOString()
   },
-  '/Users/Navigator': {
-    id: 'user_navigator',
-    name: 'Navigator',
-    type: 'dir',
-    parentId: 'users',
-    path: '/Users/Navigator',
+  '/System/logs/sys_init.log': {
+    id: 'file_sys_init',
+    name: 'sys_init.log',
+    type: 'file',
+    parentId: 'system_logs',
+    path: '/System/logs/sys_init.log',
+    mimeType: 'text/plain',
+    size: 320,
+    content: `[SYSTEM INIT] Workstation booted successfully.`,
     updatedAt: new Date().toISOString()
   },
-  '/Trash': {
-    id: 'trash',
-    name: 'Trash',
-    type: 'dir',
-    parentId: 'root',
-    path: '/Trash',
+  '/System/logs/beacon_scan.png': {
+    id: 'file_beacon_scan',
+    name: 'beacon_scan.png',
+    type: 'file',
+    parentId: 'system_logs',
+    path: '/System/logs/beacon_scan.png',
+    mimeType: 'image/png',
+    qrPayload: '/Documents/final_cipher.txt',
+    dimensions: '512x512',
+    size: 450000,
+    content: '[BEACON SCAN QR IMAGE — PAYLOAD: /Documents/final_cipher.txt]',
     updatedAt: new Date().toISOString()
   }
 };
+

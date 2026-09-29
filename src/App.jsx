@@ -2,18 +2,29 @@ import { useState, useEffect, useRef } from 'react';
 import { Terminal, Users, X, ChevronRight, Shield } from 'lucide-react';
 import { BootScreen } from './os/boot/BootScreen.jsx';
 import { OSContainer } from './os/OSContainer.jsx';
+import { Prologue } from './components/Story/Prologue.jsx';
+import { eventBus } from './os/events/eventBus.js';
+import {
+  loadRound1State,
+  buildDefaultRound1State,
+  beginRound1,
+  processRound1Event,
+  persistRound1State,
+  updateRound1TimerFromNow,
+  formatCountdown,
+} from './round1/round1Engine.js';
 import './App.css';
 
 // Fallback explorer data if server is unreachable
 const EXPLORERS = [
-  { name: 'Team Cipher',  standing: '1st (350 pts)', status: 'active' },
-  { name: 'Team Vortex',  standing: '2nd (280 pts)', status: 'active' },
-  { name: 'Team Nexus',   standing: '3rd (220 pts)', status: 'active' },
+  { name: 'Team Cipher', standing: '1st (350 pts)', status: 'active' },
+  { name: 'Team Vortex', standing: '2nd (280 pts)', status: 'active' },
+  { name: 'Team Nexus', standing: '3rd (220 pts)', status: 'active' },
   { name: 'Team Phantom', standing: '4th (160 pts)', status: 'idle' },
-  { name: 'Team Glitch',  standing: '5th (120 pts)', status: 'idle' },
-  { name: 'Team Rogue',   standing: '6th (80 pts)',  status: 'idle' },
-  { name: 'Team Epoch',   standing: '7th (40 pts)',  status: 'idle' },
-  { name: 'Team Blaze',   standing: '8th (0 pts)',   status: 'idle' },
+  { name: 'Team Glitch', standing: '5th (120 pts)', status: 'idle' },
+  { name: 'Team Rogue', standing: '6th (80 pts)', status: 'idle' },
+  { name: 'Team Epoch', standing: '7th (40 pts)', status: 'idle' },
+  { name: 'Team Blaze', standing: '8th (0 pts)', status: 'idle' },
 ];
 
 const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
@@ -31,8 +42,10 @@ const formatOrdinal = (rank) => {
   return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`;
 };
 
+const normalizeTeamName = (name) => (name || '').trim().toLowerCase();
+
 function App() {
-  const [stage, setStage] = useState('initial'); // 'initial' | 'waking' | 'main' | 'os-boot' | 'os-desktop'
+  const [stage, setStage] = useState('initial');
   const [panelOpen, setPanelOpen] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [teamInput, setTeamInput] = useState('');
@@ -50,14 +63,39 @@ function App() {
     score: 0,
     isSelected: false,
   });
+  const [round1State, setRound1State] = useState(() => loadRound1State());
   const wakeTimerRef = useRef(null);
   const socketRef = useRef(null);
+
+  useEffect(() => {
+    persistRound1State(round1State);
+  }, [round1State]);
+
+  useEffect(() => {
+    const unsubscribe = eventBus.on('*', (event) => {
+      setRound1State(prev => processRound1Event(prev, event.event, event.payload));
+    });
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (!round1State.isTimerRunning || round1State.isExpired || round1State.round1Status === 'COMPLETED') {
+      return;
+    }
+
+    const tick = () => {
+      setRound1State(prev => updateRound1TimerFromNow(prev));
+    };
+
+    tick();
+    const intervalId = setInterval(tick, 1000);
+    return () => clearInterval(intervalId);
+  }, [round1State.isTimerRunning, round1State.isExpired, round1State.round1Status]);
 
   useEffect(() => {
     return () => { if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current); };
   }, []);
 
-  // Fetch initial leaderboard from real-time database via REST
   const fetchLeaderboard = async (currentTeamName) => {
     try {
       const res = await fetch(`${API_BASE}/api/teams/leaderboard`);
@@ -84,7 +122,6 @@ function App() {
   };
 
   useEffect(() => {
-    // Read from query params or localStorage
     const params = new URLSearchParams(window.location.search);
     const paramTeam = params.get('team');
     let savedTeam = '';
@@ -116,18 +153,15 @@ function App() {
     if (savedMember1) setMember1Input(savedMember1);
     if (savedMember2) setMember2Input(savedMember2);
 
-    // Immediate initial sync with real-time database
     fetchLeaderboard(initialName);
   }, []);
 
-  // Re-fetch whenever explorer panel is toggled
   useEffect(() => {
     if (panelOpen) {
       fetchLeaderboard();
     }
   }, [panelOpen]);
 
-  // Persistent Real-Time WebSocket Connection for all workstations
   useEffect(() => {
     let reconnectTimeout;
     let pingInterval;
@@ -141,11 +175,9 @@ function App() {
 
         socket.onopen = () => {
           setIsWsConnected(true);
-          // Send identify payload if team name is set
           if (teamData.name) {
             socket.send(JSON.stringify({ action: 'identify', team: teamData.name }));
           }
-          // Periodic ping / heartbeat every 25 seconds
           pingInterval = setInterval(() => {
             if (socket.readyState === WebSocket.OPEN) {
               socket.send(JSON.stringify({ action: 'ping' }));
@@ -205,6 +237,40 @@ function App() {
     setShowTeamModal(true);
   };
 
+  const completeRegistration = (finalName, finalPin, finalMember1, finalMember2) => {
+    localStorage.setItem('cyphora_team_name', finalName);
+    if (finalMember1) localStorage.setItem('cyphora_member1', finalMember1);
+    if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
+    if (finalPin) localStorage.setItem('cyphora_team_pin', finalPin);
+
+    setRound1State(previousState => {
+      const savedTeamId = normalizeTeamName(previousState.teamId);
+      const currentTeamName = normalizeTeamName(finalName);
+      const sameTeam = !savedTeamId
+        || savedTeamId === currentTeamName
+        || savedTeamId.startsWith(`${currentTeamName}-`);
+      return sameTeam ? previousState : buildDefaultRound1State();
+    });
+
+    setTeamData(prev => ({
+      ...prev,
+      name: finalName,
+      member1: finalMember1,
+      member2: finalMember2,
+      standing: prev.standing,
+      score: prev.score
+    }));
+
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ action: 'identify', team: finalName }));
+    }
+
+    setShowTeamModal(false);
+    setStage('waking');
+    if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current);
+    wakeTimerRef.current = setTimeout(() => setStage('prologue'), 6200);
+  };
+
   const handleTeamSubmit = async (e) => {
     if (e) e.preventDefault();
     setAuthError('');
@@ -224,42 +290,48 @@ function App() {
           member2: finalMember2
         })
       });
+
       if (!res.ok) {
-        const err = await res.json();
-        setAuthError(err.detail || 'Authentication failed');
-        return;
-      }
-      const data = await res.json();
-      localStorage.setItem('cyphora_token', data.token);
-      localStorage.setItem('cyphora_team_name', data.team.name);
-      localStorage.setItem('cyphora_team_pin', finalPin);
-      if (finalMember1) localStorage.setItem('cyphora_member1', finalMember1);
-      if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
+        let message = 'Authentication failed';
+        try {
+          const err = await res.json();
+          message = err.detail || message;
+        } catch {
+          try {
+            const text = await res.text();
+            if (text) message = text;
+          } catch {
+            // Ignore parse failures and continue in local/offline mode.
+          }
+        }
+        setAuthError(message);
+      } else {
+        const data = await res.json();
+        localStorage.setItem('cyphora_token', data.token);
+        localStorage.setItem('cyphora_team_name', data.team.name);
+        localStorage.setItem('cyphora_team_pin', finalPin);
+        if (finalMember1) localStorage.setItem('cyphora_member1', finalMember1);
+        if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
 
-      setTeamData(prev => ({
-        ...prev,
-        name: data.team.name,
-        member1: data.team.member1 || finalMember1,
-        member2: data.team.member2 || finalMember2,
-        standing: data.team.standing ? formatOrdinal(data.team.standing) : 'Unranked',
-        score: data.team.score
-      }));
+        setTeamData(prev => ({
+          ...prev,
+          name: data.team.name,
+          member1: data.team.member1 || finalMember1,
+          member2: data.team.member2 || finalMember2,
+          standing: data.team.standing ? formatOrdinal(data.team.standing) : 'Unranked',
+          score: data.team.score
+        }));
 
-      // Immediately identify to active WebSocket
-      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-        socketRef.current.send(JSON.stringify({ action: 'identify', team: data.team.name }));
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({ action: 'identify', team: data.team.name }));
+        }
       }
     } catch (err) {
-      // Offline fallback
-      localStorage.setItem('cyphora_team_name', finalName);
-      if (finalMember1) localStorage.setItem('cyphora_member1', finalMember1);
-      if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
       setTeamData(prev => ({ ...prev, name: finalName, member1: finalMember1, member2: finalMember2 }));
+      setAuthError('The server is unavailable. Continuing in offline mode.');
     }
 
-    setShowTeamModal(false);
-    setStage('waking');
-    wakeTimerRef.current = setTimeout(() => setStage('main'), 6000);
+    completeRegistration(finalName, finalPin, finalMember1, finalMember2);
   };
 
   const handleSkip = async () => {
@@ -301,13 +373,36 @@ function App() {
         }
       }
     } catch (err) {
-      localStorage.setItem('cyphora_team_name', finalName);
       setTeamData(prev => ({ ...prev, name: finalName }));
     }
 
-    setShowTeamModal(false);
-    setStage('waking');
-    wakeTimerRef.current = setTimeout(() => setStage('main'), 6000);
+    completeRegistration(finalName, finalPin, finalMember1, finalMember2);
+  };
+
+  const handleBeginExpedition = async () => {
+    let started;
+    try {
+      started = beginRound1(round1State, {
+        teamId: normalizeTeamName(teamData.name),
+        sessionId: `session-${Date.now()}`,
+        teamName: teamData.name
+      });
+      setRound1State(started);
+      setStage('os-boot');
+    } catch (error) {
+      console.error('[Round1] Failed to begin expedition', error);
+      setRound1State(loadRound1State());
+      setAuthError('The expedition state was repaired. Press BEGIN EXPEDITION again.');
+      return;
+    }
+
+    if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+      try {
+        await document.documentElement.requestFullscreen();
+      } catch (err) {
+        console.warn('[Round1] Fullscreen request denied', err);
+      }
+    }
   };
 
   const handleLevelClick = (level, unlocked) => {
@@ -433,6 +528,13 @@ function App() {
         </div>
       )}
 
+      {stage === 'prologue' && (
+        <Prologue
+          teamName={teamData.name}
+          onBeginExpedition={handleBeginExpedition}
+        />
+      )}
+
       {/* Main landing */}
       {stage === 'main' && (
         <>
@@ -534,19 +636,15 @@ function App() {
         </>
       )}
 
-      {/* Stage 1 Virtual OS Boot Screen */}
-      {stage === 'os-boot' && (
-        <BootScreen
-          teamName={teamData.name}
-          onComplete={() => setStage('os-desktop')}
-        />
-      )}
-
-      {/* Stage 1 Virtual OS Desktop Environment */}
-      {stage === 'os-desktop' && (
+      {/* Stage 1 Virtual OS (Boot & Desktop Environment) */}
+      {(stage === 'os-boot' || stage === 'os-desktop') && (
         <OSContainer
+          stage={stage}
+          setStage={setStage}
           teamData={teamData}
           onReturnToHub={() => setStage('main')}
+          round1State={round1State}
+          setRound1State={setRound1State}
         />
       )}
     </div>

@@ -5,17 +5,16 @@
   inset: 0;
   width: 100vw;
   height: 100vh;
-  background-color: #060a06;
+  background-color: #102116;
   background-image:
-    radial-gradient(ellipse at 50% 30%, rgba(223, 177, 37, 0.07) 0%, transparent 65%),
-    linear-gradient(rgba(8, 12, 8, 0.94), rgba(6, 10, 6, 0.98)),
-    url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1920&q=80');
+    linear-gradient(rgba(12, 35, 21, 0.12), rgba(5, 16, 11, 0.48)),
+    url('/bg-forest.jpg');
   background-size: cover;
   background-position: center;
   overflow: hidden;
-  user-select: none;
+  user-select: auto;
   font-family: 'Montserrat', sans-serif;
-  color: #eae0c8;
+  color: #edf5ef;
   z-index: 10000;
 }
 
@@ -28,8 +27,8 @@
   left: 0;
   right: 0;
   height: 38px;
-  background: rgba(14, 18, 12, 0.92);
-  border-bottom: 1px solid rgba(223, 177, 37, 0.25);
+  background: rgba(10, 26, 18, 0.72);
+  border-bottom: 1px solid rgba(151, 211, 174, 0.28);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -117,6 +116,10 @@
   align-items: center;
   gap: 0.6rem;
 }
+
+.hud-round1-timer { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.55rem; border-right: 1px solid rgba(223,177,37,0.25); color: #dfb125; }
+.hud-round1-label { color: #9b9d88; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08rem; }
+.hud-round1-value { min-width: 3.25rem; color: #f0d98b; font-family: 'Fira Code', monospace; font-size: 0.82rem; font-weight: 700; }
 
 .hud-clock {
   display: flex;
@@ -284,6 +287,7 @@
 .terminal-color { color: #98c379; }
 .folder-color { color: #dfb125; }
 .editor-color { color: #61afef; }
+.settings-color { color: #77a487; }
 .file-color { color: #e5c07b; }
 
 .desktop-icon-label {
@@ -568,6 +572,7 @@
 .start-app-icon { color: #98c379; }
 .start-app-icon.folder { color: #dfb125; }
 .start-app-icon.text { color: #61afef; }
+.start-app-icon.settings { color: #77a487; }
 
 .start-app-info {
   display: flex;

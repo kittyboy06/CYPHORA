@@ -51,12 +51,26 @@ export function osReducer(state, action) {
         }
       }
 
-      // Stagger new window position
-      const offset = (state.windows.length % 6) * 28;
-      const initialWidth = defaultBounds?.width || 680;
-      const initialHeight = defaultBounds?.height || 480;
-      const initialX = Math.max(40, (window.innerWidth - initialWidth) / 2 + offset);
-      const initialY = Math.max(60, (window.innerHeight - initialHeight) / 2 + offset - 40);
+      // Cascade windows through the safe workspace below the HUD and above the taskbar.
+      const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1366;
+      const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 768;
+      const safeTop = 64;
+      const safeBottom = 72;
+      const cascadeIndex = state.windows.filter(win => !win.isMinimized).length;
+      const initialWidth = Math.max(280, Math.min(defaultBounds?.width || 760, viewportWidth - 48));
+      const initialHeight = Math.max(220, Math.min(defaultBounds?.height || 500, viewportHeight - safeTop - safeBottom - 24));
+
+      let initialX, initialY;
+      if (appId === 'terminal') {
+        initialX = 40;
+        initialY = 70;
+      } else if (appId === 'file-manager') {
+        initialX = 140;
+        initialY = 95;
+      } else {
+        initialX = Math.max(24, Math.min(viewportWidth - initialWidth - 360, 60 + cascadeIndex * 50));
+        initialY = Math.max(safeTop, Math.min(viewportHeight - initialHeight - safeBottom, 80 + cascadeIndex * 35));
+      }
 
       const newWindow = {
         id: `win_${appId}_${Date.now()}`,
@@ -190,8 +204,7 @@ export function osReducer(state, action) {
     case OS_ACTIONS.SET_FULLSCREEN: {
       return {
         ...state,
-        isFullscreen: action.payload,
-        showExitBanner: !action.payload
+        isFullscreen: action.payload
       };
     }
 

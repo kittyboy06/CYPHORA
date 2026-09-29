@@ -13,50 +13,61 @@ import {
   RefreshCw,
   HardDrive,
   Trash2,
-  Lock
+  Lock,
+  Compass,
+  Eye,
+  Info,
+  X
 } from 'lucide-react';
 import { useOS } from '../../state/OSContext.jsx';
 import './FileManagerApp.css';
 
 export function FileManagerApp() {
   const { vfs, eventBus, openApp } = useOS();
-  const [currentPath, setCurrentPath] = useState('/Desktop');
-  const [history, setHistory] = useState(['/Desktop']);
+  const [currentPath, setCurrentPath] = useState('/');
+  const [history, setHistory] = useState(['/']);
   const [historyIdx, setHistoryIdx] = useState(0);
   const [items, setItems] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+  const [viewMode, setViewMode] = useState('grid');
+  const [showHidden, setShowHidden] = useState(false);
+  const [showPropertiesModal, setShowPropertiesModal] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
-  const loadDirectory = (targetPath) => {
+  const loadDirectory = (targetPath, includeHidden = showHidden) => {
     try {
-      const entries = vfs.listDir(targetPath, true);
+      const entries = vfs.listDir(targetPath, includeHidden);
       setItems(entries);
       setCurrentPath(targetPath);
       setSelectedItem(null);
       setStatusMessage('');
       eventBus.emit('DIR_CHANGED', { to: targetPath, appId: 'file-manager' });
+
+      if (targetPath.includes('.hidden') || targetPath.includes('.archive')) {
+        eventBus.emit('HIDDEN_FOLDER_FOUND', {
+          folderPath: targetPath
+        });
+      }
     } catch (err) {
       setStatusMessage(`Error: ${err.message}`);
     }
   };
 
   useEffect(() => {
-    loadDirectory(currentPath);
-  }, [currentPath]);
+    loadDirectory(currentPath, showHidden);
+  }, [currentPath, showHidden]);
 
-  // Listen to file creations or deletions
   useEffect(() => {
-    const unsubCreated = eventBus.on('FILE_CREATED', () => loadDirectory(currentPath));
-    const unsubDeleted = eventBus.on('FILE_DELETED', () => loadDirectory(currentPath));
-    const unsubReset = eventBus.on('VFS_RESET', () => loadDirectory('/Desktop'));
+    const unsubCreated = eventBus.on('FILE_CREATED', () => loadDirectory(currentPath, showHidden));
+    const unsubDeleted = eventBus.on('FILE_DELETED', () => loadDirectory(currentPath, showHidden));
+    const unsubReset = eventBus.on('VFS_RESET', () => loadDirectory('/', showHidden));
 
     return () => {
       unsubCreated();
       unsubDeleted();
       unsubReset();
     };
-  }, [currentPath]);
+  }, [currentPath, showHidden]);
 
   const navigateTo = (path) => {
     if (path === currentPath) return;
@@ -64,14 +75,14 @@ export function FileManagerApp() {
     newHistory.push(path);
     setHistory(newHistory);
     setHistoryIdx(newHistory.length - 1);
-    loadDirectory(path);
+    loadDirectory(path, showHidden);
   };
 
   const handleBack = () => {
     if (historyIdx > 0) {
       const prevIdx = historyIdx - 1;
       setHistoryIdx(prevIdx);
-      loadDirectory(history[prevIdx]);
+      loadDirectory(history[prevIdx], showHidden);
     }
   };
 
@@ -79,7 +90,7 @@ export function FileManagerApp() {
     if (historyIdx < history.length - 1) {
       const nextIdx = historyIdx + 1;
       setHistoryIdx(nextIdx);
-      loadDirectory(history[nextIdx]);
+      loadDirectory(history[nextIdx], showHidden);
     }
   };
 
@@ -90,33 +101,58 @@ export function FileManagerApp() {
     navigateTo(parentPath);
   };
 
+  const handleToggleHidden = () => {
+    const nextHidden = !showHidden;
+    setShowHidden(nextHidden);
+    loadDirectory(currentPath, nextHidden);
+    if (nextHidden) {
+      setStatusMessage('✓ Showing hidden directories (e.g. /.hidden/)');
+      setTimeout(() => setStatusMessage(''), 2500);
+    }
+  };
+
+  const handleInspectProperties = (item = selectedItem) => {
+    if (!item) return;
+    setSelectedItem(item);
+    setShowPropertiesModal(true);
+
+    eventBus.emit('FILE_PROPERTIES_VIEWED', {
+      filePath: item.path,
+      fileName: item.name,
+      size: item.size,
+      modifiedAt: item.updatedAt
+    });
+  };
+
   const handleItemDoubleClick = (item) => {
     if (item.type === 'dir') {
       navigateTo(item.path);
     } else {
-      // Open in Text Editor if text/plain or recognized text extension
       const isText = item.mimeType === 'text/plain' ||
         item.name.endsWith('.txt') ||
         item.name.endsWith('.log') ||
-        item.name.endsWith('.sys');
+        item.name.endsWith('.dat') ||
+        item.name.endsWith('.cfg');
 
       if (isText) {
         openApp('text-editor', {
           title: `Text Editor - ${item.name}`,
           meta: { filePath: item.path }
         });
+      } else if (item.name.endsWith('.png') || item.name.endsWith('.jpg')) {
+        openApp('metadata-inspector');
       } else {
-        alert(`Binary/unsupported file preview: ${item.name} (${item.mimeType || 'unknown format'})`);
+        handleInspectProperties(item);
       }
     }
   };
 
   const getFileIcon = (item) => {
     if (item.type === 'dir') return <Folder size={32} className="fm-icon-folder" />;
-    if (item.mimeType?.startsWith('image/') || item.name.endsWith('.png')) {
+    if (item.mimeType?.startsWith('image/') || item.name.endsWith('.png') || item.name.endsWith('.jpg')) {
       return <ImageIcon size={32} className="fm-icon-image" />;
     }
-    if (item.name.endsWith('.txt') || item.name.endsWith('.log')) {
+    if (item.name.endsWith('.txt') || item.name.endsWith('.log') || item.name.endsWith('.dat') || item.name.endsWith('.cfg')) {
       return <FileText size={32} className="fm-icon-text" />;
     }
     return <File size={32} className="fm-icon-file" />;
@@ -128,10 +164,9 @@ export function FileManagerApp() {
     { name: 'Downloads', path: '/Downloads', icon: <Folder size={16} /> },
     { name: 'Pictures', path: '/Pictures', icon: <ImageIcon size={16} /> },
     { name: 'System', path: '/System', icon: <Lock size={16} /> },
-    { name: 'Trash', path: '/Trash', icon: <Trash2 size={16} /> },
+    { name: 'Hidden Archive', path: '/.hidden', icon: <Folder size={16} className="hidden-link" /> }
   ];
 
-  // Breadcrumbs generator
   const pathParts = currentPath.split('/').filter(Boolean);
 
   return (
@@ -139,40 +174,21 @@ export function FileManagerApp() {
       {/* Top toolbar */}
       <div className="fm-toolbar">
         <div className="fm-nav-controls">
-          <button
-            className="fm-btn"
-            onClick={handleBack}
-            disabled={historyIdx <= 0}
-            title="Back"
-          >
+          <button className="fm-btn" onClick={handleBack} disabled={historyIdx <= 0} title="Back">
             <ArrowLeft size={16} />
           </button>
-          <button
-            className="fm-btn"
-            onClick={handleForward}
-            disabled={historyIdx >= history.length - 1}
-            title="Forward"
-          >
+          <button className="fm-btn" onClick={handleForward} disabled={historyIdx >= history.length - 1} title="Forward">
             <ArrowRight size={16} />
           </button>
-          <button
-            className="fm-btn"
-            onClick={handleUp}
-            disabled={currentPath === '/'}
-            title="Up Directory"
-          >
+          <button className="fm-btn" onClick={handleUp} disabled={currentPath === '/'} title="Up Directory">
             <ArrowUp size={16} />
           </button>
-          <button
-            className="fm-btn"
-            onClick={() => loadDirectory(currentPath)}
-            title="Refresh"
-          >
+          <button className="fm-btn" onClick={() => loadDirectory(currentPath, showHidden)} title="Refresh">
             <RefreshCw size={15} />
           </button>
         </div>
 
-        {/* Breadcrumb address bar */}
+        {/* Address bar */}
         <div className="fm-breadcrumb-bar">
           <button className="fm-crumb root-crumb" onClick={() => navigateTo('/')}>
             root
@@ -193,22 +209,33 @@ export function FileManagerApp() {
           })}
         </div>
 
-        {/* View mode toggle */}
-        <div className="fm-view-toggle">
+        {/* Hidden toggle & View mode */}
+        <div className="fm-right-tools">
           <button
-            className={`fm-btn ${viewMode === 'grid' ? 'active-mode' : ''}`}
-            onClick={() => setViewMode('grid')}
-            title="Grid View"
+            className={`fm-btn hidden-toggle-btn ${showHidden ? 'active' : ''}`}
+            onClick={handleToggleHidden}
+            title="Toggle Hidden Files & Folders"
           >
-            <LayoutGrid size={16} />
+            <Eye size={15} />
+            <span>{showHidden ? 'Hide Hidden' : 'Show Hidden'}</span>
           </button>
-          <button
-            className={`fm-btn ${viewMode === 'list' ? 'active-mode' : ''}`}
-            onClick={() => setViewMode('list')}
-            title="List View"
-          >
-            <List size={16} />
-          </button>
+
+          <div className="fm-view-toggle">
+            <button
+              className={`fm-btn ${viewMode === 'grid' ? 'active-mode' : ''}`}
+              onClick={() => setViewMode('grid')}
+              title="Grid View"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              className={`fm-btn ${viewMode === 'list' ? 'active-mode' : ''}`}
+              onClick={() => setViewMode('list')}
+              title="List View"
+            >
+              <List size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -232,17 +259,18 @@ export function FileManagerApp() {
         {/* Files content pane */}
         <div className="fm-content-pane">
           {statusMessage ? (
-            <div className="fm-error-state">{statusMessage}</div>
+            <div className="fm-info-state">{statusMessage}</div>
           ) : items.length === 0 ? (
             <div className="fm-empty-state">This directory is empty</div>
           ) : viewMode === 'grid' ? (
             <div className="fm-grid-view">
               {items.map(item => {
                 const isSelected = selectedItem?.path === item.path;
+                const isHidden = item.hidden || item.name.startsWith('.');
                 return (
                   <div
                     key={item.path}
-                    className={`fm-grid-item ${isSelected ? 'selected' : ''}`}
+                    className={`fm-grid-item ${isSelected ? 'selected' : ''} ${isHidden ? 'hidden-item' : ''}`}
                     onClick={() => setSelectedItem(item)}
                     onDoubleClick={() => handleItemDoubleClick(item)}
                   >
@@ -264,10 +292,11 @@ export function FileManagerApp() {
               </div>
               {items.map(item => {
                 const isSelected = selectedItem?.path === item.path;
+                const isHidden = item.hidden || item.name.startsWith('.');
                 return (
                   <div
                     key={item.path}
-                    className={`fm-list-row ${isSelected ? 'selected' : ''}`}
+                    className={`fm-list-row ${isSelected ? 'selected' : ''} ${isHidden ? 'hidden-item' : ''}`}
                     onClick={() => setSelectedItem(item)}
                     onDoubleClick={() => handleItemDoubleClick(item)}
                   >
@@ -277,7 +306,7 @@ export function FileManagerApp() {
                     </span>
                     <span className="col-type">{item.type === 'dir' ? 'Folder' : (item.mimeType || 'File')}</span>
                     <span className="col-size">{item.type === 'dir' ? '--' : `${item.size || 0} B`}</span>
-                    <span className="col-date">{new Date(item.updatedAt || Date.now()).toLocaleDateString()}</span>
+                    <span className="col-date">{new Date(item.updatedAt || Date.now()).toLocaleTimeString()}</span>
                   </div>
                 );
               })}
@@ -286,13 +315,43 @@ export function FileManagerApp() {
         </div>
       </div>
 
+      {/* File Properties Modal */}
+      {showPropertiesModal && selectedItem && (
+        <div className="fm-modal-backdrop" onClick={() => setShowPropertiesModal(false)}>
+          <div className="fm-properties-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">
+                <Info size={16} />
+                <span>File Properties — {selectedItem.name}</span>
+              </div>
+              <button className="close-btn" onClick={() => setShowPropertiesModal(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="prop-row"><span>File Name:</span><strong>{selectedItem.name}</strong></div>
+              <div className="prop-row"><span>Path:</span><strong>{selectedItem.path}</strong></div>
+              <div className="prop-row"><span>Exact Size:</span><strong className="size-val">{selectedItem.size || 4096} bytes</strong></div>
+              <div className="prop-row"><span>MIME Type:</span><strong>{selectedItem.mimeType || 'text/plain'}</strong></div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Status footer bar */}
       <div className="fm-footer">
         <span>{items.length} item{items.length === 1 ? '' : 's'}</span>
         {selectedItem && (
-          <span className="fm-selected-desc">
-            Selected: {selectedItem.name} ({selectedItem.type === 'dir' ? 'Folder' : `${selectedItem.size || 0} bytes`})
-          </span>
+          <div className="fm-footer-right">
+            <button className="inspect-prop-btn" onClick={() => handleInspectProperties(selectedItem)}>
+              <Info size={13} />
+              <span>Inspect Properties</span>
+            </button>
+            <span className="fm-selected-desc">
+              Selected: {selectedItem.name} ({selectedItem.type === 'dir' ? 'Folder' : `${selectedItem.size || 0} B`})
+            </span>
+          </div>
         )}
       </div>
     </div>
