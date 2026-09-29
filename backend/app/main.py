@@ -186,6 +186,11 @@ round1_dir = BASE_DIR / "round1"
 if round1_dir.exists():
     app.mount("/round1", StaticFiles(directory=round1_dir.as_posix(), html=True), name="round1")
 
+# Mount round2 static directory
+round2_dir = BASE_DIR / "round2"
+if round2_dir.exists():
+    app.mount("/round2", StaticFiles(directory=round2_dir.as_posix(), html=True), name="round2")
+
 from fastapi.responses import FileResponse, HTMLResponse
 
 @app.get("/admin")
