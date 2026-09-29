@@ -18,7 +18,7 @@
 ## 2. Core Assumptions
 
 1. **Virtual Filesystem**: Runs entirely in-memory as an indexed map with JSON serialization to `localStorage`.
-2. **Kiosk Policy**: Enters fullscreen automatically on transition; displays a non-punitive re-entry banner if fullscreen is exited.
+2. **Kiosk & Anti-Cheat Security Lock**: Enters fullscreen automatically. If fullscreen is exited, screenshots are taken (PrintScreen / Snipping Tool), tabs are switched / window blurred, or inspector / DevTools is opened, the OS triggers a hardcoded Blue Screen security lock. Only entering one of the 5 authorized 4-character recovery passwords (`CYPH`, `7492`, `ROOT`, `8080`, `NOVA`) restores fullscreen and resumes the game.
 3. **Sound**: Subtle audio cues for boot chime and window actions, with an immediate mute/toggle option in the system tray.
 4. **App Registry**: Extensible application registry pattern allowing seamless addition of future apps (Browser, Calculator, Task Manager).
 
@@ -165,5 +165,5 @@ Standard events emitted through `eventBus.emit(eventType, payload)`:
 ## 8. Resilience & Session Recovery
 
 * **Instant Hydration**: On component mount, the VFS loads from `localStorage.getItem('cyphora_vfs_data')`. If missing or invalid, it restores from `initialVFS`.
-* **State Preservation**: Active window positions, minimized states, and active working directory are stored to `cyphora_os_session`.
+* **State Preservation**: Active window positions, minimized states, and active working directory are stored in `sessionStorage` under `cyphora_os_session` (preserved during in-tab F5 page refreshes, automatically reset upon closing or reopening the browser/tab).
 * **Return to Hub**: The Start Menu and HUD feature a clean *"Return to Hub"* button that transitions `stage` back to `'main'` without clearing data.

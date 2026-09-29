@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ChevronUp, Maximize2, Minus, PartyPopper, CheckCircle, FileText, Folder } from 'lucide-react';
 import { useOS } from '../os/state/OSContext.jsx';
 import { SET_PRESENTATIONS, TASK_PRESENTATIONS, TASK_DEFINITIONS } from '../round1/taskContent.js';
+import { ROUND_1_SETS } from '../round1/round1Engine.js';
 import { TaskCompletionCelebration } from './TaskCompletionCelebration.jsx';
 import { VirtualFilePicker } from '../os/components/VirtualFilePicker.jsx';
 
@@ -91,7 +92,8 @@ export function TaskBoard({ round1State }) {
     hints: []
   };
 
-  const setPresentation = SET_PRESENTATIONS[activeTask.setId];
+  const currentSetId = activeTask.setId || ROUND_1_SETS.find(s => s.tasks.includes(activeTask.id))?.id || round1State?.activeSet || 'set1';
+  const setPresentation = SET_PRESENTATIONS[currentSetId];
   const requiredAssets = taskDef.requiredInput?.assets || [];
 
   const revealHint = () => {
@@ -284,12 +286,6 @@ export function TaskBoard({ round1State }) {
             <PartyPopper size={15} /> TASK {presentation.number} <Maximize2 size={13} />
           </button>
         )}
-
-        <div className="objective-journey-hud">
-          <span>JOURNEY</span>
-          <strong>{Math.round(round1State.journeyProgress || 0)}%</strong>
-          <small>{setPresentation?.label} — {setPresentation?.title}</small>
-        </div>
       </div>
 
       {celebratedTask && <TaskCompletionCelebration {...celebratedTask} />}

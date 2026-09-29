@@ -246,6 +246,39 @@
   padding: 1.5rem;
 }
 
+.desktop-journey-hud {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  display: grid;
+  gap: 0.18rem;
+  color: #aebfa9;
+  pointer-events: none;
+  justify-items: end;
+  text-align: right;
+  z-index: 1;
+  user-select: none;
+}
+
+.desktop-journey-hud span {
+  color: #dfb125;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.16rem;
+}
+
+.desktop-journey-hud strong {
+  color: #e8f0e4;
+  font-size: 1.15rem;
+}
+
+.desktop-journey-hud small {
+  font-size: 0.58rem;
+  letter-spacing: 0.08rem;
+  text-transform: uppercase;
+  color: #aebfa9;
+}
+
 .desktop-icon-grid {
   display: flex;
   flex-direction: column;
