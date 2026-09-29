@@ -9,7 +9,7 @@ export const setupBlocks = () => {
         message0: 'Run(1 step)',
         previousStatement: null,
         nextStatement: null,
-        colour: 230,
+        colour: '#4a6a3a', // Moss green matching bridge
         tooltip: 'Run forward one step on the ground'
       });
     }
@@ -22,7 +22,7 @@ export const setupBlocks = () => {
         message0: 'Jump(1 step)',
         previousStatement: null,
         nextStatement: null,
-        colour: 230,
+        colour: '#555544', // Stone gray matching bridge
         tooltip: 'Jump forward one step'
       });
     }
@@ -46,7 +46,7 @@ export const setupBlocks = () => {
         message0: 'Attack',
         previousStatement: null,
         nextStatement: null,
-        colour: 0,
+        colour: '#8b2020', // Red
         tooltip: 'Attack the beast'
       });
     }
@@ -59,7 +59,7 @@ export const setupBlocks = () => {
         message0: 'Defend',
         previousStatement: null,
         nextStatement: null,
-        colour: 230,
+        colour: '#2266aa', // Shield blue
         tooltip: 'Raise shield'
       });
     }
@@ -71,7 +71,7 @@ export const setupBlocks = () => {
         type: 'sensor_beast_vulnerable',
         message0: 'Is beast vulnerable?',
         output: 'Boolean',
-        colour: 120,
+        colour: '#dfb125', // Gold
         tooltip: 'Returns true if the beast has lowered its shield'
       });
     }
@@ -99,7 +99,7 @@ export const setupBlocks = () => {
         message0: 'Activate Totem',
         previousStatement: null,
         nextStatement: null,
-        colour: 280, // Purple
+        colour: '#800080', // Purple
         tooltip: 'Activates the totem you are standing on'
       });
     }

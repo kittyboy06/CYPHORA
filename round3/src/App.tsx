@@ -1,20 +1,46 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import PhaserGame from './game/PhaserGame';
 import BlocklyEditor from './components/BlocklyEditor';
 import { GameOverlay } from './components/GameOverlay';
 import { StoryIntro } from './components/StoryIntro';
+import { LandingScreen } from './components/LandingScreen';
+import { AntiCheatScreen } from './components/AntiCheatScreen';
 import { useGameStore } from './state/gameStore';
 import { executeCode } from './blockly/interpreter';
 import { Play, RotateCcw } from 'lucide-react';
 
 function App() {
+  const [hasEntered, setHasEntered] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [adminOverride, setAdminOverride] = useState(false);
   const [showStory, setShowStory] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
   const blocklyRef = useRef<any>(null);
   const gameRef = useRef<any>(null);
   const level = useGameStore((state) => state.level);
-  
+  const setStatus = useGameStore((state) => state.setStatus);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const enterFullscreen = async () => {
+    try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen();
+      }
+      setHasEntered(true);
+    } catch (e) {
+      console.error("Fullscreen request failed", e);
+      setHasEntered(true); // Allow them in anyway if API fails, they'll just get the warning if it actually didn't work
+    }
+  };
+
   const handleRun = async () => {
     if (!blocklyRef.current || !gameRef.current || isRunning) return;
     
@@ -22,11 +48,11 @@ function App() {
     const code = blocklyRef.current.getGeneratedCode();
     
     try {
-      useGameStore.getState().setStatus('running');
+      setStatus('running');
       await executeCode(code, gameRef.current, blocklyRef.current);
     } catch (e: any) {
       console.error(e);
-      useGameStore.getState().setStatus('failed');
+      setStatus('failed');
     } finally {
       setIsRunning(false);
     }
@@ -37,8 +63,17 @@ function App() {
     if (gameRef.current) {
       gameRef.current.resetLevel();
     }
-    useGameStore.getState().setStatus('idle');
+    setStatus('idle');
   };
+
+  if (!hasEntered) {
+    return <LandingScreen onEnter={enterFullscreen} />;
+  }
+
+  // Anti-Cheat is disabled:
+  // if (!isFullscreen && !adminOverride) {
+  //   return <AntiCheatScreen onReenter={enterFullscreen} onAdminUnlock={() => setAdminOverride(true)} />;
+  // }
 
   if (showStory) {
     return <StoryIntro onComplete={() => setShowStory(false)} />;

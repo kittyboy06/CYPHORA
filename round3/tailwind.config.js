@@ -14,6 +14,15 @@ export default {
         'cyphora-text': '#eae0c8',
         'cyphora-muted': '#888888',
       },
+      animation: {
+        'image-pan': 'pan 20s ease-in-out infinite alternate',
+      },
+      keyframes: {
+        pan: {
+          '0%': { transform: 'scale(1.0) translate(0, 0)' },
+          '100%': { transform: 'scale(1.1) translate(-2%, -2%)' },
+        }
+      }
     },
   },
   plugins: [],

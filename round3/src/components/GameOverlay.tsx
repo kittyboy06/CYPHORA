@@ -6,10 +6,17 @@ interface Props {
   onRetry: () => void;
 }
 
+const LEVEL_ORDER = [1, 2, 4];
+
 export const GameOverlay: React.FC<Props> = ({ onRetry }) => {
   const { status, score, totalCommands, level, setLevel } = useGameStore();
 
   if (status === 'idle' || status === 'running') return null;
+
+  const currentIdx = LEVEL_ORDER.indexOf(level);
+  const nextLevel = currentIdx >= 0 && currentIdx < LEVEL_ORDER.length - 1 
+    ? LEVEL_ORDER[currentIdx + 1] 
+    : null;
 
   return (
     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-8 text-center text-[var(--text-primary)]">
@@ -33,9 +40,9 @@ export const GameOverlay: React.FC<Props> = ({ onRetry }) => {
             </div>
           </div>
 
-          {level === 1 ? (
+          {nextLevel ? (
             <button 
-              onClick={() => setLevel(2)}
+              onClick={() => setLevel(nextLevel)}
               className="w-full py-4 bg-[var(--accent-gold)] text-[var(--bg-dark)] font-bold tracking-widest hover:brightness-110 transition-all uppercase">
               Next Level
             </button>
@@ -43,7 +50,7 @@ export const GameOverlay: React.FC<Props> = ({ onRetry }) => {
             <button 
               onClick={() => window.location.reload()}
               className="w-full py-4 bg-[var(--accent-gold)] text-[var(--bg-dark)] font-bold tracking-widest hover:brightness-110 transition-all uppercase">
-              Continue Expedition
+              🏆 Victory — Return to Base
             </button>
           )}
         </div>
