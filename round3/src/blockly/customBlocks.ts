@@ -109,4 +109,105 @@ export const setupBlocks = () => {
   javascriptGenerator.forBlock['action_activate_totem'] = function(block: Blockly.Block) {
     return `await game.activateTotemStep('${block.id}');\n`;
   };
+
+  // ──── Level 3 Blocks ────
+  Blockly.Blocks['action_dodge'] = {
+    init: function () {
+      this.jsonInit({
+        type: 'action_dodge',
+        message0: 'Dodge',
+        previousStatement: null,
+        nextStatement: null,
+        colour: '#aa3333', // Reddish
+        tooltip: 'Dodge a threat on a red tile'
+      });
+    }
+  };
+
+  Blockly.Blocks['action_slide'] = {
+    init: function () {
+      this.jsonInit({
+        type: 'action_slide',
+        message0: 'Slide',
+        previousStatement: null,
+        nextStatement: null,
+        colour: '#3366aa', // Blueish
+        tooltip: 'Slide under a threat on a blue tile'
+      });
+    }
+  };
+
+  Blockly.Blocks['action_activate_tile'] = {
+    init: function () {
+      this.jsonInit({
+        type: 'action_activate_tile',
+        message0: 'Activate (Tile)',
+        previousStatement: null,
+        nextStatement: null,
+        colour: '#cc9900', // Gold
+        tooltip: 'Activate a gold tile'
+      });
+    }
+  };
+
+  Blockly.Blocks['sensor_tile_color'] = {
+    init: function () {
+      this.jsonInit({
+        type: 'sensor_tile_color',
+        message0: 'Current Tile Color',
+        output: 'String',
+        colour: '#555555',
+        tooltip: 'Returns the color of the current tile ("red", "blue", "gold", "none")'
+      });
+    }
+  };
+
+  Blockly.Blocks['color_value'] = {
+    init: function () {
+      this.jsonInit({
+        type: 'color_value',
+        message0: '%1',
+        args0: [
+          {
+            type: 'field_dropdown',
+            name: 'COLOR',
+            options: [
+              ['Red', 'red'],
+              ['Blue', 'blue'],
+              ['Gold', 'gold']
+            ]
+          }
+        ],
+        output: 'String',
+        colour: '#888888',
+        tooltip: 'Select a color to compare'
+      });
+    }
+  };
+
+  // @ts-ignore
+  javascriptGenerator.forBlock['action_dodge'] = function(block: Blockly.Block) {
+    return `await game.dodgeStep('${block.id}');\n`;
+  };
+
+  // @ts-ignore
+  javascriptGenerator.forBlock['action_slide'] = function(block: Blockly.Block) {
+    return `await game.slideStep('${block.id}');\n`;
+  };
+
+  // @ts-ignore
+  javascriptGenerator.forBlock['action_activate_tile'] = function(block: Blockly.Block) {
+    return `await game.activateTileStep('${block.id}');\n`;
+  };
+
+  // @ts-ignore
+  javascriptGenerator.forBlock['sensor_tile_color'] = function(block: Blockly.Block) {
+    return [`await game.getTileColor()`, javascriptGenerator.ORDER_ATOMIC];
+  };
+
+  // @ts-ignore
+  javascriptGenerator.forBlock['color_value'] = function(block: Blockly.Block) {
+    const color = block.getFieldValue('COLOR');
+    return [`'${color}'`, javascriptGenerator.ORDER_ATOMIC];
+  };
 };

@@ -1,23 +1,23 @@
 import { LevelDefinition, TileType } from '../types/game';
 
 const G = TileType.GROUND;
+const F = TileType.FIRE;
 const X = TileType.GOAL;
 
 // The Beast's Lair:
-// Player stands on solid ground. The beast is in front of them.
-// The beast pattern is: Shielded, Shielded, Vulnerable (false, false, true).
-// The beast has 3 HP.
-// Goal is right behind the beast, but the beast must be defeated first.
+// Fire at 5th block (idx 4).
+// Beast at 10th block (idx 9).
+// Player must stop at 8th block (idx 7) to attack safely.
 export const level2: LevelDefinition = {
   id: 'level_02',
   name: "The Beast's Lair",
-  length: 10,
-  playerStartX: 2,
+  length: 11,
+  playerStartX: 0,
   tiles: [
-    G, G, G, G, G, G, G, G, G, X
+    G, G, G, G, F, G, G, G, G, G, X
   ],
   beast: {
-    positionIndex: 6,
+    positionIndex: 9,
     hp: 3,
     vulnerablePattern: [false, false, true] // Shield, Shield, Drop Shield
   }
