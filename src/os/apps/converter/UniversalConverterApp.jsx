@@ -5,10 +5,10 @@ import './UniversalConverterApp.css';
 
 const CONVERSION_OPTIONS = [
   { id: 'binary', label: 'Binary' },
-  { id: 'decimal', label: 'Decimal (0-9 Format)' },
+  { id: 'decimal', label: 'Decimal (0–9 Format)' },
   { id: 'hex', label: 'Hexadecimal' },
-  { id: 'ascii', label: 'ASCII' },
-  { id: 'text', label: 'Text' },
+  { id: 'ascii', label: 'ASCII (Character Codes)' },
+  { id: 'text', label: 'Text (Readable Words)' },
   { id: 'base64', label: 'Base64' },
   { id: 'url', label: 'URL' },
   { id: 'octal', label: 'Octal' }
@@ -18,7 +18,7 @@ export function UniversalConverterApp() {
   const { eventBus } = useOS();
   const [sourceType, setSourceType] = useState('binary');
   const [targetType, setTargetType] = useState('decimal');
-  const [inputVal, setInputVal] = useState('01001000 01000101 01001100 01010000');
+  const [inputVal, setInputVal] = useState('');
   const [outputVal, setOutputVal] = useState('');
   const [copied, setCopied] = useState(false);
 
@@ -35,20 +35,17 @@ export function UniversalConverterApp() {
 
       // BINARY
       if (sourceType === 'binary') {
-        if (targetType === 'decimal') {
-          // Binary -> Decimal (Intermediate 0-9 format)
+        if (targetType === 'decimal' || targetType === 'ascii') {
+          // Binary -> Decimal / ASCII (Intermediate 0-9 numeric code format)
           result = tokens.map(b => parseInt(b, 2)).filter(n => !isNaN(n)).join(' ');
         } else if (targetType === 'hex') {
           // Binary -> Hexadecimal
           result = tokens.map(b => parseInt(b, 2).toString(16).toUpperCase().padStart(2, '0')).join(' ');
-        } else if (targetType === 'ascii' || targetType === 'text') {
-          // Binary -> ASCII (Preserves 0-9 intermediate codes when converting to ASCII)
-          result = tokens.map(b => parseInt(b, 2)).filter(n => !isNaN(n)).join(' ');
         } else if (targetType === 'octal') {
           // Binary -> Octal
           result = tokens.map(b => parseInt(b, 2).toString(8)).join(' ');
         } else {
-          result = raw;
+          result = tokens.map(b => parseInt(b, 2)).filter(n => !isNaN(n)).join(' ');
         }
       }
       // DECIMAL
@@ -61,10 +58,7 @@ export function UniversalConverterApp() {
           result = tokens.map(d => parseInt(d, 10).toString(16).toUpperCase().padStart(2, '0')).join(' ');
         } else if (targetType === 'ascii') {
           // Decimal -> ASCII character codes
-          result = tokens.map(d => String.fromCharCode(parseInt(d, 10))).join(' ');
-        } else if (targetType === 'text') {
-          // Decimal -> Text (Direct string output)
-          result = tokens.map(d => String.fromCharCode(parseInt(d, 10))).join('');
+          result = tokens.map(d => parseInt(d, 10)).filter(n => !isNaN(n)).join(' ');
         } else if (targetType === 'octal') {
           // Decimal -> Octal
           result = tokens.map(d => parseInt(d, 10).toString(8)).join(' ');
@@ -74,20 +68,14 @@ export function UniversalConverterApp() {
       }
       // HEXADECIMAL
       else if (sourceType === 'hex') {
-        if (targetType === 'decimal') {
-          // Hexadecimal -> Decimal (Intermediate 0-9 format)
+        if (targetType === 'decimal' || targetType === 'ascii') {
+          // Hexadecimal -> Decimal / ASCII (Intermediate 0-9 format)
           result = tokens.map(h => parseInt(h, 16)).filter(n => !isNaN(n)).join(' ');
         } else if (targetType === 'binary') {
           // Hexadecimal -> Binary
           result = tokens.map(h => parseInt(h, 16).toString(2).padStart(8, '0')).join(' ');
-        } else if (targetType === 'ascii') {
-          // Hexadecimal -> ASCII codes
-          result = tokens.map(h => parseInt(h, 16)).filter(n => !isNaN(n)).join(' ');
-        } else if (targetType === 'text') {
-          // Hexadecimal -> Text
-          result = tokens.map(h => String.fromCharCode(parseInt(h, 16))).join('');
         } else {
-          result = raw;
+          result = tokens.map(h => parseInt(h, 16)).filter(n => !isNaN(n)).join(' ');
         }
       }
       // ASCII

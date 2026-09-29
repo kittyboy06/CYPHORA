@@ -64,6 +64,69 @@ Status: WORKSTATION OPERATIONAL
     content: `01001000 01001001 01000100 01000101`,
     updatedAt: new Date().toISOString()
   },
+  '/Evidence': {
+    id: 'evidence',
+    name: 'Evidence',
+    type: 'dir',
+    parentId: 'root',
+    path: '/Evidence',
+    updatedAt: new Date().toISOString()
+  },
+  '/Evidence/message.txt': {
+    id: 'file_evidence_message',
+    name: 'message.txt',
+    type: 'file',
+    parentId: 'evidence',
+    path: '/Evidence/message.txt',
+    mimeType: 'text/plain',
+    size: 40,
+    content: `01001000 01001001 01000100 01000100`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Evidence/evidence.jpg': {
+    id: 'file_evidence_jpg_evidence',
+    name: 'evidence.jpg',
+    type: 'file',
+    parentId: 'evidence',
+    path: '/Evidence/evidence.jpg',
+    mimeType: 'image/jpeg',
+    author: 'ARLO',
+    software: 'Field Camera',
+    description: '48 45 4C 50',
+    dimensions: '1280x720',
+    size: 980000,
+    content: '[IMAGE FILE: EVIDENCE JPG (Author: ARLO, Description: 48 45 4C 50)]',
+    updatedAt: new Date().toISOString()
+  },
+  '/Evidence/clue.png': {
+    id: 'file_evidence_clue_png',
+    name: 'clue.png',
+    type: 'file',
+    parentId: 'evidence',
+    path: '/Evidence/clue.png',
+    mimeType: 'image/png',
+    qrPayload: 'SECTOR-7',
+    dimensions: '512x512',
+    size: 420000,
+    content: '[QR CODE IMAGE — PAYLOAD: SECTOR-7]',
+    updatedAt: new Date().toISOString()
+  },
+  '/Archive': {
+    id: 'archive',
+    name: 'Archive',
+    type: 'dir',
+    parentId: 'root',
+    path: '/Archive',
+    updatedAt: new Date().toISOString()
+  },
+  '/Shared': {
+    id: 'shared',
+    name: 'Shared',
+    type: 'dir',
+    parentId: 'root',
+    path: '/Shared',
+    updatedAt: new Date().toISOString()
+  },
   '/Documents': {
     id: 'documents',
     name: 'Documents',
@@ -353,12 +416,12 @@ ENCODED_VALUE: 53 59 4D 50 4F
     parentId: 'pictures',
     path: '/Pictures/evidence.jpg',
     mimeType: 'image/jpeg',
-    author: 'Dr. Arlo Vance',
+    author: 'ARLO',
     software: 'Field Camera',
-    description: 'REPORT_17',
+    description: '48 45 4C 50',
     dimensions: '1280x720',
     size: 980000,
-    content: '[IMAGE FILE: EVIDENCE JPG (Author: Dr. Arlo Vance, Description: REPORT_17)]',
+    content: '[IMAGE FILE: EVIDENCE JPG (Author: ARLO, Description: 48 45 4C 50)]',
     updatedAt: new Date().toISOString()
   },
   '/Pictures/poster.png': {

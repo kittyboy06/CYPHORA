@@ -14,7 +14,7 @@ const DEFAULT_METADATA_FILES = [
 
 export function MetadataInspectorApp() {
   const { vfs, eventBus } = useOS();
-  const [selectedPath, setSelectedPath] = useState('/Pictures/evidence.jpg');
+  const [selectedPath, setSelectedPath] = useState('');
   const [metadata, setMetadata] = useState(null);
   const [copiedKey, setCopiedKey] = useState('');
   const [showPicker, setShowPicker] = useState(false);
@@ -35,7 +35,7 @@ export function MetadataInspectorApp() {
       path: node.path,
       size: `${node.size || 2145760} bytes`,
       mimeType: node.mimeType || 'image/jpeg',
-      author: node.author || (isEvidence ? '01000001 01010010 01001100 01001111' : isPhoto ? 'ARCHIVIST' : 'UNKNOWN'),
+      author: node.author || (isEvidence ? 'ARLO' : isPhoto ? 'ARCHIVIST' : 'UNKNOWN'),
       software: node.software || 'Workstation Pro v3',
       createdDate: node.createdDate || '2026-09-24T09:12:00.000Z',
       modifiedDate: node.modifiedDate || '2026-09-24T10:15:00.000Z',
@@ -64,7 +64,11 @@ export function MetadataInspectorApp() {
   const handleSelectFile = (e) => {
     const p = e.target.value;
     setSelectedPath(p);
-    handleInspectVFS(p);
+    if (p) {
+      handleInspectVFS(p);
+    } else {
+      setMetadata(null);
+    }
   };
 
   const handleCopyVal = (key, val) => {
@@ -88,6 +92,7 @@ export function MetadataInspectorApp() {
         <div className="control-group" style={{ flex: 1 }}>
           <label>SELECT FILE FROM VFS:</label>
           <select value={selectedPath} onChange={handleSelectFile} className="inspector-select">
+            <option value="">-- Select File from Virtual OS --</option>
             {DEFAULT_METADATA_FILES.map(f => (
               <option key={f.path} value={f.path}>{f.label}</option>
             ))}
@@ -103,11 +108,17 @@ export function MetadataInspectorApp() {
           <span>Browse Virtual OS</span>
         </button>
 
-        <button className="inspect-btn" onClick={() => handleInspectVFS(selectedPath)}>
+        <button className="inspect-btn" onClick={() => handleInspectVFS(selectedPath)} disabled={!selectedPath}>
           <FileSearch size={15} />
           <span>Inspect Metadata</span>
         </button>
       </div>
+
+      {!selectedPath && !metadata && (
+        <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#8b949e', fontStyle: 'italic', background: '#0d1117', border: '1px solid #21262d', borderRadius: '6px', marginTop: '1rem' }}>
+          No file selected. Choose a file from the dropdown above or click 'Browse Virtual OS' to inspect a file.
+        </div>
+      )}
 
       {/* Metadata Table Display */}
       {metadata && !metadata.error && (

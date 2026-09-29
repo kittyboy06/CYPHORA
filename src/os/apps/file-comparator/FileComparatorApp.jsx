@@ -12,12 +12,17 @@ const DEFAULT_DIFF_FILES = [
 
 export function FileComparatorApp() {
   const { vfs, eventBus } = useOS();
-  const [fileAPath, setFileAPath] = useState('/Documents/message_old.txt');
-  const [fileBPath, setFileBPath] = useState('/Documents/message_new.txt');
+  const [fileAPath, setFileAPath] = useState('');
+  const [fileBPath, setFileBPath] = useState('');
   const [diffResult, setDiffResult] = useState(null);
   const [copied, setCopied] = useState(false);
 
   const compareFiles = () => {
+    if (!fileAPath || !fileBPath) {
+      setDiffResult(null);
+      return;
+    }
+
     try {
       const contentA = vfs.readFile(fileAPath, 'file-comparator').split('\n');
       const contentB = vfs.readFile(fileBPath, 'file-comparator').split('\n');
@@ -91,6 +96,7 @@ export function FileComparatorApp() {
         <div className="selector-group">
           <label>FILE A (ORIGINAL):</label>
           <select value={fileAPath} onChange={(e) => setFileAPath(e.target.value)} className="file-select">
+            <option value="">-- Select File A --</option>
             {DEFAULT_DIFF_FILES.map(f => (
               <option key={f.path} value={f.path}>{f.label}</option>
             ))}
@@ -102,12 +108,19 @@ export function FileComparatorApp() {
         <div className="selector-group">
           <label>FILE B (REVISED):</label>
           <select value={fileBPath} onChange={(e) => setFileBPath(e.target.value)} className="file-select">
+            <option value="">-- Select File B --</option>
             {DEFAULT_DIFF_FILES.map(f => (
               <option key={f.path} value={f.path}>{f.label}</option>
             ))}
           </select>
         </div>
       </div>
+
+      {(!fileAPath || !fileBPath) && (
+        <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#8b949e', fontStyle: 'italic', background: '#0d1117', border: '1px solid #21262d', borderRadius: '6px', marginTop: '1rem' }}>
+          Select File A and File B from the dropdowns above to compare document differences.
+        </div>
+      )}
 
       {/* Side by Side Diff Viewer */}
       {diffResult && (

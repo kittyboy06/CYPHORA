@@ -36,19 +36,25 @@ export const ROUND_1_TASKS = TASK_DEFINITIONS.map(def => ({
   validator: (payload = {}) => {
     const rawInput = (payload.answer || '').toString();
     let userVal = rawInput;
-    let expectedVal = (def.answer.expected || '').toString();
+    const expectedVal = (def.answer.expected || '').toString();
+    const acceptedList = (def.answer.accepted || [expectedVal]).map(v => v.toString());
 
     if (def.answer.trimWhitespace !== false) {
       userVal = userVal.trim();
-      expectedVal = expectedVal.trim();
     }
 
     if (!def.answer.caseSensitive) {
       userVal = userVal.toUpperCase();
-      expectedVal = expectedVal.toUpperCase();
     }
 
-    return userVal === expectedVal && userVal.length > 0;
+    if (userVal.length === 0) return false;
+
+    return acceptedList.some(item => {
+      let itemVal = item;
+      if (def.answer.trimWhitespace !== false) itemVal = itemVal.trim();
+      if (!def.answer.caseSensitive) itemVal = itemVal.toUpperCase();
+      return userVal === itemVal;
+    });
   }
 }));
 
