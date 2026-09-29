@@ -3,6 +3,12 @@ export const toolboxXml = `
   <category name="Actions" colour="#5b80a5">
     <block type="action_run"></block>
     <block type="action_jump"></block>
+    <block type="action_attack"></block>
+    <block type="action_defend"></block>
+    <block type="action_activate_totem"></block>
+  </category>
+  <category name="Sensors" colour="#a5935b">
+    <block type="sensor_beast_vulnerable"></block>
   </category>
   <category name="Logic" colour="#5b80a5">
     <block type="controls_if"></block>

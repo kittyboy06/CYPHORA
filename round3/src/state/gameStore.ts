@@ -16,6 +16,7 @@ interface GameState {
   resetCommands: (total: number) => void;
   incExecutedCommands: () => void;
   tickTime: () => void;
+  setLevel: (level: number) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -34,4 +35,5 @@ export const useGameStore = create<GameState>((set) => ({
   resetCommands: (total) => set({ totalCommands: total, executedCommands: 0 }),
   incExecutedCommands: () => set((state) => ({ executedCommands: state.executedCommands + 1 })),
   tickTime: () => set((state) => ({ timeRemaining: Math.max(0, state.timeRemaining - 1) })),
+  setLevel: (level) => set({ level, status: 'idle' }),
 }));

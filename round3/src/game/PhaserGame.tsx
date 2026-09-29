@@ -1,8 +1,15 @@
 import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import Phaser from 'phaser';
 import GameScene from './GameScene';
+import { level1 } from '../levels/level1';
+import { level2 } from '../levels/level2';
+import { level4 } from '../levels/level4';
 
-const PhaserGame = forwardRef((props, ref) => {
+interface Props {
+  levelIndex: number;
+}
+
+const PhaserGame = forwardRef((props: Props, ref) => {
   const gameRef = useRef<Phaser.Game | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -35,6 +42,16 @@ const PhaserGame = forwardRef((props, ref) => {
     };
   }, []);
 
+  useEffect(() => {
+    if (gameRef.current) {
+      const scene = gameRef.current.scene.getScene('GameScene') as GameScene;
+      if (scene) {
+        const levelDef = props.levelIndex === 4 ? level4 : props.levelIndex === 2 ? level2 : level1;
+        scene.loadLevel(levelDef);
+      }
+    }
+  }, [props.levelIndex]);
+
   useImperativeHandle(ref, () => ({
     executeCommand: async (cmd: any) => {
       if (gameRef.current) {
@@ -48,6 +65,13 @@ const PhaserGame = forwardRef((props, ref) => {
         const scene = gameRef.current.scene.getScene('GameScene') as GameScene;
         scene.resetLevel();
       }
+    },
+    isBeastVulnerable: () => {
+      if (gameRef.current) {
+        const scene = gameRef.current.scene.getScene('GameScene') as GameScene;
+        return scene.isBeastVulnerable();
+      }
+      return false;
     }
   }));
 

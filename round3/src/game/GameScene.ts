@@ -1,23 +1,38 @@
 import Phaser from 'phaser';
 import { level1 } from '../levels/level1';
-import { Command, TileType } from '../types/game';
+import { Command, TileType, LevelDefinition } from '../types/game';
 
 const TILE_W = 64;
 const TILE_H = 48;
 
 export default class GameScene extends Phaser.Scene {
-  private levelData = level1;
+  private levelData: LevelDefinition = level1;
   private player!: Phaser.GameObjects.Container;
   private pIndex = 0;
   private groundY = 0;
   private startX = 0;
   private allObjects: Phaser.GameObjects.GameObject[] = [];
   
+  private turnCount = 0;
+  private totemsActivated = 0;
+  private beastHp = 0;
+  private beastVisual?: Phaser.GameObjects.Container;
+  private beastShieldVisual?: Phaser.GameObjects.Arc;
+  
   constructor() {
     super('GameScene');
   }
 
+  loadLevel(levelDef: LevelDefinition) {
+    this.levelData = levelDef;
+    this.scene.restart();
+  }
+
   create() {
+    this.turnCount = 0;
+    this.totemsActivated = 0;
+    this.totemsActivated = 0;
+    this.beastHp = this.levelData.beast?.hp || 0;
     const h = this.scale.height;
     this.groundY = h * 0.72;
     this.startX = 80;
@@ -25,16 +40,54 @@ export default class GameScene extends Phaser.Scene {
     this.drawBackground();
     this.createPlatforms();
     this.spawnPlayer();
+    this.spawnBeast();
 
     // Set camera bounds so it can scroll horizontally
     const worldWidth = this.startX + this.levelData.length * TILE_W + 200;
     this.cameras.main.setBounds(0, 0, worldWidth, h);
   }
 
+  spawnBeast() {
+    if (!this.levelData.beast) return;
+    
+    const bx = this.startX + this.levelData.beast.positionIndex * TILE_W + TILE_W / 2;
+    const by = this.groundY;
+
+    // A large red rectangle
+    const body = this.add.rectangle(0, -40, 40, 60, 0x991111).setOrigin(0.5, 1);
+    body.setStrokeStyle(2, 0xff5555);
+
+    // Glowing shield
+    this.beastShieldVisual = this.add.circle(0, -40, 45, 0x5555ff, 0.3);
+    this.beastShieldVisual.setStrokeStyle(3, 0xaaaaff);
+    
+    this.beastVisual = this.add.container(bx, by, [body, this.beastShieldVisual]);
+    
+    this.updateBeastVisuals();
+  }
+  
+  updateBeastVisuals() {
+    if (!this.levelData.beast || !this.beastShieldVisual) return;
+    const vulnerable = this.isBeastVulnerable();
+    this.beastShieldVisual.setVisible(!vulnerable);
+  }
+  
+  isBeastVulnerable(): boolean {
+    if (!this.levelData.beast) return false;
+    const pattern = this.levelData.beast.vulnerablePattern;
+    return pattern[this.turnCount % pattern.length];
+  }
+
   resetLevel() {
+    this.turnCount = 0;
+    this.beastHp = this.levelData.beast?.hp || 0;
     this.pIndex = this.levelData.playerStartX;
     this.player.setAlpha(1);
     this.updatePlayerVisuals(false);
+    this.updateBeastVisuals();
+    if (this.beastVisual) {
+       this.beastVisual.setAlpha(1);
+    }
   }
 
   drawBackground() {
@@ -90,6 +143,28 @@ export default class GameScene extends Phaser.Scene {
         }
         // Draw faint red line to indicate danger
         this.add.rectangle(x + TILE_W / 2, y + TILE_H + 2, TILE_W - 8, 2, 0x5a1010).setOrigin(0.5, 0).setAlpha(0.5);
+      } else if (tile === TileType.FIRE || tile === TileType.TOTEM_FIRE) {
+        const block = this.add.rectangle(x + TILE_W / 2, y, TILE_W - 3, TILE_H, 0x3a3a2e).setOrigin(0.5, 0);
+        for (let s = 0; s < 3; s++) {
+          this.add.triangle(x + 15 + s * 16, y, 0, 0, 8, -16, 16, 0, 0xff4500).setOrigin(0, 1);
+        }
+        if (tile === TileType.TOTEM_FIRE) {
+          const diamond = this.add.polygon(x + TILE_W / 2, y - 30, [0, -10, 10, 0, 0, 10, -10, 0], 0xffd700);
+          diamond.setStrokeStyle(1, 0xffaa00);
+        }
+      } else if (tile === TileType.GOBLIN || tile === TileType.TOTEM_GOBLIN) {
+        const block = this.add.rectangle(x + TILE_W / 2, y, TILE_W - 3, TILE_H, 0x3a3a2e).setOrigin(0.5, 0);
+        this.add.rectangle(x + TILE_W / 2, y - 10, 20, 20, 0x228b22);
+        this.add.circle(x + TILE_W / 2 - 4, y - 14, 2, 0xff0000);
+        this.add.circle(x + TILE_W / 2 + 4, y - 14, 2, 0xff0000);
+        if (tile === TileType.TOTEM_GOBLIN) {
+          const diamond = this.add.polygon(x + TILE_W / 2, y - 40, [0, -10, 10, 0, 0, 10, -10, 0], 0xffd700);
+          diamond.setStrokeStyle(1, 0xffaa00);
+        }
+      } else if (tile === TileType.TOTEM_FINAL) {
+        const block = this.add.rectangle(x + TILE_W / 2, y, TILE_W - 3, TILE_H, 0x555555).setOrigin(0.5, 0);
+        const diamond = this.add.polygon(x + TILE_W / 2, y - 20, [0, -20, 20, 0, 0, 20, -20, 0], 0xffd700);
+        diamond.setStrokeStyle(2, 0xffaa00);
       }
     }
   }
@@ -168,7 +243,64 @@ export default class GameScene extends Phaser.Scene {
   }
 
   async executeCommand(cmd: Command): Promise<string> {
-    if (cmd.type === 'RUN') {
+    if (this.levelData.id === 'level_04') {
+      if (cmd.type === 'ACTIVATE_TOTEM') {
+        const currentTile = this.levelData.tiles[this.pIndex];
+        if (currentTile === TileType.TOTEM_FIRE || currentTile === TileType.TOTEM_GOBLIN || currentTile === TileType.TOTEM_FINAL) {
+          const glow = this.add.circle(this.player.x, this.player.y - 20, 40, 0xffd700, 0.5);
+          this.tweens.add({ targets: glow, alpha: 0, scale: 1.5, duration: 500, onComplete: () => glow.destroy() });
+          this.totemsActivated++;
+          await new Promise(r => setTimeout(r, 600));
+          if (this.totemsActivated === 3) return 'LEVEL_COMPLETE';
+          return 'OK';
+        }
+        return 'FAILED';
+      }
+
+      const nextIndex = this.pIndex + 1;
+      if (nextIndex >= this.levelData.length) return 'OK';
+      const nextTile = this.levelData.tiles[nextIndex];
+      
+      this.pIndex = nextIndex;
+
+      if (cmd.type === 'RUN') {
+        await this.updatePlayerVisuals(true, false);
+        if ([TileType.FIRE, TileType.GOBLIN, TileType.TOTEM_FIRE, TileType.TOTEM_GOBLIN].includes(nextTile)) {
+          this.tweens.add({ targets: this.player, y: this.player.y + 150, alpha: 0, duration: 400 });
+          await new Promise(r => setTimeout(r, 500));
+          return 'FAILED';
+        }
+        return 'OK';
+      } else if (cmd.type === 'JUMP') {
+        await this.updatePlayerVisuals(true, true);
+        if ([TileType.GOBLIN, TileType.TOTEM_GOBLIN].includes(nextTile)) {
+          this.tweens.add({ targets: this.player, y: this.player.y + 150, alpha: 0, duration: 400 });
+          await new Promise(r => setTimeout(r, 500));
+          return 'FAILED';
+        }
+        return 'OK';
+      } else if (cmd.type === 'ATTACK') {
+        await this.updatePlayerVisuals(true, false);
+        await new Promise<void>((resolve) => {
+          this.tweens.add({
+            targets: this.player, x: this.player.x + 40, duration: 150, yoyo: true, ease: 'Power2', onComplete: () => resolve()
+          });
+        });
+        if ([TileType.FIRE, TileType.TOTEM_FIRE].includes(nextTile)) {
+          this.tweens.add({ targets: this.player, y: this.player.y + 150, alpha: 0, duration: 400 });
+          await new Promise(r => setTimeout(r, 500));
+          return 'FAILED';
+        }
+        return 'OK';
+      }
+      return 'OK';
+    }
+
+    if (cmd.type === 'ATTACK') {
+      return this.handleAttack();
+    } else if (cmd.type === 'DEFEND') {
+      return this.handleDefend();
+    } else if (cmd.type === 'RUN') {
       // Run = advance 1 tile. Must land on ground/goal. Trap = death.
       const nextIndex = this.pIndex + 1;
       
@@ -237,6 +369,91 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
+    return 'OK';
+  }
+
+  async handleAttack(): Promise<string> {
+    // Player dashes forward and back
+    const startX = this.player.x;
+    const attackX = startX + 40;
+    
+    await new Promise<void>((resolve) => {
+      this.tweens.add({
+        targets: this.player,
+        x: attackX,
+        duration: 150,
+        yoyo: true,
+        ease: 'Power2',
+        onComplete: () => resolve()
+      });
+    });
+
+    if (this.levelData.beast) {
+      if (this.isBeastVulnerable()) {
+        this.beastHp--;
+        // Flash beast
+        if (this.beastVisual) {
+          const body = this.beastVisual.list[0] as Phaser.GameObjects.Rectangle;
+          body.fillColor = 0xffffff;
+          setTimeout(() => {
+             body.fillColor = 0x991111;
+          }, 150);
+        }
+        
+        if (this.beastHp <= 0) {
+          // Beast dies
+          if (this.beastVisual) {
+            this.tweens.add({
+              targets: this.beastVisual,
+              alpha: 0,
+              y: this.beastVisual.y + 50,
+              duration: 500
+            });
+          }
+          return 'LEVEL_COMPLETE'; // or maybe just open the path? Prompt says: "If beastHp <= 0, beast dies, return 'LEVEL_COMPLETE'".
+        }
+      } else {
+        // Shielded -> beast attacks player
+        if (this.beastVisual) {
+          const bx = this.beastVisual.x;
+          await new Promise<void>((resolve) => {
+            this.tweens.add({
+              targets: this.beastVisual,
+              x: bx - 40,
+              duration: 150,
+              yoyo: true,
+              onComplete: () => resolve()
+            });
+          });
+        }
+        
+        // player dies
+        this.tweens.add({
+          targets: this.player,
+          y: this.player.y + 150,
+          alpha: 0,
+          duration: 400
+        });
+        await new Promise(r => setTimeout(r, 500));
+        return 'FAILED';
+      }
+    }
+    
+    this.turnCount++;
+    this.updateBeastVisuals();
+    return 'OK';
+  }
+
+  async handleDefend(): Promise<string> {
+    // Show blue shield
+    const shield = this.add.circle(this.player.x, this.player.y - 20, 35, 0x55aaff, 0.5);
+    shield.setStrokeStyle(2, 0xaaddff);
+    
+    await new Promise(r => setTimeout(r, 300));
+    shield.destroy();
+    
+    this.turnCount++;
+    this.updateBeastVisuals();
     return 'OK';
   }
 
