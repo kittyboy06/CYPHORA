@@ -41,17 +41,14 @@ export const ROUND_1_TASKS = TASK_DEFINITIONS.map(def => {
       let userVal = rawInput;
       let expectedVal = (def.answer.expected || '').toString();
 
-      if (def.answer.trimWhitespace !== false) {
-        userVal = userVal.trim();
-        expectedVal = expectedVal.trim();
-      }
+      const acceptedList = (def.answer.accepted || [def.answer.expected]).map(a => {
+        let v = a.toString();
+        if (def.answer.trimWhitespace !== false) v = v.trim();
+        if (!def.answer.caseSensitive) v = v.toUpperCase();
+        return v;
+      });
 
-      if (!def.answer.caseSensitive) {
-        userVal = userVal.toUpperCase();
-        expectedVal = expectedVal.toUpperCase();
-      }
-
-      return userVal === expectedVal && userVal.length > 0;
+      return acceptedList.includes(userVal) && userVal.length > 0;
     }
   };
 });
