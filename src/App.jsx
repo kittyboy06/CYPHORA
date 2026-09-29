@@ -18,10 +18,10 @@ import './App.css';
 
 
 const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-const isDev = typeof window !== 'undefined' && window.location.port === '5173';
-const API_BASE = isDev ? `http://${hostname}:8000` : '';
+const isDevPort = typeof window !== 'undefined' && window.location.port && window.location.port !== '8000';
+const API_BASE = isDevPort ? `http://${hostname}:8000` : '';
 const WS_PROTOCOL = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const WS_HOST = isDev ? `${hostname}:8000` : (typeof window !== 'undefined' ? window.location.host : 'localhost:8000');
+const WS_HOST = isDevPort ? `${hostname}:8000` : (typeof window !== 'undefined' ? window.location.host : 'localhost:8000');
 const WS_BASE_URL = `${WS_PROTOCOL}//${WS_HOST}/ws/live`;
 
 const formatOrdinal = (rank) => {
@@ -50,6 +50,7 @@ function App() {
   const [liveExplorers, setLiveExplorers] = useState([]);
   const [isWsConnected, setIsWsConnected] = useState(false);
   const [teamData, setTeamData] = useState({
+    id: null,
     name: 'Wandering Nomad',
     member1: '',
     member2: '',
@@ -60,14 +61,109 @@ function App() {
   const [round1State, setRound1State] = useState(() => loadRound1State());
   const wakeTimerRef = useRef(null);
   const socketRef = useRef(null);
+  const teamDataRef = useRef(teamData);
+  const round1StateRef = useRef(round1State);
+  const syncedTasksRef = useRef(new Set());
 
   useEffect(() => {
+    teamDataRef.current = teamData;
+  }, [teamData]);
+
+  useEffect(() => {
+    round1StateRef.current = round1State;
     persistRound1State(round1State);
   }, [round1State]);
 
+  // Synchronize task completion with backend SQLite database
+  const syncTaskSubmission = async (taskId, answer) => {
+    if (!taskId) return;
+    try {
+      const token = localStorage.getItem('cyphora_token');
+      const teamId = teamDataRef.current.id || localStorage.getItem('cyphora_team_id');
+      const teamName = teamDataRef.current.name || localStorage.getItem('cyphora_team_name');
+
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (teamId) headers['X-Team-Id'] = String(teamId);
+      if (teamName) headers['X-Team-Name'] = teamName;
+
+      const res = await fetch(`${API_BASE}/api/stage1/submit`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          task_key: taskId,
+          proof: answer || null
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        syncedTasksRef.current.add(taskId);
+        if (data.new_total_score !== undefined) {
+          setTeamData(prev => ({
+            ...prev,
+            score: data.new_total_score
+          }));
+        }
+      }
+    } catch (err) {
+      console.warn('[CYPHORA] Error syncing task submission to backend:', err);
+    }
+  };
+
+  // Synchronize global event countdown timer from backend
+  const applyGlobalTimer = (timer) => {
+    if (!timer) return;
+    if (timer.action === 'start' && timer.ends_at) {
+      const remainingMs = Math.max(0, new Date(timer.ends_at).getTime() - Date.now());
+      setRound1State(prev => ({
+        ...prev,
+        isTimerRunning: remainingMs > 0,
+        isExpired: remainingMs <= 0,
+        remainingTimeMs: remainingMs,
+        round1StartedAt: prev.round1StartedAt || timer.started_at,
+        round1Status: remainingMs <= 0 ? 'TIME_EXPIRED' : 'IN_PROGRESS'
+      }));
+    } else if (timer.action === 'pause') {
+      const remSec = timer.remaining_seconds !== undefined ? timer.remaining_seconds : 3600;
+      setRound1State(prev => ({
+        ...prev,
+        isTimerRunning: false,
+        remainingTimeMs: remSec * 1000
+      }));
+    } else if (timer.action === 'resume' && timer.ends_at) {
+      const remainingMs = Math.max(0, new Date(timer.ends_at).getTime() - Date.now());
+      setRound1State(prev => ({
+        ...prev,
+        isTimerRunning: remainingMs > 0,
+        remainingTimeMs: remainingMs,
+        round1Status: 'IN_PROGRESS'
+      }));
+    } else if (timer.action === 'reset') {
+      const durationMs = (timer.duration_minutes || 60) * 60 * 1000;
+      setRound1State(prev => ({
+        ...prev,
+        isTimerRunning: false,
+        isExpired: false,
+        remainingTimeMs: durationMs
+      }));
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = eventBus.on('*', (event) => {
-      setRound1State(prev => processRound1Event(prev, event.event, event.payload));
+      setRound1State(prev => {
+        const next = processRound1Event(prev, event.event, event.payload);
+        return next;
+      });
+
+      if (event.event === 'TASK_ANSWER_SUBMITTED') {
+        const currentState = round1StateRef.current;
+        const activeTask = currentState.tasks.find(t => t.status === 'ACTIVE');
+        if (activeTask && activeTask.validator && activeTask.validator(event.payload)) {
+          syncTaskSubmission(activeTask.id, event.payload.answer);
+        }
+      }
     });
     return unsubscribe;
   }, []);
@@ -189,19 +285,30 @@ function App() {
         const data = await res.json();
         if (Array.isArray(data.teams)) {
           setLiveExplorers(data.teams);
-          if (data.teams.length > 0) {
-            const activeName = (currentTeamName || teamData.name || '').toLowerCase();
-            const self = data.teams.find(e => e.name.toLowerCase() === activeName);
-            if (self) {
-              setTeamData(prev => ({
+          const current = teamDataRef.current;
+          const savedId = parseInt(localStorage.getItem('cyphora_team_id'), 10) || current.id;
+          const searchName = (currentTeamName || localStorage.getItem('cyphora_team_name') || current.name || '').toLowerCase();
+
+          const self = data.teams.find(e => (savedId && e.id === savedId) || (searchName && e.name.toLowerCase() === searchName));
+          if (self) {
+            setTeamData(prev => {
+              if (self.name && self.name !== prev.name && self.name !== 'Wandering Nomad') {
+                localStorage.setItem('cyphora_team_name', self.name);
+              }
+              return {
                 ...prev,
+                id: self.id,
+                name: self.name || prev.name,
                 member1: self.member1 || prev.member1,
                 member2: self.member2 || prev.member2,
                 standing: formatOrdinal(self.rank),
                 score: self.score
-              }));
-            }
+              };
+            });
           }
+        }
+        if (data.timer) {
+          applyGlobalTimer(data.timer);
         }
       }
     } catch (err) {
@@ -216,11 +323,14 @@ function App() {
     let savedPin = '';
     let savedMember1 = '';
     let savedMember2 = '';
+    let savedId = null;
     try {
       savedTeam = localStorage.getItem('cyphora_team_name') || '';
       savedPin = localStorage.getItem('cyphora_team_pin') || '';
       savedMember1 = localStorage.getItem('cyphora_member1') || '';
       savedMember2 = localStorage.getItem('cyphora_member2') || '';
+      const rawId = localStorage.getItem('cyphora_team_id');
+      if (rawId) savedId = parseInt(rawId, 10);
     } catch (err) {}
 
     const paramStage = params.get('stage');
@@ -231,6 +341,7 @@ function App() {
     const initialName = paramTeam || savedTeam || 'Wandering Nomad';
     setTeamData(prev => ({
       ...prev,
+      id: savedId || prev.id,
       name: initialName,
       member1: savedMember1 || prev.member1,
       member2: savedMember2 || prev.member2,
@@ -261,21 +372,24 @@ function App() {
 
     const connect = () => {
       try {
-        const currentName = encodeURIComponent(teamData.name || '');
-        const wsUrl = currentName ? `${WS_BASE_URL}?team=${currentName}` : WS_BASE_URL;
+        const current = teamDataRef.current;
+        const currentName = current.name && current.name !== 'Wandering Nomad' ? current.name : (localStorage.getItem('cyphora_team_name') || '');
+        const currentId = current.id || localStorage.getItem('cyphora_team_id');
+        const encodedName = encodeURIComponent(currentName || '');
+        const wsUrl = encodedName ? `${WS_BASE_URL}?team=${encodedName}` : WS_BASE_URL;
         const socket = new WebSocket(wsUrl);
         socketRef.current = socket;
 
         socket.onopen = () => {
           setIsWsConnected(true);
-          if (teamData.name) {
-            socket.send(JSON.stringify({ action: 'identify', team: teamData.name }));
+          if (currentName || currentId) {
+            socket.send(JSON.stringify({ action: 'identify', team: currentName, team_id: currentId }));
           }
           pingInterval = setInterval(() => {
             if (socket.readyState === WebSocket.OPEN) {
               socket.send(JSON.stringify({ action: 'ping' }));
             }
-          }, 25000);
+          }, 15000);
         };
 
         socket.onmessage = (event) => {
@@ -284,21 +398,33 @@ function App() {
             if (payload.event === 'LEADERBOARD_UPDATE' || payload.event === 'INITIAL_STATE') {
               if (Array.isArray(payload.data)) {
                 setLiveExplorers(payload.data);
-                if (payload.data.length > 0) {
-                  const self = payload.data.find(
-                    e => e.name.toLowerCase() === teamData.name.toLowerCase()
-                  );
-                  if (self) {
-                    setTeamData(prev => ({
+                const cur = teamDataRef.current;
+                const savedId = parseInt(localStorage.getItem('cyphora_team_id'), 10) || cur.id;
+                const searchName = (localStorage.getItem('cyphora_team_name') || cur.name || '').toLowerCase();
+
+                const self = payload.data.find(e => (savedId && e.id === savedId) || (searchName && e.name.toLowerCase() === searchName));
+                if (self) {
+                  setTeamData(prev => {
+                    if (self.name && self.name !== prev.name && self.name !== 'Wandering Nomad') {
+                      localStorage.setItem('cyphora_team_name', self.name);
+                    }
+                    return {
                       ...prev,
+                      id: self.id,
+                      name: self.name || prev.name,
                       member1: self.member1 || prev.member1,
                       member2: self.member2 || prev.member2,
                       standing: formatOrdinal(self.rank),
                       score: self.score
-                    }));
-                  }
+                    };
+                  });
                 }
               }
+              if (payload.timer) {
+                applyGlobalTimer(payload.timer);
+              }
+            } else if (payload.event === 'EVENT_TIMER_SYNC') {
+              applyGlobalTimer(payload.data);
             }
           } catch (e) {
             console.error('Failed to parse WS payload', e);
@@ -335,10 +461,11 @@ function App() {
     setShowTeamModal(true);
   };
 
-  const completeRegistration = (finalName, finalPin, finalMember1, finalMember2) => {
+  const completeRegistration = (finalName, finalPin, finalMember1, finalMember2, teamId = null, currentScore = 0, currentStanding = 'Unranked') => {
     if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
     }
+    if (teamId) localStorage.setItem('cyphora_team_id', String(teamId));
     localStorage.setItem('cyphora_team_name', finalName);
     if (finalMember1) localStorage.setItem('cyphora_member1', finalMember1);
     if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
@@ -355,15 +482,16 @@ function App() {
 
     setTeamData(prev => ({
       ...prev,
+      id: teamId || prev.id,
       name: finalName,
       member1: finalMember1,
       member2: finalMember2,
-      standing: prev.standing,
-      score: prev.score
+      standing: currentStanding !== 'Unranked' ? currentStanding : prev.standing,
+      score: currentScore !== undefined ? currentScore : prev.score
     }));
 
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ action: 'identify', team: finalName }));
+      socketRef.current.send(JSON.stringify({ action: 'identify', team: finalName, team_id: teamId }));
     }
 
     setShowTeamModal(false);
@@ -401,38 +529,32 @@ function App() {
           try {
             const text = await res.text();
             if (text) message = text;
-          } catch {
-            // Ignore parse failures and continue in local/offline mode.
-          }
+          } catch {}
         }
         setAuthError(message);
-      } else {
-        const data = await res.json();
-        localStorage.setItem('cyphora_token', data.token);
-        localStorage.setItem('cyphora_team_name', data.team.name);
-        localStorage.setItem('cyphora_team_pin', finalPin);
-        if (finalMember1) localStorage.setItem('cyphora_member1', finalMember1);
-        if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
-
-        setTeamData(prev => ({
-          ...prev,
-          name: data.team.name,
-          member1: data.team.member1 || finalMember1,
-          member2: data.team.member2 || finalMember2,
-          standing: data.team.standing ? formatOrdinal(data.team.standing) : 'Unranked',
-          score: data.team.score
-        }));
-
-        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-          socketRef.current.send(JSON.stringify({ action: 'identify', team: data.team.name }));
-        }
+        return;
       }
-    } catch (err) {
-      setTeamData(prev => ({ ...prev, name: finalName, member1: finalMember1, member2: finalMember2 }));
-      setAuthError('The server is unavailable. Continuing in offline mode.');
-    }
 
-    completeRegistration(finalName, finalPin, finalMember1, finalMember2);
+      const data = await res.json();
+      localStorage.setItem('cyphora_token', data.token);
+      localStorage.setItem('cyphora_team_id', String(data.team.id));
+      localStorage.setItem('cyphora_team_name', data.team.name);
+      localStorage.setItem('cyphora_team_pin', finalPin);
+      if (finalMember1) localStorage.setItem('cyphora_member1', finalMember1);
+      if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
+
+      completeRegistration(
+        data.team.name,
+        finalPin,
+        data.team.member1 || finalMember1,
+        data.team.member2 || finalMember2,
+        data.team.id,
+        data.team.score,
+        data.team.standing ? formatOrdinal(data.team.standing) : 'Unranked'
+      );
+    } catch (err) {
+      setAuthError('The server is unavailable. Verify that run_server.py is running.');
+    }
   };
 
   const handleSkip = async () => {
@@ -455,27 +577,20 @@ function App() {
       if (res.ok) {
         const data = await res.json();
         localStorage.setItem('cyphora_token', data.token);
+        localStorage.setItem('cyphora_team_id', String(data.team.id));
         localStorage.setItem('cyphora_team_name', data.team.name);
-        localStorage.setItem('cyphora_team_pin', finalPin);
-        if (finalMember1) localStorage.setItem('cyphora_member1', finalMember1);
-        if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
-
-        setTeamData(prev => ({
-          ...prev,
-          name: data.team.name,
-          member1: data.team.member1 || finalMember1,
-          member2: data.team.member2 || finalMember2,
-          standing: data.team.standing ? formatOrdinal(data.team.standing) : prev.standing,
-          score: data.team.score
-        }));
-
-        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-          socketRef.current.send(JSON.stringify({ action: 'identify', team: data.team.name }));
-        }
+        completeRegistration(
+          data.team.name,
+          finalPin,
+          data.team.member1 || finalMember1,
+          data.team.member2 || finalMember2,
+          data.team.id,
+          data.team.score,
+          data.team.standing ? formatOrdinal(data.team.standing) : 'Unranked'
+        );
+        return;
       }
-    } catch (err) {
-      setTeamData(prev => ({ ...prev, name: finalName }));
-    }
+    } catch (err) {}
 
     completeRegistration(finalName, finalPin, finalMember1, finalMember2);
   };
@@ -667,6 +782,12 @@ function App() {
               </button>
             </div>
             <div className="panel-list">
+              {explorerList.length === 0 && (
+                <div style={{ padding: '2.5rem 1.2rem', textAlign: 'center', color: '#8c8268', fontSize: '0.82rem', lineHeight: '1.5' }}>
+                  No explorers connected yet.<br />
+                  <span style={{ fontSize: '0.74rem', opacity: 0.7 }}>When participant workstations join, they will appear here live.</span>
+                </div>
+              )}
               {explorerList.map((e, i) => {
                 const isYou = e.name.toLowerCase() === teamData.name.toLowerCase();
                 return (

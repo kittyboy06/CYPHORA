@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -31,25 +31,47 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 async def get_current_team(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: AsyncSession = Depends(get_db)
 ) -> Team:
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication token required"
-        )
-    token = credentials.credentials
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        team_id: int = payload.get("sub")
-        if team_id is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired or invalid")
+    # 1. Try Bearer JWT token first
+    if credentials and credentials.credentials:
+        token = credentials.credentials
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            raw_sub = payload.get("sub")
+            if raw_sub is not None:
+                team_id = int(raw_sub)
+                result = await db.execute(select(Team).filter(Team.id == team_id))
+                team = result.scalar_one_or_none()
+                if team:
+                    return team
+        except Exception:
+            pass
 
-    result = await db.execute(select(Team).filter(Team.id == team_id))
-    team = result.scalar_one_or_none()
-    if team is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
-    return team
+    # 2. Resilient fallback for 100-workstation LAN: Check X-Team-Id or X-Team-Name headers
+    hdr_id = request.headers.get("X-Team-Id")
+    if hdr_id:
+        try:
+            team_id = int(hdr_id)
+            res = await db.execute(select(Team).filter(Team.id == team_id))
+            team = res.scalar_one_or_none()
+            if team:
+                return team
+        except Exception:
+            pass
+
+    hdr_name = request.headers.get("X-Team-Name")
+    if hdr_name:
+        clean_name = hdr_name.strip()
+        from sqlalchemy import func
+        res = await db.execute(select(Team).filter(func.lower(Team.name) == clean_name.lower()))
+        team = res.scalar_one_or_none()
+        if team:
+            return team
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Authentication token or team identifier required"
+    )
