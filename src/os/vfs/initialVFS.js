@@ -12,56 +12,14 @@ export const INITIAL_VFS = {
     path: '/',
     updatedAt: new Date().toISOString()
   },
+
+  // ROOT DIRECTORIES
   '/Desktop': {
     id: 'desktop',
     name: 'Desktop',
     type: 'dir',
     parentId: 'root',
     path: '/Desktop',
-    updatedAt: new Date().toISOString()
-  },
-  '/Desktop/welcome.txt': {
-    id: 'file_welcome',
-    name: 'welcome.txt',
-    type: 'file',
-    parentId: 'desktop',
-    path: '/Desktop/welcome.txt',
-    mimeType: 'text/plain',
-    size: 512,
-    content: `================================================
-CYPHORA EXPEDITION // WORKSTATION TERMINAL
-ROUND 1: OS NAVIGATOR MULTI-APP SYSTEM
-================================================
-
-Explorer,
-
-Welcome to the internal workstation terminal. You have accessed
-the forward relay system.
-
-Applications Available:
-1. Universal Converter — Multi-step data format transformer
-2. Metadata Inspector — Inspect hidden EXIF & file properties
-3. QR Scanner — Scan machine-readable codes & payloads
-4. Image Inspector — Examine visual dimensions & pixel data
-5. Text Analyzer — Analyze word frequency & line patterns
-6. File Comparison Tool — Identify document differences
-7. File Manager — Navigate folders & inspect file properties
-8. Terminal — Command line filesystem interaction
-9. Text Editor — Open and read text documents
-
-Status: WORKSTATION OPERATIONAL
-`,
-    updatedAt: new Date().toISOString()
-  },
-  '/Desktop/message.txt': {
-    id: 'file_desktop_message',
-    name: 'message.txt',
-    type: 'file',
-    parentId: 'desktop',
-    path: '/Desktop/message.txt',
-    mimeType: 'text/plain',
-    size: 40,
-    content: `01001000 01001001 01000100 01000101`,
     updatedAt: new Date().toISOString()
   },
   '/Documents': {
@@ -72,17 +30,157 @@ Status: WORKSTATION OPERATIONAL
     path: '/Documents',
     updatedAt: new Date().toISOString()
   },
-  '/Documents/binary_message.txt': {
-    id: 'file_binary_message',
-    name: 'binary_message.txt',
-    type: 'file',
-    parentId: 'documents',
-    path: '/Documents/binary_message.txt',
-    mimeType: 'text/plain',
-    size: 40,
-    content: `01001000 01001001 01000100 01000101`,
+  '/Downloads': {
+    id: 'downloads',
+    name: 'Downloads',
+    type: 'dir',
+    parentId: 'root',
+    path: '/Downloads',
     updatedAt: new Date().toISOString()
   },
+  '/Pictures': {
+    id: 'pictures',
+    name: 'Pictures',
+    type: 'dir',
+    parentId: 'root',
+    path: '/Pictures',
+    updatedAt: new Date().toISOString()
+  },
+  '/Archive': {
+    id: 'archive',
+    name: 'Archive',
+    type: 'dir',
+    parentId: 'root',
+    path: '/Archive',
+    updatedAt: new Date().toISOString()
+  },
+  '/Evidence': {
+    id: 'evidence',
+    name: 'Evidence',
+    type: 'dir',
+    parentId: 'root',
+    path: '/Evidence',
+    updatedAt: new Date().toISOString()
+  },
+  '/Shared': {
+    id: 'shared',
+    name: 'Shared',
+    type: 'dir',
+    parentId: 'root',
+    path: '/Shared',
+    updatedAt: new Date().toISOString()
+  },
+
+  // SUBDIRECTORIES
+  '/Documents/clues': {
+    id: 'dir_docs_clues',
+    name: 'clues',
+    type: 'dir',
+    parentId: 'documents',
+    path: '/Documents/clues',
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/logs': {
+    id: 'dir_docs_logs',
+    name: 'logs',
+    type: 'dir',
+    parentId: 'documents',
+    path: '/Documents/logs',
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/Archive': {
+    id: 'dir_docs_archive',
+    name: 'Archive',
+    type: 'dir',
+    parentId: 'documents',
+    path: '/Documents/Archive',
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/Transfers': {
+    id: 'dir_docs_transfers',
+    name: 'Transfers',
+    type: 'dir',
+    parentId: 'documents',
+    path: '/Documents/Transfers',
+    updatedAt: new Date().toISOString()
+  },
+  '/Archive/.hidden': {
+    id: 'dir_archive_hidden',
+    name: '.hidden',
+    type: 'dir',
+    parentId: 'archive',
+    path: '/Archive/.hidden',
+    hidden: true,
+    updatedAt: new Date().toISOString()
+  },
+
+  // TASK 01 EVIDENCE
+  '/Desktop/message.txt': {
+    id: 'file_desktop_message',
+    name: 'message.txt',
+    type: 'file',
+    parentId: 'desktop',
+    path: '/Desktop/message.txt',
+    mimeType: 'text/plain',
+    size: 11,
+    content: `72 73 68 69`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Desktop/welcome.txt': {
+    id: 'file_welcome',
+    name: 'welcome.txt',
+    type: 'file',
+    parentId: 'desktop',
+    path: '/Desktop/welcome.txt',
+    mimeType: 'text/plain',
+    size: 420,
+    content: `================================================
+CYPHORA EXPEDITION // WORKSTATION TERMINAL
+ROUND 1: OS NAVIGATOR MULTI-APP SYSTEM
+================================================
+
+Welcome to the internal workstation terminal.
+Investigate workstation files and tools to solve challenges.
+Applications do not auto-fill or solve tasks for you.
+
+Status: WORKSTATION OPERATIONAL
+`,
+    updatedAt: new Date().toISOString()
+  },
+
+  // TASK 02 EVIDENCE
+  '/Pictures/evidence.jpg': {
+    id: 'file_evidence_jpg',
+    name: 'evidence.jpg',
+    type: 'file',
+    parentId: 'pictures',
+    path: '/Pictures/evidence.jpg',
+    mimeType: 'image/jpeg',
+    author: 'ARLO',
+    software: 'Field Camera v1.4',
+    description: 'Expedition Survey Photo',
+    dimensions: '1280x720',
+    size: 980000,
+    content: '[IMAGE FILE: EVIDENCE JPG (Author: ARLO)]',
+    updatedAt: new Date().toISOString()
+  },
+
+  // TASK 03 EVIDENCE
+  '/Pictures/poster.png': {
+    id: 'file_poster_png',
+    name: 'poster.png',
+    type: 'file',
+    parentId: 'pictures',
+    path: '/Pictures/poster.png',
+    mimeType: 'image/png',
+    qrPayload: 'SECTOR-7',
+    dimensions: '512x512',
+    size: 420000,
+    content: '[OPTICAL MATRIX CODE — PAYLOAD: SECTOR-7]',
+    updatedAt: new Date().toISOString()
+  },
+
+  // TASK 04 EVIDENCE
   '/Documents/access.log': {
     id: 'file_access_log',
     name: 'access.log',
@@ -90,7 +188,7 @@ Status: WORKSTATION OPERATIONAL
     parentId: 'documents',
     path: '/Documents/access.log',
     mimeType: 'text/plain',
-    size: 140,
+    size: 85,
     content: `[04:12] BLUE
 [04:07] RED
 [04:19] GREEN
@@ -99,24 +197,8 @@ Status: WORKSTATION OPERATIONAL
 `,
     updatedAt: new Date().toISOString()
   },
-  '/Documents/pattern_log.txt': {
-    id: 'file_pattern_log',
-    name: 'pattern_log.txt',
-    type: 'file',
-    parentId: 'documents',
-    path: '/Documents/pattern_log.txt',
-    mimeType: 'text/plain',
-    size: 180,
-    content: `ALPHA
-BETA
-GAMMA
-ALPHA
-DELTA
-ALPHA
-BETA
-`,
-    updatedAt: new Date().toISOString()
-  },
+
+  // TASK 05 EVIDENCE
   '/Documents/message_old.txt': {
     id: 'file_message_old',
     name: 'message_old.txt',
@@ -124,8 +206,8 @@ BETA
     parentId: 'documents',
     path: '/Documents/message_old.txt',
     mimeType: 'text/plain',
-    size: 240,
-    content: `[CYPHORA TRANSMISSION LOG v1.0]
+    size: 110,
+    content: `[CYPHORA TRANSMISSION LOG]
 STATUS: ONLINE
 RETRY: 3
 KEY_VAL: 8492
@@ -141,8 +223,8 @@ END_LOG
     parentId: 'documents',
     path: '/Documents/message_new.txt',
     mimeType: 'text/plain',
-    size: 240,
-    content: `[CYPHORA TRANSMISSION LOG v1.0]
+    size: 110,
+    content: `[CYPHORA TRANSMISSION LOG]
 STATUS: ONLINE
 RETRY: 3
 KEY_VAL: 9941
@@ -151,99 +233,120 @@ END_LOG
 `,
     updatedAt: new Date().toISOString()
   },
-  '/Documents/data.txt': {
-    id: 'file_data_txt',
-    name: 'data.txt',
+
+  // TASK 06 EVIDENCE
+  '/Documents/fragment_01.txt': {
+    id: 'file_fragment_01',
+    name: 'fragment_01.txt',
     type: 'file',
     parentId: 'documents',
-    path: '/Documents/data.txt',
+    path: '/Documents/fragment_01.txt',
     mimeType: 'text/plain',
     size: 30,
-    content: `01001001 01001110 01001011`,
-    updatedAt: new Date().toISOString()
+    content: `4A\n[TIMESTAMP: 09:31]`,
+    updatedAt: '2026-09-29T09:31:00.000Z'
   },
-  '/Documents/binary_chain.txt': {
-    id: 'file_binary_chain',
-    name: 'binary_chain.txt',
+  '/Documents/fragment_02.txt': {
+    id: 'file_fragment_02',
+    name: 'fragment_02.txt',
     type: 'file',
     parentId: 'documents',
-    path: '/Documents/binary_chain.txt',
+    path: '/Documents/fragment_02.txt',
+    mimeType: 'text/plain',
+    size: 35,
+    content: `55 4D\n[TIMESTAMP: 09:42]`,
+    updatedAt: '2026-09-29T09:42:00.000Z'
+  },
+  '/Documents/fragment_03.txt': {
+    id: 'file_fragment_03',
+    name: 'fragment_03.txt',
+    type: 'file',
+    parentId: 'documents',
+    path: '/Documents/fragment_03.txt',
     mimeType: 'text/plain',
     size: 30,
-    content: `01001001 01001110 01001011`,
+    content: `50\n[TIMESTAMP: 09:56]`,
+    updatedAt: '2026-09-29T09:56:00.000Z'
+  },
+
+  // TASK 07 EVIDENCE
+  '/Pictures/archive_photo.png': {
+    id: 'file_archive_photo',
+    name: 'archive_photo.png',
+    type: 'file',
+    parentId: 'pictures',
+    path: '/Pictures/archive_photo.png',
+    mimeType: 'image/png',
+    author: 'ARCHIVIST-01',
+    description: '72 69 76 80',
+    dimensions: '1920x1080',
+    size: 1540000,
+    content: '[ARCHIVE PHOTO — METADATA DESCRIPTION: 72 69 76 80]',
     updatedAt: new Date().toISOString()
   },
-  '/Documents/REPORT_17.txt': {
-    id: 'file_report_17',
-    name: 'REPORT_17.txt',
+
+  // TASK 08 EVIDENCE (ONLY hidden folder task)
+  '/Archive/.hidden/clue.txt': {
+    id: 'file_hidden_clue',
+    name: 'clue.txt',
     type: 'file',
-    parentId: 'documents',
-    path: '/Documents/REPORT_17.txt',
+    parentId: 'dir_archive_hidden',
+    path: '/Archive/.hidden/clue.txt',
     mimeType: 'text/plain',
-    size: 120,
-    content: `[EXPEDITION SECURITY REPORT #17]
-STATION_STATUS: OFFLINE
-The access code is 4812.
+    hidden: true,
+    size: 35,
+    content: `The missing value is:\n7314`,
+    updatedAt: new Date().toISOString()
+  },
+
+  // TASK 09 EVIDENCE
+  '/Pictures/map.png': {
+    id: 'file_map_png',
+    name: 'map.png',
+    type: 'file',
+    parentId: 'pictures',
+    path: '/Pictures/map.png',
+    mimeType: 'image/png',
+    qrPayload: 'CLUE-42',
+    dimensions: '1024x1024',
+    size: 890000,
+    content: '[SURVEY MAP — OPTICAL PAYLOAD: CLUE-42]',
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/clues/index.txt': {
+    id: 'file_clues_index',
+    name: 'index.txt',
+    type: 'file',
+    parentId: 'dir_docs_clues',
+    path: '/Documents/clues/index.txt',
+    mimeType: 'text/plain',
+    size: 100,
+    content: `CLUE-17 → notes.txt
+CLUE-31 → archive.txt
+CLUE-42 → activity.log
+CLUE-58 → report.txt
 `,
     updatedAt: new Date().toISOString()
   },
-  '/Documents/hex_stream.txt': {
-    id: 'file_hex_stream',
-    name: 'hex_stream.txt',
+  '/Documents/logs/activity.log': {
+    id: 'file_logs_activity',
+    name: 'activity.log',
     type: 'file',
-    parentId: 'documents',
-    path: '/Documents/hex_stream.txt',
+    parentId: 'dir_docs_logs',
+    path: '/Documents/logs/activity.log',
     mimeType: 'text/plain',
-    size: 20,
-    content: `48 45 4C 50`,
-    updatedAt: new Date().toISOString()
-  },
-  '/Documents/clues': {
-    id: 'dir_clues',
-    name: 'clues',
-    type: 'dir',
-    parentId: 'documents',
-    path: '/Documents/clues',
-    updatedAt: new Date().toISOString()
-  },
-  '/Documents/clues/numbers.txt': {
-    id: 'file_clues_numbers',
-    name: 'numbers.txt',
-    type: 'file',
-    parentId: 'dir_clues',
-    path: '/Documents/clues/numbers.txt',
-    mimeType: 'text/plain',
-    size: 80,
-    content: `17
-42
-17
-91
-63
-42
-17
-28
+    size: 160,
+    content: `08:14 USER-A LOGIN
+08:21 USER-B LOGIN
+08:37 USER-A DOWNLOAD FILE=17
+08:42 USER-C LOGIN
+08:51 USER-A LOGOUT
+09:03 USER-B DOWNLOAD FILE=22
 `,
     updatedAt: new Date().toISOString()
   },
-  '/Documents/numbers.txt': {
-    id: 'file_numbers',
-    name: 'numbers.txt',
-    type: 'file',
-    parentId: 'documents',
-    path: '/Documents/numbers.txt',
-    mimeType: 'text/plain',
-    size: 80,
-    content: `17
-42
-17
-91
-63
-42
-17
-28
-`,
-    updatedAt: new Date().toISOString()
-  },
+
+  // TASK 10 EVIDENCE
   '/Documents/alpha.txt': {
     id: 'file_alpha',
     name: 'alpha.txt',
@@ -251,12 +354,10 @@ The access code is 4812.
     parentId: 'documents',
     path: '/Documents/alpha.txt',
     mimeType: 'text/plain',
-    size: 160,
-    content: `[LOG RECORD ARCHIVE ALPHA]
-SYS_TIME: 10:45:00
-CHECKSUM: OK
-CHANGED_FIELD: 00 00 00 00
-END_RECORD
+    size: 60,
+    content: `STATUS=READY
+TOKEN=ACTIVE
+NOTE=48 45 4C 50
 `,
     updatedAt: new Date().toISOString()
   },
@@ -267,230 +368,116 @@ END_RECORD
     parentId: 'documents',
     path: '/Documents/beta.txt',
     mimeType: 'text/plain',
-    size: 160,
-    content: `[LOG RECORD ARCHIVE ALPHA]
-SYS_TIME: 10:45:00
-CHECKSUM: OK
-CHANGED_FIELD: 4A 55 4D 50
-END_RECORD
+    size: 60,
+    content: `STATUS=READY
+TOKEN=ACTIVE
+NOTE=4A 55 4D 50
 `,
     updatedAt: new Date().toISOString()
   },
-  '/Documents/Archive_04.txt': {
-    id: 'file_archive_04',
-    name: 'Archive_04.txt',
+
+  // TASK 11 EVIDENCE
+  '/Documents/incident_note.txt': {
+    id: 'file_incident_note',
+    name: 'incident_note.txt',
     type: 'file',
     parentId: 'documents',
-    path: '/Documents/Archive_04.txt',
+    path: '/Documents/incident_note.txt',
     mimeType: 'text/plain',
-    size: 110,
-    content: `[RECOVERED ARCHIVE RECORD #04]
-ENCODED_MESSAGE: 53 48 49 46 54
+    size: 70,
+    content: `The trail begins where the picture ends.
+
+REFERENCE:
+ARCHIVE-17
 `,
     updatedAt: new Date().toISOString()
   },
-  '/Documents/final_cipher.txt': {
-    id: 'file_final_cipher',
-    name: 'final_cipher.txt',
+  '/Archive/archive-17.txt': {
+    id: 'file_archive_17',
+    name: 'archive-17.txt',
     type: 'file',
-    parentId: 'documents',
-    path: '/Documents/final_cipher.txt',
+    parentId: 'archive',
+    path: '/Archive/archive-17.txt',
     mimeType: 'text/plain',
-    size: 90,
-    content: `[MASTER WORKSTATION CLEARANCE CIPHER]
-ENCODED_VALUE: 53 59 4D 50 4F
+    size: 25,
+    content: `NEXT:
+DEVICE-9
 `,
     updatedAt: new Date().toISOString()
   },
-  '/Downloads': {
-    id: 'downloads',
-    name: 'Downloads',
-    type: 'dir',
-    parentId: 'root',
-    path: '/Downloads',
-    updatedAt: new Date().toISOString()
-  },
-  '/Downloads/recovered.dat': {
-    id: 'file_recovered_dat',
-    name: 'recovered.dat',
-    type: 'file',
-    parentId: 'downloads',
-    path: '/Downloads/recovered.dat',
-    mimeType: 'text/plain',
-    size: 20,
-    content: `48 45 4C 50`,
-    updatedAt: new Date().toISOString()
-  },
-  '/Pictures': {
-    id: 'pictures',
-    name: 'Pictures',
-    type: 'dir',
-    parentId: 'root',
-    path: '/Pictures',
-    updatedAt: new Date().toISOString()
-  },
-  '/Pictures/expedition_photo.png': {
-    id: 'file_expedition_photo',
-    name: 'expedition_photo.png',
+  '/Pictures/device-9.jpg': {
+    id: 'file_device_9_jpg',
+    name: 'device-9.jpg',
     type: 'file',
     parentId: 'pictures',
-    path: '/Pictures/expedition_photo.png',
-    mimeType: 'image/png',
-    author: 'Dr. Arlo Vance',
-    software: 'Expedition Cam v2',
-    description: 'Field Outpost Survey',
-    createdDate: '2026-09-24T09:12:00.000Z',
-    modifiedDate: '2026-09-24T10:15:00.000Z',
-    dimensions: '1920x1080',
-    size: 1845000,
-    content: '[IMAGE FILE: EXPEDITION PHOTO (Author: Dr. Arlo Vance)]',
-    updatedAt: new Date().toISOString()
-  },
-  '/Pictures/evidence.jpg': {
-    id: 'file_evidence_jpg',
-    name: 'evidence.jpg',
-    type: 'file',
-    parentId: 'pictures',
-    path: '/Pictures/evidence.jpg',
+    path: '/Pictures/device-9.jpg',
     mimeType: 'image/jpeg',
-    author: 'Dr. Arlo Vance',
-    software: 'Field Camera',
-    description: 'REPORT_17',
-    dimensions: '1280x720',
-    size: 980000,
-    content: '[IMAGE FILE: EVIDENCE JPG (Author: Dr. Arlo Vance, Description: REPORT_17)]',
-    updatedAt: new Date().toISOString()
-  },
-  '/Pictures/poster.png': {
-    id: 'file_poster_png',
-    name: 'poster.png',
-    type: 'file',
-    parentId: 'pictures',
-    path: '/Pictures/poster.png',
-    mimeType: 'image/png',
-    qrPayload: 'SECTOR-7',
-    dimensions: '512x512',
-    size: 420000,
-    content: '[QR CODE IMAGE — PAYLOAD: SECTOR-7]',
-    updatedAt: new Date().toISOString()
-  },
-  '/Pictures/sector_qr.png': {
-    id: 'file_sector_qr',
-    name: 'sector_qr.png',
-    type: 'file',
-    parentId: 'pictures',
-    path: '/Pictures/sector_qr.png',
-    mimeType: 'image/png',
-    qrPayload: 'SECTOR-7',
-    dimensions: '512x512',
-    size: 420000,
-    content: '[QR CODE IMAGE — PAYLOAD: SECTOR-7]',
-    updatedAt: new Date().toISOString()
-  },
-  '/Pictures/archive_map.png': {
-    id: 'file_archive_map_png',
-    name: 'archive_map.png',
-    type: 'file',
-    parentId: 'pictures',
-    path: '/Pictures/archive_map.png',
-    mimeType: 'image/png',
-    qrPayload: '/Documents/clues/numbers.txt',
-    dimensions: '512x512',
-    size: 490000,
-    content: '[QR CODE IMAGE — PAYLOAD: /Documents/clues/numbers.txt]',
-    updatedAt: new Date().toISOString()
-  },
-  '/Pictures/location_qr.png': {
-    id: 'file_location_qr',
-    name: 'location_qr.png',
-    type: 'file',
-    parentId: 'pictures',
-    path: '/Pictures/location_qr.png',
-    mimeType: 'image/png',
-    qrPayload: '/Documents/numbers.txt',
-    dimensions: '512x512',
-    size: 490000,
-    content: '[QR CODE IMAGE — PAYLOAD: /Documents/numbers.txt]',
-    updatedAt: new Date().toISOString()
-  },
-  '/Pictures/photo.png': {
-    id: 'file_photo_png',
-    name: 'photo.png',
-    type: 'file',
-    parentId: 'pictures',
-    path: '/Pictures/photo.png',
-    mimeType: 'image/png',
-    author: 'ARCHIVIST',
-    software: 'Capture Pro',
-    description: 'ARCHIVE_04',
+    author: 'SYSTEM MONITOR',
+    description: '53 48 49 46 54',
     dimensions: '1920x1080',
-    size: 1650000,
-    content: '[IMAGE FILE: PHOTO PNG (Metadata Description: ARCHIVE_04)]',
+    size: 1100000,
+    content: '[IMAGE FILE: DEVICE-9 (Metadata Description: 53 48 49 46 54)]',
     updatedAt: new Date().toISOString()
   },
-  '/.hidden': {
-    id: 'dir_hidden',
-    name: '.hidden',
-    type: 'dir',
-    parentId: 'root',
-    path: '/.hidden',
-    hidden: true,
-    updatedAt: new Date().toISOString()
-  },
-  '/.hidden/enclave_beacon.png': {
-    id: 'file_enclave_beacon',
-    name: 'enclave_beacon.png',
+
+  // TASK 12 EVIDENCE (FINAL BOSS)
+  '/Documents/system.log': {
+    id: 'file_system_log',
+    name: 'system.log',
     type: 'file',
-    parentId: 'dir_hidden',
-    path: '/.hidden/enclave_beacon.png',
-    mimeType: 'image/png',
-    hidden: true,
-    author: 'SYSTEM OPERATOR',
-    description: 'Beacon QR payload inside /System/logs/beacon_scan.png',
-    dimensions: '1024x1024',
-    size: 780000,
-    content: '[CONCEALED IMAGE FILE — METADATA DESCRIPTION: Beacon QR payload inside /System/logs/beacon_scan.png]',
-    updatedAt: new Date().toISOString()
-  },
-  '/System': {
-    id: 'system',
-    name: 'System',
-    type: 'dir',
-    parentId: 'root',
-    path: '/System',
-    updatedAt: new Date().toISOString()
-  },
-  '/System/logs': {
-    id: 'system_logs',
-    name: 'logs',
-    type: 'dir',
-    parentId: 'system',
-    path: '/System/logs',
-    updatedAt: new Date().toISOString()
-  },
-  '/System/logs/sys_init.log': {
-    id: 'file_sys_init',
-    name: 'sys_init.log',
-    type: 'file',
-    parentId: 'system_logs',
-    path: '/System/logs/sys_init.log',
+    parentId: 'documents',
+    path: '/Documents/system.log',
     mimeType: 'text/plain',
-    size: 320,
-    content: `[SYSTEM INIT] Workstation booted successfully.`,
+    size: 130,
+    content: `08:15 — SYSTEM START
+08:27 — FILE ACCESS
+08:43 — UNKNOWN DEVICE
+08:51 — FILE TRANSFER
+09:02 — SYSTEM LOCK
+`,
     updatedAt: new Date().toISOString()
   },
-  '/System/logs/beacon_scan.png': {
-    id: 'file_beacon_scan',
-    name: 'beacon_scan.png',
+  '/Pictures/device.png': {
+    id: 'file_device_png',
+    name: 'device.png',
     type: 'file',
-    parentId: 'system_logs',
-    path: '/System/logs/beacon_scan.png',
+    parentId: 'pictures',
+    path: '/Pictures/device.png',
     mimeType: 'image/png',
-    qrPayload: '/Documents/final_cipher.txt',
-    dimensions: '512x512',
-    size: 450000,
-    content: '[BEACON SCAN QR IMAGE — PAYLOAD: /Documents/final_cipher.txt]',
+    author: 'DEVICE LOG',
+    description: 'Device ID: VX-27',
+    deviceId: 'VX-27',
+    dimensions: '1024x1024',
+    size: 870000,
+    content: '[DEVICE IMAGE — METADATA: Device ID: VX-27]',
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/Archive/VX-27.txt': {
+    id: 'file_vx27_txt',
+    name: 'VX-27.txt',
+    type: 'file',
+    parentId: 'dir_docs_archive',
+    path: '/Documents/Archive/VX-27.txt',
+    mimeType: 'text/plain',
+    size: 45,
+    content: `DEVICE: VX-27
+
+TRANSFER ID:
+TR-904
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/Transfers/TR-904.txt': {
+    id: 'file_tr904_txt',
+    name: 'TR-904.txt',
+    type: 'file',
+    parentId: 'dir_docs_transfers',
+    path: '/Documents/Transfers/TR-904.txt',
+    mimeType: 'text/plain',
+    size: 35,
+    content: `PAYLOAD:
+53 59 4D 50 4F
+`,
     updatedAt: new Date().toISOString()
   }
 };
-

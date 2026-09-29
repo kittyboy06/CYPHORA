@@ -9,7 +9,7 @@ const SAMPLE_AUDIO_FILES = [
 
 export function AudioInspectorApp() {
   const { vfs, eventBus } = useOS();
-  const [selectedPath, setSelectedPath] = useState('/Audio/distress_beacon.wav');
+  const [selectedPath, setSelectedPath] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
 

@@ -15,17 +15,7 @@ import {
 } from './round1/round1Engine.js';
 import './App.css';
 
-// Fallback explorer data if server is unreachable
-const EXPLORERS = [
-  { name: 'Team Cipher', standing: '1st (350 pts)', status: 'active' },
-  { name: 'Team Vortex', standing: '2nd (280 pts)', status: 'active' },
-  { name: 'Team Nexus', standing: '3rd (220 pts)', status: 'active' },
-  { name: 'Team Phantom', standing: '4th (160 pts)', status: 'idle' },
-  { name: 'Team Glitch', standing: '5th (120 pts)', status: 'idle' },
-  { name: 'Team Rogue', standing: '6th (80 pts)', status: 'idle' },
-  { name: 'Team Epoch', standing: '7th (40 pts)', status: 'idle' },
-  { name: 'Team Blaze', standing: '8th (0 pts)', status: 'idle' },
-];
+
 
 const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
 const isDev = typeof window !== 'undefined' && window.location.port === '5173';
@@ -45,7 +35,11 @@ const formatOrdinal = (rank) => {
 const normalizeTeamName = (name) => (name || '').trim().toLowerCase();
 
 function App() {
-  const [stage, setStage] = useState('initial');
+  const [stage, setStage] = useState(() => (
+    typeof window !== 'undefined'
+      ? (new URLSearchParams(window.location.search).get('stage') || 'initial')
+      : 'initial'
+  ));
   const [panelOpen, setPanelOpen] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [teamInput, setTeamInput] = useState('');
@@ -96,23 +90,117 @@ function App() {
     return () => { if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current); };
   }, []);
 
+  // Strict full-webpage scroll lock for computer screen app (landing page & story page)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if (document.documentElement) {
+      document.documentElement.scrollTop = 0;
+      document.documentElement.scrollLeft = 0;
+    }
+    if (document.body) {
+      document.body.scrollTop = 0;
+      document.body.scrollLeft = 0;
+    }
+
+    const preventScroll = (e) => {
+      const target = e.target;
+      // Allow scrolling inside internal scrollable elements (e.g., explorer side panel list or OS app containers)
+      if (target && target.closest && target.closest('.panel-list, .terminal-body, .window-body, .start-menu-content, .virtual-file-list, .text-editor-textarea, .desktop-leaderboard-list')) {
+        return;
+      }
+      if (e.type === 'wheel' || e.type === 'touchmove') {
+        e.preventDefault();
+      }
+      if (e.type === 'keydown') {
+        const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+        if (!isInput && [' ', 'PageUp', 'PageDown', 'End', 'Home', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    window.addEventListener('wheel', preventScroll, { passive: false });
+    window.addEventListener('touchmove', preventScroll, { passive: false });
+    window.addEventListener('keydown', preventScroll, { passive: false });
+
+    const handleWindowScroll = () => {
+      if (window.scrollX !== 0 || window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
+      const appContainer = document.querySelector('.app-container');
+      if (appContainer && (appContainer.scrollTop !== 0 || appContainer.scrollLeft !== 0)) {
+        appContainer.scrollTop = 0;
+        appContainer.scrollLeft = 0;
+      }
+    };
+
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('wheel', preventScroll);
+      window.removeEventListener('touchmove', preventScroll);
+      window.removeEventListener('keydown', preventScroll);
+      window.removeEventListener('scroll', handleWindowScroll);
+    };
+  }, []);
+
+  // Automatically request fullscreen at start of the app (and on first user interaction)
+  useEffect(() => {
+    const triggerAutoFullscreen = () => {
+      if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    };
+
+    // Attempt immediately when app mounts/starts
+    triggerAutoFullscreen();
+
+    // Browser security may require a user gesture; trigger on the first interaction anywhere
+    const onFirstInteraction = () => {
+      triggerAutoFullscreen();
+    };
+
+    window.addEventListener('click', onFirstInteraction, { capture: true });
+    window.addEventListener('keydown', onFirstInteraction, { capture: true });
+    window.addEventListener('touchstart', onFirstInteraction, { capture: true });
+    window.addEventListener('pointerdown', onFirstInteraction, { capture: true });
+
+    return () => {
+      window.removeEventListener('click', onFirstInteraction, { capture: true });
+      window.removeEventListener('keydown', onFirstInteraction, { capture: true });
+      window.removeEventListener('touchstart', onFirstInteraction, { capture: true });
+      window.removeEventListener('pointerdown', onFirstInteraction, { capture: true });
+    };
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const container = document.querySelector('.app-container');
+    if (container) {
+      container.scrollTop = 0;
+      container.scrollLeft = 0;
+    }
+  }, [stage]);
+
   const fetchLeaderboard = async (currentTeamName) => {
     try {
       const res = await fetch(`${API_BASE}/api/teams/leaderboard`);
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data.teams) && data.teams.length > 0) {
+        if (Array.isArray(data.teams)) {
           setLiveExplorers(data.teams);
-          const activeName = (currentTeamName || teamData.name || '').toLowerCase();
-          const self = data.teams.find(e => e.name.toLowerCase() === activeName);
-          if (self) {
-            setTeamData(prev => ({
-              ...prev,
-              member1: self.member1 || prev.member1,
-              member2: self.member2 || prev.member2,
-              standing: formatOrdinal(self.rank),
-              score: self.score
-            }));
+          if (data.teams.length > 0) {
+            const activeName = (currentTeamName || teamData.name || '').toLowerCase();
+            const self = data.teams.find(e => e.name.toLowerCase() === activeName);
+            if (self) {
+              setTeamData(prev => ({
+                ...prev,
+                member1: self.member1 || prev.member1,
+                member2: self.member2 || prev.member2,
+                standing: formatOrdinal(self.rank),
+                score: self.score
+              }));
+            }
           }
         }
       }
@@ -134,6 +222,11 @@ function App() {
       savedMember1 = localStorage.getItem('cyphora_member1') || '';
       savedMember2 = localStorage.getItem('cyphora_member2') || '';
     } catch (err) {}
+
+    const paramStage = params.get('stage');
+    if (paramStage && ['initial', 'prologue', 'main'].includes(paramStage)) {
+      setStage(paramStage);
+    }
 
     const initialName = paramTeam || savedTeam || 'Wandering Nomad';
     setTeamData(prev => ({
@@ -189,19 +282,21 @@ function App() {
           try {
             const payload = JSON.parse(event.data);
             if (payload.event === 'LEADERBOARD_UPDATE' || payload.event === 'INITIAL_STATE') {
-              if (Array.isArray(payload.data) && payload.data.length > 0) {
+              if (Array.isArray(payload.data)) {
                 setLiveExplorers(payload.data);
-                const self = payload.data.find(
-                  e => e.name.toLowerCase() === teamData.name.toLowerCase()
-                );
-                if (self) {
-                  setTeamData(prev => ({
-                    ...prev,
-                    member1: self.member1 || prev.member1,
-                    member2: self.member2 || prev.member2,
-                    standing: formatOrdinal(self.rank),
-                    score: self.score
-                  }));
+                if (payload.data.length > 0) {
+                  const self = payload.data.find(
+                    e => e.name.toLowerCase() === teamData.name.toLowerCase()
+                  );
+                  if (self) {
+                    setTeamData(prev => ({
+                      ...prev,
+                      member1: self.member1 || prev.member1,
+                      member2: self.member2 || prev.member2,
+                      standing: formatOrdinal(self.rank),
+                      score: self.score
+                    }));
+                  }
                 }
               }
             }
@@ -234,10 +329,16 @@ function App() {
   }, [teamData.name]);
 
   const handleBeginClick = () => {
+    if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
     setShowTeamModal(true);
   };
 
   const completeRegistration = (finalName, finalPin, finalMember1, finalMember2) => {
+    if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
     localStorage.setItem('cyphora_team_name', finalName);
     if (finalMember1) localStorage.setItem('cyphora_member1', finalMember1);
     if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
@@ -423,15 +524,19 @@ function App() {
         member1: e.member1,
         member2: e.member2,
         standing: `${formatOrdinal(e.rank)} (${e.score ?? 0} pts)`,
+        score: e.score ?? 0,
         status: e.status || 'idle'
       }))
-    : (
-      EXPLORERS.some(e => e.name.toLowerCase() === teamData.name.toLowerCase())
-        ? EXPLORERS
-        : [
-            { name: teamData.name, standing: teamData.standing, status: 'active' },
-            ...EXPLORERS
-          ]
+    : (teamData.name && teamData.name !== 'Wandering Nomad'
+        ? [{
+            name: teamData.name,
+            member1: teamData.member1,
+            member2: teamData.member2,
+            standing: `${teamData.standing || 'Unranked'} (${teamData.score ?? 0} pts)`,
+            score: teamData.score ?? 0,
+            status: 'active'
+          }]
+        : []
     );
 
   return (
@@ -645,6 +750,9 @@ function App() {
           onReturnToHub={() => setStage('main')}
           round1State={round1State}
           setRound1State={setRound1State}
+          liveExplorers={liveExplorers}
+          isWsConnected={isWsConnected}
+          fetchLeaderboard={fetchLeaderboard}
         />
       )}
     </div>

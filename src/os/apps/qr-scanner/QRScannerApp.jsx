@@ -14,9 +14,9 @@ const DEFAULT_QR_IMAGES = [
 
 export function QRScannerApp() {
   const { vfs, openApp, eventBus } = useOS();
-  const [selectedPath, setSelectedPath] = useState('/Pictures/poster.png');
+  const [selectedPath, setSelectedPath] = useState('');
   const [isScanning, setIsScanning] = useState(false);
-  const [qrOutput, setQrOutput] = useState('01010011 01000101 01000011 01010100 01001111 01000010 00101101 00110111');
+  const [qrOutput, setQrOutput] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
   const [showPicker, setShowPicker] = useState(false);
 
@@ -92,7 +92,8 @@ export function QRScannerApp() {
       <div className="scanner-controls" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <div className="control-group" style={{ flex: 1 }}>
           <label>SELECT IMAGE FROM VFS:</label>
-          <select value={selectedPath.startsWith('/') ? selectedPath : DEFAULT_QR_IMAGES[0].path} onChange={handleSelectImage} className="scanner-select">
+          <select value={selectedPath} onChange={handleSelectImage} className="scanner-select">
+            <option value="">-- Select Image from Virtual OS --</option>
             {DEFAULT_QR_IMAGES.map(img => (
               <option key={img.path} value={img.path}>{img.label}</option>
             ))}
@@ -108,7 +109,7 @@ export function QRScannerApp() {
           <span>Browse Virtual OS</span>
         </button>
 
-        <button className="scan-btn" onClick={() => handleScan(selectedPath)} disabled={isScanning}>
+        <button className="scan-btn" onClick={() => handleScan(selectedPath)} disabled={isScanning || !selectedPath}>
           <Scan size={15} />
           <span>{isScanning ? 'Scanning...' : 'Scan Image'}</span>
         </button>

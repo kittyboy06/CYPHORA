@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ChevronUp, Maximize2, Minus, PartyPopper, CheckCircle, FileText, Folder } from 'lucide-react';
 import { useOS } from '../os/state/OSContext.jsx';
 import { SET_PRESENTATIONS, TASK_PRESENTATIONS, TASK_DEFINITIONS } from '../round1/taskContent.js';
+import { ROUND_1_SETS } from '../round1/round1Engine.js';
 import { TaskCompletionCelebration } from './TaskCompletionCelebration.jsx';
 import { VirtualFilePicker } from '../os/components/VirtualFilePicker.jsx';
 
@@ -91,7 +92,8 @@ export function TaskBoard({ round1State }) {
     hints: []
   };
 
-  const setPresentation = SET_PRESENTATIONS[activeTask.setId];
+  const currentSetId = activeTask.setId || ROUND_1_SETS.find(s => s.tasks.includes(activeTask.id))?.id || round1State?.activeSet || 'set1';
+  const setPresentation = SET_PRESENTATIONS[currentSetId];
   const requiredAssets = taskDef.requiredInput?.assets || [];
 
   const revealHint = () => {
@@ -191,53 +193,8 @@ export function TaskBoard({ round1State }) {
                 </p>
               </div>
 
-              {/* Task Evidence Reference Box */}
-              {requiredAssets.length > 0 && (
-                <div className="task-evidence-box" style={{ background: '#0d1117', border: '1px solid #21262d', borderRadius: '6px', padding: '0.8rem 1rem', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#7ee787', letterSpacing: '0.08rem', display: 'block', marginBottom: '0.5rem' }}>
-                    VIRTUAL OS EVIDENCE
-                  </span>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                    {requiredAssets.map(asset => (
-                      <div key={asset.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#161b22', padding: '0.45rem 0.75rem', borderRadius: '4px', border: '1px solid #30363d' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          <FileText size={15} color="#79c0ff" />
-                          <span style={{ fontSize: '0.85rem', color: '#f0f6fc', fontWeight: 600 }}>{asset.name}</span>
-                          <span style={{ fontSize: '0.75rem', color: '#8b949e', fontFamily: 'monospace' }}>({asset.path})</span>
-                        </div>
-                      </div>
-                    ))}
-                    <div style={{ marginTop: '0.3rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <button
-                        type="button"
-                        onClick={() => setShowPicker(true)}
-                        style={{ background: '#21262d', color: '#58a6ff', border: '1px solid #30363d', padding: '0.35rem 0.75rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                      >
-                        <Folder size={14} />
-                        <span>Locate in Virtual OS</span>
-                      </button>
-                      {selectedEvidencePath && (
-                        <span style={{ fontSize: '0.78rem', color: '#7ee787', fontWeight: 600, fontFamily: 'monospace' }}>
-                          ✓ Selected: {selectedEvidencePath}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Hints Box */}
-              {hintLevel > 0 && (
-                <div className="objective-hint" style={{ background: '#1c2128', border: '1px solid #388bfd', borderRadius: '6px', padding: '0.65rem 0.9rem', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#58a6ff', display: 'block', marginBottom: '0.2rem' }}>
-                    HINT {hintLevel} OF {presentation.hints.length}
-                  </span>
-                  <p style={{ margin: 0, fontSize: '0.88rem', color: '#c9d1d9' }}>{presentation.hints[hintLevel - 1]}</p>
-                </div>
-              )}
-
               {/* Dedicated Answer Submission Box */}
-              <form onSubmit={handleAnswerSubmit} className="objective-answer-form" style={{ marginTop: '0.5rem', background: '#161b22', border: '1px solid #30363d', borderRadius: '6px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              <form onSubmit={handleAnswerSubmit} className="objective-answer-form" style={{ marginTop: '1rem', background: '#161b22', border: '1px solid #30363d', borderRadius: '6px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f0f6fc', letterSpacing: '0.08rem' }}>
                   FINAL ANSWER
                 </label>
@@ -267,11 +224,42 @@ export function TaskBoard({ round1State }) {
 
               {/* Action Buttons Footer */}
               <div className="objective-modal-actions" style={{ marginTop: '1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                {presentation.hints.length > hintLevel ? (
-                  <button className="objective-secondary-button" onClick={revealHint}>REVEAL HINT ({hintLevel + 1}/{presentation.hints.length})</button>
+                {presentation.hints && presentation.hints.length > 0 ? (
+                  <button
+                    type="button"
+                    className="objective-secondary-button"
+                    onClick={revealHint}
+                    style={{ background: '#21262d', color: '#e3b341', border: '1px solid #d29922', padding: '0.45rem 0.85rem', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                  >
+                    <span>? HINT</span>
+                    {hintLevel > 0 && <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>({hintLevel}/{presentation.hints.length})</span>}
+                  </button>
                 ) : <div />}
                 <button className="objective-primary-button" onClick={() => setObjectiveMode('docked')}>MINIMIZE PANEL</button>
               </div>
+
+              {/* Hint Modal Display */}
+              {hintLevel > 0 && presentation.hints && presentation.hints[hintLevel - 1] && (
+                <div className="objective-hint" style={{ marginTop: '1rem', background: '#1c2128', border: '1px solid #d29922', borderRadius: '6px', padding: '0.8rem 1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#e3b341', letterSpacing: '0.05rem' }}>
+                      HINT {hintLevel} OF {presentation.hints.length}
+                    </span>
+                    {hintLevel < presentation.hints.length && (
+                      <button
+                        type="button"
+                        onClick={revealHint}
+                        style={{ background: 'transparent', border: 'none', color: '#58a6ff', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}
+                      >
+                        MORE SPECIFIC HINT →
+                      </button>
+                    )}
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#c9d1d9', lineHeight: 1.4 }}>
+                    {presentation.hints[hintLevel - 1]}
+                  </p>
+                </div>
+              )}
             </section>
           </div>
         )}
@@ -298,12 +286,6 @@ export function TaskBoard({ round1State }) {
             <PartyPopper size={15} /> TASK {presentation.number} <Maximize2 size={13} />
           </button>
         )}
-
-        <div className="objective-journey-hud">
-          <span>JOURNEY</span>
-          <strong>{Math.round(round1State.journeyProgress || 0)}%</strong>
-          <small>{setPresentation?.label} — {setPresentation?.title}</small>
-        </div>
       </div>
 
       {celebratedTask && <TaskCompletionCelebration {...celebratedTask} />}

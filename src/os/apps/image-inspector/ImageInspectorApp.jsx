@@ -11,7 +11,7 @@ const SAMPLE_IMAGES = [
 
 export function ImageInspectorApp() {
   const { vfs, eventBus } = useOS();
-  const [selectedPath, setSelectedPath] = useState('/Pictures/field_poster.png');
+  const [selectedPath, setSelectedPath] = useState('');
   const [zoom, setZoom] = useState(100);
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);

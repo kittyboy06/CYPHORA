@@ -14,7 +14,7 @@ const SAMPLE_TEXT_FILES = [
 
 export function TextAnalyzerApp() {
   const { vfs, eventBus } = useOS();
-  const [selectedPath, setSelectedPath] = useState('/Documents/numbers.txt');
+  const [selectedPath, setSelectedPath] = useState('');
   const [activeTab, setActiveTab] = useState('frequency'); // 'frequency' | 'splitter'
   const [textVal, setTextVal] = useState('');
   const [delimiter, setDelimiter] = useState('-');
@@ -23,12 +23,16 @@ export function TextAnalyzerApp() {
   const [copiedWord, setCopiedWord] = useState('');
 
   const loadText = (path = selectedPath) => {
+    if (!path) {
+      setTextVal('');
+      return;
+    }
     try {
       const content = vfs.readFile(path, 'text-analyzer');
       setTextVal(content);
       eventBus.emit('FILE_OPENED', { filePath: path, openedBy: 'text-analyzer' });
     } catch (e) {
-      setTextVal('17\n42\n17\n91\n63\n42\n17\n28');
+      setTextVal('');
     }
   };
 
@@ -37,7 +41,11 @@ export function TextAnalyzerApp() {
   }, [selectedPath]);
 
   useEffect(() => {
-    if (!textVal) return;
+    if (!textVal) {
+      setFrequencies([]);
+      setSplitParts([]);
+      return;
+    }
 
     if (activeTab === 'frequency') {
       const words = textVal.split(/[\s,\n\r\t]+/).filter(w => w.trim().length > 0);
@@ -62,7 +70,11 @@ export function TextAnalyzerApp() {
     const p = e.target.value;
     setSelectedPath(p);
     setActiveTab('frequency');
-    loadText(p);
+    if (p) {
+      loadText(p);
+    } else {
+      setTextVal('');
+    }
   };
 
   const handleCopyValue = (val) => {
@@ -86,6 +98,7 @@ export function TextAnalyzerApp() {
         <div className="file-selector">
           <label>SELECT FILE:</label>
           <select value={selectedPath} onChange={handleSelectFile} className="analyzer-select">
+            <option value="">-- Select Document from Virtual OS --</option>
             {SAMPLE_TEXT_FILES.map(f => (
               <option key={f.path} value={f.path}>{f.label}</option>
             ))}
@@ -105,6 +118,11 @@ export function TextAnalyzerApp() {
       </div>
 
       {/* Main Analyzer Content */}
+      {!selectedPath && (!textVal || textVal.length === 0) ? (
+        <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#8b949e', fontStyle: 'italic', background: '#0d1117', border: '1px solid #21262d', borderRadius: '6px', marginTop: '1rem' }}>
+          No document selected. Choose a file from the dropdown above to analyze token frequencies.
+        </div>
+      ) : (
       <div className="analyzer-content">
         {activeTab === 'frequency' ? (
           <div className="frequency-panel">
@@ -155,6 +173,7 @@ export function TextAnalyzerApp() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
