@@ -7,7 +7,16 @@ import { APP_REGISTRY } from '../apps/registry.js';
 const OSContext = createContext(null);
 const SESSION_STORAGE_KEY = 'cyphora_os_session';
 
-export function OSProvider({ children, teamData, onReturnToHub, round1State, setRound1State }) {
+export function OSProvider({
+  children,
+  teamData,
+  onReturnToHub,
+  round1State,
+  setRound1State,
+  liveExplorers = [],
+  isWsConnected = false,
+  fetchLeaderboard = () => {}
+}) {
   const [state, dispatch] = useReducer(osReducer, INITIAL_OS_STATE, (init) => {
     try {
       // Remove any lingering legacy localStorage session key so old sessions don't persist across restarts
@@ -278,6 +287,9 @@ export function OSProvider({ children, teamData, onReturnToHub, round1State, set
   const value = {
     ...state,
     teamData: teamData || { name: 'Explorer', standing: '1st', score: 0 },
+    liveExplorers,
+    isWsConnected,
+    fetchLeaderboard,
     vfs,
     eventBus,
     openApp,

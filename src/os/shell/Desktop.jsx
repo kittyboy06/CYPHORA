@@ -12,17 +12,49 @@ import {
   GitCompare,
   Volume2,
   FilePlus,
-  RotateCcw
+  RotateCcw,
+  Trophy,
+  Radio
 } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
 import { SET_PRESENTATIONS } from '../../round1/taskContent.js';
 import { ROUND_1_SETS } from '../../round1/round1Engine.js';
 
 export function Desktop() {
-  const { vfs, openApp, closeStartMenu, round1State } = useOS();
+  const {
+    vfs,
+    openApp,
+    closeStartMenu,
+    round1State,
+    liveExplorers = [],
+    teamData,
+    isWsConnected = false,
+    fetchLeaderboard
+  } = useOS();
   const [desktopFiles, setDesktopFiles] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [contextMenu, setContextMenu] = useState(null);
+
+  useEffect(() => {
+    if (typeof fetchLeaderboard === 'function') {
+      fetchLeaderboard();
+      const pollTimer = setInterval(() => {
+        fetchLeaderboard();
+      }, 7000);
+      return () => clearInterval(pollTimer);
+    }
+  }, [fetchLeaderboard]);
+
+  const displayTeams = Array.isArray(liveExplorers) && liveExplorers.length > 0
+    ? liveExplorers
+    : (teamData?.name && teamData.name !== 'Wandering Nomad' && teamData.name !== 'Explorer'
+        ? [{ rank: 1, name: teamData.name, score: teamData.score ?? 0, status: 'active' }]
+        : []);
+
+  const isCurrentTeam = (name) => {
+    if (!name || !teamData?.name) return false;
+    return teamData.name.trim().toLowerCase() === name.trim().toLowerCase();
+  };
 
   const activeTask = round1State?.tasks?.find(t => t.status === 'ACTIVE');
   const currentSetId = activeTask?.setId || (activeTask ? ROUND_1_SETS.find(s => s.tasks.includes(activeTask.id))?.id : null) || round1State?.activeSet || 'set1';
@@ -198,16 +230,79 @@ export function Desktop() {
         ))}
       </div>
 
-      {/* Desktop Journey HUD — sits directly on the desktop canvas, never overlapping open/fullscreen windows */}
-      {round1State?.round1StartedAt && (
+      {/* Top-Right Desktop HUD Stack: Journey HUD + Synced Database Leaderboard */}
+      <aside
+        className="desktop-top-right-hud"
+        aria-label="Expedition Progress and Leaderboard"
+        onClick={(e) => {
+          e.stopPropagation();
+          closeStartMenu();
+          setContextMenu(null);
+        }}
+      >
         <div className="desktop-journey-hud">
           <span>JOURNEY</span>
-          <strong>{Math.round(round1State.journeyProgress || 0)}%</strong>
-          {setPresentation?.label && (
+          <strong>{Math.round(round1State?.journeyProgress || 0)}%</strong>
+          {setPresentation?.label ? (
             <small>{setPresentation.label} — {setPresentation.title}</small>
+          ) : (
+            <small>TIER 1 — ONE-STEP TECHNICAL RECONNAISSANCE</small>
           )}
         </div>
-      )}
+
+        <div className="desktop-leaderboard-widget">
+          <div className="desktop-leaderboard-header">
+            <div className="desktop-leaderboard-title">
+              <Trophy size={13} className="leaderboard-trophy-icon" />
+              <span>EXPEDITION LEADERBOARD</span>
+            </div>
+            <div
+              className={`desktop-leaderboard-sync-badge ${isWsConnected ? 'synced' : 'polling'}`}
+              title={isWsConnected ? 'Real-time WebSocket connected' : 'Database sync active'}
+            >
+              <span className="sync-pulse-dot" />
+              <span className="sync-label">{isWsConnected ? 'LIVE' : 'SYNCED'}</span>
+            </div>
+          </div>
+
+          <div className="desktop-leaderboard-body">
+            {displayTeams.length > 0 ? (
+              <div className="desktop-leaderboard-list">
+                {displayTeams.map((team, idx) => {
+                  const isSelf = isCurrentTeam(team.name);
+                  const rank = team.rank || idx + 1;
+                  return (
+                    <div
+                      key={team.id || team.name || idx}
+                      className={`desktop-leaderboard-row ${isSelf ? 'is-self' : ''}`}
+                    >
+                      <span className={`leaderboard-rank rank-${rank <= 3 ? rank : 'other'}`}>
+                        #{rank}
+                      </span>
+                      <div className="leaderboard-team-info">
+                        <span className="leaderboard-team-name" title={team.name}>
+                          {team.name}
+                        </span>
+                        {isSelf && <span className="leaderboard-you-tag">YOU</span>}
+                      </div>
+                      <div className="leaderboard-score-pill">
+                        <span className="score-num">{team.score ?? 0}</span>
+                        <span className="score-unit">PTS</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="desktop-leaderboard-empty">
+                <Radio size={13} className="empty-radio-icon" />
+                <span className="empty-title">Awaiting telemetry...</span>
+                <span className="empty-subtitle">No teams recorded in database</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </aside>
 
       {/* Right-click Context Menu */}
       {contextMenu && (

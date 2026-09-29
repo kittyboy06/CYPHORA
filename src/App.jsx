@@ -105,7 +105,7 @@ function App() {
     const preventScroll = (e) => {
       const target = e.target;
       // Allow scrolling inside internal scrollable elements (e.g., explorer side panel list or OS app containers)
-      if (target && target.closest && target.closest('.panel-list, .terminal-body, .window-body, .start-menu-content, .virtual-file-list, .text-editor-textarea')) {
+      if (target && target.closest && target.closest('.panel-list, .terminal-body, .window-body, .start-menu-content, .virtual-file-list, .text-editor-textarea, .desktop-leaderboard-list')) {
         return;
       }
       if (e.type === 'wheel' || e.type === 'touchmove') {
@@ -144,6 +144,35 @@ function App() {
     };
   }, []);
 
+  // Automatically request fullscreen at start of the app (and on first user interaction)
+  useEffect(() => {
+    const triggerAutoFullscreen = () => {
+      if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    };
+
+    // Attempt immediately when app mounts/starts
+    triggerAutoFullscreen();
+
+    // Browser security may require a user gesture; trigger on the first interaction anywhere
+    const onFirstInteraction = () => {
+      triggerAutoFullscreen();
+    };
+
+    window.addEventListener('click', onFirstInteraction, { capture: true });
+    window.addEventListener('keydown', onFirstInteraction, { capture: true });
+    window.addEventListener('touchstart', onFirstInteraction, { capture: true });
+    window.addEventListener('pointerdown', onFirstInteraction, { capture: true });
+
+    return () => {
+      window.removeEventListener('click', onFirstInteraction, { capture: true });
+      window.removeEventListener('keydown', onFirstInteraction, { capture: true });
+      window.removeEventListener('touchstart', onFirstInteraction, { capture: true });
+      window.removeEventListener('pointerdown', onFirstInteraction, { capture: true });
+    };
+  }, []);
+
   useEffect(() => {
     window.scrollTo(0, 0);
     const container = document.querySelector('.app-container');
@@ -158,18 +187,20 @@ function App() {
       const res = await fetch(`${API_BASE}/api/teams/leaderboard`);
       if (res.ok) {
         const data = await res.json();
-        if (Array.isArray(data.teams) && data.teams.length > 0) {
+        if (Array.isArray(data.teams)) {
           setLiveExplorers(data.teams);
-          const activeName = (currentTeamName || teamData.name || '').toLowerCase();
-          const self = data.teams.find(e => e.name.toLowerCase() === activeName);
-          if (self) {
-            setTeamData(prev => ({
-              ...prev,
-              member1: self.member1 || prev.member1,
-              member2: self.member2 || prev.member2,
-              standing: formatOrdinal(self.rank),
-              score: self.score
-            }));
+          if (data.teams.length > 0) {
+            const activeName = (currentTeamName || teamData.name || '').toLowerCase();
+            const self = data.teams.find(e => e.name.toLowerCase() === activeName);
+            if (self) {
+              setTeamData(prev => ({
+                ...prev,
+                member1: self.member1 || prev.member1,
+                member2: self.member2 || prev.member2,
+                standing: formatOrdinal(self.rank),
+                score: self.score
+              }));
+            }
           }
         }
       }
@@ -251,19 +282,21 @@ function App() {
           try {
             const payload = JSON.parse(event.data);
             if (payload.event === 'LEADERBOARD_UPDATE' || payload.event === 'INITIAL_STATE') {
-              if (Array.isArray(payload.data) && payload.data.length > 0) {
+              if (Array.isArray(payload.data)) {
                 setLiveExplorers(payload.data);
-                const self = payload.data.find(
-                  e => e.name.toLowerCase() === teamData.name.toLowerCase()
-                );
-                if (self) {
-                  setTeamData(prev => ({
-                    ...prev,
-                    member1: self.member1 || prev.member1,
-                    member2: self.member2 || prev.member2,
-                    standing: formatOrdinal(self.rank),
-                    score: self.score
-                  }));
+                if (payload.data.length > 0) {
+                  const self = payload.data.find(
+                    e => e.name.toLowerCase() === teamData.name.toLowerCase()
+                  );
+                  if (self) {
+                    setTeamData(prev => ({
+                      ...prev,
+                      member1: self.member1 || prev.member1,
+                      member2: self.member2 || prev.member2,
+                      standing: formatOrdinal(self.rank),
+                      score: self.score
+                    }));
+                  }
                 }
               }
             }
@@ -296,10 +329,16 @@ function App() {
   }, [teamData.name]);
 
   const handleBeginClick = () => {
+    if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
     setShowTeamModal(true);
   };
 
   const completeRegistration = (finalName, finalPin, finalMember1, finalMember2) => {
+    if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
     localStorage.setItem('cyphora_team_name', finalName);
     if (finalMember1) localStorage.setItem('cyphora_member1', finalMember1);
     if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
