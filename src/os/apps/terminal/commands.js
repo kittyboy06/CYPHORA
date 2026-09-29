@@ -14,38 +14,35 @@ export function executeCommand({ commandLine, cwd, vfs, eventBus, teamName, setC
   const cmd = rawArgs[0].toLowerCase();
   const args = rawArgs.slice(1);
 
-  // Emit event for future Task & Validation engine
-  eventBus.emit('COMMAND_EXECUTED', {
+  // Emit event for Task & Validation engine
+  eventBus.emit('TERMINAL_COMMAND_EXECUTED', {
     command: cmd,
     args,
     raw: trimmed,
-    cwd
+    cwd,
+    output: trimmed
   });
 
   switch (cmd) {
     case 'help': {
       return [
-        { type: 'info', text: 'CYPHORA OS Navigator v1.0.4 - Command Shell' },
-        { type: 'info', text: '================================================' },
-        { type: 'text', text: 'ls [-a] [-l] [path]  : List directory contents' },
-        { type: 'text', text: 'cd [path]            : Change current working directory' },
-        { type: 'text', text: 'pwd                  : Print working directory' },
-        { type: 'text', text: 'cat <file>           : Display file content' },
-        { type: 'text', text: 'echo [text]          : Print text to standard output' },
-        { type: 'text', text: 'touch <file>         : Create an empty file' },
-        { type: 'text', text: 'mkdir <dir>          : Create a new directory' },
-        { type: 'text', text: 'rm <path>            : Remove file or directory' },
-        { type: 'text', text: 'clear                : Clear the terminal screen' },
-        { type: 'text', text: 'whoami               : Display current logged-in identity' },
-        { type: 'text', text: 'date                 : Show system date and time' },
-        { type: 'text', text: 'history              : View executed command history' },
-        { type: 'text', text: 'exit                 : Close the terminal session' },
-        { type: 'info', text: '================================================' }
+        { type: 'text', text: 'pwd               show current location' },
+        { type: 'text', text: 'ls                list folder contents' },
+        { type: 'text', text: 'ls -a             show hidden entries' },
+        { type: 'text', text: 'cd <folder>       enter a folder' },
+        { type: 'text', text: 'cd ..             move to parent folder' },
+        { type: 'text', text: 'cat <file>        read a text file' },
+        { type: 'text', text: 'find <path> <x>   search for a file' },
+        { type: 'text', text: 'grep <x> <path>   search text' },
+        { type: 'text', text: 'history           show command history' },
+        { type: 'text', text: 'clear             clear terminal' },
+        { type: 'text', text: 'date              show system time' },
+        { type: 'text', text: 'whoami            show current user' }
       ];
     }
 
     case 'pwd': {
-      return [{ type: 'text', text: cwd }];
+      return [{ type: 'text', text: cwd || '/' }];
     }
 
     case 'clear': {
@@ -54,7 +51,7 @@ export function executeCommand({ commandLine, cwd, vfs, eventBus, teamName, setC
     }
 
     case 'whoami': {
-      return [{ type: 'text', text: `${teamName || 'navigator'}@cyphora-workstation` }];
+      return [{ type: 'text', text: `${teamName || 'hkgj'}@cyphora-workstation` }];
     }
 
     case 'date': {
@@ -69,19 +66,27 @@ export function executeCommand({ commandLine, cwd, vfs, eventBus, teamName, setC
     }
 
     case 'cd': {
-      const target = args[0] || '~';
+      const target = args[0] || '/';
       const resolved = vfs.resolvePath(cwd, target);
       const node = vfs.getNode(resolved);
 
       if (!node) {
+        // Navigation Safety Check: If target exists at root (e.g. /Documents), give a helpful hint
+        const rootAttempt = target.startsWith('/') ? null : vfs.getNode('/' + target);
+        if (rootAttempt && rootAttempt.type === 'dir') {
+          return [
+            { type: 'error', text: `cd: ${target}: no such directory here` },
+            { type: 'info', text: `Tip: use an absolute path such as /${target}` }
+          ];
+        }
         return [{ type: 'error', text: `cd: no such file or directory: ${target}` }];
       }
       if (node.type !== 'dir') {
         return [{ type: 'error', text: `cd: not a directory: ${target}` }];
       }
 
-      setCwd(resolved);
-      eventBus.emit('DIR_CHANGED', { from: cwd, to: resolved, appId: 'terminal' });
+      setCwd(node.path);
+      eventBus.emit('DIR_CHANGED', { from: cwd, to: node.path, appId: 'terminal' });
       return null;
     }
 
@@ -137,6 +142,48 @@ export function executeCommand({ commandLine, cwd, vfs, eventBus, teamName, setC
       }
     }
 
+    case 'find': {
+      if (args.length === 0) return [{ type: 'error', text: 'Usage: find <path> <pattern> or find <pattern>' }];
+      let searchPathArg, patternArg;
+      if (args.length === 1) {
+        searchPathArg = cwd || '/';
+        patternArg = args[0];
+      } else {
+        searchPathArg = args[0];
+        patternArg = args[1];
+      }
+
+      const searchRoot = vfs.resolvePath(cwd, searchPathArg);
+      const pattern = patternArg.toLowerCase();
+      const matches = [];
+
+      const visit = (path) => {
+        const node = vfs.getNode(path);
+        if (!node) return;
+        if (node.type === 'file') {
+          if (node.name.toLowerCase().includes(pattern) || node.path.toLowerCase().includes(pattern)) {
+            matches.push(node);
+          }
+          return;
+        }
+        try {
+          vfs.listDir(path, true).forEach(child => visit(child.path));
+        } catch (e) {}
+      };
+
+      visit(searchRoot);
+      matches.forEach(node => {
+        eventBus.emit('FILE_FOUND', { filePath: node.path, fileName: node.name, hidden: Boolean(node.hidden) });
+        if (node.path.toLowerCase().includes('distress') || node.path.toLowerCase().includes('radio')) {
+          eventBus.emit('DISTRESS_MESSAGE_FOUND', { filePath: node.path, evidence: 'relay tampered' });
+        }
+      });
+
+      return matches.length > 0
+        ? matches.map(node => ({ type: 'text', text: node.path }))
+        : [{ type: 'text', text: `find: no matches for '${patternArg}'` }];
+    }
+
     case 'cat': {
       if (args.length === 0) {
         return [{ type: 'error', text: 'cat: missing file operand' }];
@@ -147,6 +194,29 @@ export function executeCommand({ commandLine, cwd, vfs, eventBus, teamName, setC
 
       try {
         const content = vfs.readFile(resolved, 'terminal');
+        const lowerPath = resolved.toLowerCase();
+
+        // T05 event correlation
+        if (lowerPath.includes('field_report.txt') || lowerPath.includes('marker_data.txt') || lowerPath.includes('trail_reference.txt')) {
+          eventBus.emit('TRAIL_RECORD_FOUND', { filePath: resolved, trailRecordFound: true });
+          eventBus.emit('FILE_FOUND', { filePath: resolved, hidden: false });
+        }
+
+        // T07 event correlation
+        if (lowerPath.includes('distress')) {
+          eventBus.emit('DISTRESS_MESSAGE_FOUND', { filePath: resolved, evidence: 'relay tampered' });
+        }
+
+        // T09 event correlation
+        if (lowerPath.includes('marker_sequence.txt') || lowerPath.includes('marker_data.txt')) {
+          eventBus.emit('TRAIL_MARKER_SEQUENCE_FOUND', { filePath: resolved, sequence: 'STONE,LEAF,RIVER,LEAF' });
+        }
+
+        // T11 event correlation
+        if (lowerPath.includes('last_coordinate.txt') || lowerPath.includes('navigation.cfg') || lowerPath.includes('route_notes.txt')) {
+          eventBus.emit('POSITION_FOUND', { filePath: resolved, grid: '118/742', bearing: '041', sector: '07' });
+        }
+
         const lines = content.split('\n');
         return lines.map(line => ({ type: 'text', text: line }));
       } catch (err) {
@@ -154,8 +224,59 @@ export function executeCommand({ commandLine, cwd, vfs, eventBus, teamName, setC
       }
     }
 
+    case 'grep': {
+      if (args.length === 0) {
+        return [{ type: 'error', text: 'grep: missing search pattern' }];
+      }
+
+      const query = args[0].toLowerCase();
+      const target = args[1] || cwd;
+      const resolvedTarget = vfs.resolvePath(cwd, target);
+      const matches = [];
+      const visit = (path) => {
+        const node = vfs.getNode(path);
+        if (!node) return;
+        if (node.type === 'file') {
+          const content = node.content || '';
+          content.split('\n').forEach((line, index) => {
+            if (line.toLowerCase().includes(query)) {
+              matches.push(`${node.path}:${index + 1}:${line}`);
+            }
+          });
+          return;
+        }
+        try {
+          vfs.listDir(path, true).forEach(child => visit(child.path));
+        } catch (e) {}
+      };
+
+      visit(resolvedTarget);
+
+      // Check T07 distress search
+      const distressMatch = matches.find(text => text.toLowerCase().includes('distress') || text.toLowerCase().includes('relay tampered'));
+      if (distressMatch || query.includes('distress') || query.includes('radio') || query.includes('tampered')) {
+        eventBus.emit('DISTRESS_MESSAGE_FOUND', { filePath: '/Field/Logs/distress.log', evidence: 'relay tampered' });
+      }
+
+      return matches.length > 0
+        ? matches.map(text => ({ type: 'text', text }))
+        : [{ type: 'text', text: `grep: no matches for '${args[0]}'` }];
+    }
+
+    case 'head':
+    case 'tail': {
+      if (args.length === 0) return [{ type: 'error', text: `${cmd}: missing file operand` }];
+      const resolved = vfs.resolvePath(cwd, args[0]);
+      try {
+        const lines = vfs.readFile(resolved, 'terminal').split('\n');
+        const selected = cmd === 'head' ? lines.slice(0, 10) : lines.slice(-10);
+        return selected.map(line => ({ type: 'text', text: line }));
+      } catch (err) {
+        return [{ type: 'error', text: `${cmd}: ${args[0]}: ${err.message}` }];
+      }
+    }
+
     case 'echo': {
-      // Check for simple redirection: echo "hello" > file.txt
       const redirIndex = args.indexOf('>');
       if (redirIndex !== -1 && redirIndex < args.length - 1) {
         const textToSave = args.slice(0, redirIndex).join(' ');

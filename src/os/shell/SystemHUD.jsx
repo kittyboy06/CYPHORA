@@ -1,21 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Shield, Maximize, Minimize, LogOut, Award, Clock } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
+import { formatCountdown } from '../../round1/round1Engine.js';
+
+const formatSimulatedClock = (value) => {
+  if (!value) return 'CLOCK UNSYNCED';
+  return value.replace('CYPHORA-EXPEDITION-', '').replace('-', ' ');
+};
 
 export function SystemHUD() {
-  const { teamData, isFullscreen, requestFullscreen, onReturnToHub } = useOS();
-  const [timeStr, setTimeStr] = useState('');
-
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      setTimeStr(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
+  const { teamData, isFullscreen, requestFullscreen, onReturnToHub, round1State } = useOS();
   const handleToggleFullscreen = async () => {
     if (!document.fullscreenElement) {
       requestFullscreen();
@@ -58,9 +52,15 @@ export function SystemHUD() {
 
       {/* Right: Clock & Actions */}
       <div className="hud-right">
+        {round1State?.round1StartedAt && (
+          <div className="hud-round1-timer">
+            <span className="hud-round1-label">ROUND 01</span>
+            <span className="hud-round1-value">{formatCountdown(round1State.remainingTimeMs ?? 1200000)}</span>
+          </div>
+        )}
         <div className="hud-clock">
           <Clock size={13} />
-          <span>{timeStr}</span>
+          <span>{formatSimulatedClock(round1State?.simulatedClock)}</span>
         </div>
 
         <button

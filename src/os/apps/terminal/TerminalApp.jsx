@@ -1,17 +1,28 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useOS } from '../../state/OSContext.jsx';
 import { executeCommand } from './commands.js';
+import { Folder } from 'lucide-react';
 import './TerminalApp.css';
+
+const QUICK_LOCATIONS = [
+  'Desktop',
+  'Documents',
+  'Downloads',
+  'Pictures',
+  'System',
+  'Field',
+  'Trash'
+];
 
 export function TerminalApp({ windowId }) {
   const { vfs, eventBus, teamData, closeWindow } = useOS();
-  const [cwd, setCwd] = useState('/Desktop');
+  const [cwd, setCwd] = useState('/');
   const [inputVal, setInputVal] = useState('');
   const [history, setHistory] = useState([]);
   const [historyIdx, setHistoryIdx] = useState(-1);
   const [lines, setLines] = useState([
     { type: 'info', text: 'CYPHORA OS Navigator v1.0.4 [TTY 0]' },
-    { type: 'info', text: `Authorized Session: ${teamData.name || 'Navigator'}` },
+    { type: 'info', text: `Authorized Session: ${teamData.name || 'hkgj'}` },
     { type: 'info', text: "Type 'help' to inspect command capabilities." },
     { type: 'text', text: '' }
   ]);
@@ -24,6 +35,12 @@ export function TerminalApp({ windowId }) {
   }, [lines]);
 
   const handleContainerClick = () => {
+    inputRef.current?.focus();
+  };
+
+  const handleLocationClick = (loc, e) => {
+    e.stopPropagation();
+    setInputVal(`cd /${loc}`);
     inputRef.current?.focus();
   };
 
@@ -56,7 +73,7 @@ export function TerminalApp({ windowId }) {
         cwd,
         vfs,
         eventBus,
-        teamName: teamData.name,
+        teamName: teamData.name || 'hkgj',
         setCwd,
         clearTerminal: () => setLines([]),
         history: newHistory
@@ -117,22 +134,38 @@ export function TerminalApp({ windowId }) {
     } catch (e) {}
   };
 
-  const formatCwd = (path) => {
-    if (path === '/Users/Navigator') return '~';
-    if (path.startsWith('/Users/Navigator/')) return '~' + path.slice('/Users/Navigator'.length);
-    return path;
-  };
+  const userName = teamData.name || 'hkgj';
 
   return (
     <div className="terminal-app-container" onClick={handleContainerClick}>
+      {/* File Locations Bar */}
+      <div className="terminal-locations-bar">
+        <span className="terminal-locations-label">FILE LOCATIONS:</span>
+        <div className="terminal-locations-chips">
+          {QUICK_LOCATIONS.map(loc => (
+            <button
+              key={loc}
+              type="button"
+              className="terminal-location-chip"
+              onClick={(e) => handleLocationClick(loc, e)}
+              title={`Insert 'cd /${loc}'`}
+            >
+              <Folder size={11} />
+              <span>{loc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Terminal Output */}
       <div className="terminal-output-area">
         {lines.map((line, idx) => {
           if (line.type === 'prompt') {
             return (
               <div key={idx} className="terminal-line prompt-line">
-                <span className="terminal-user">{teamData.name || 'team'}@cyphora</span>
+                <span className="terminal-user">{userName}@cyphora</span>
                 <span className="terminal-colon">:</span>
-                <span className="terminal-cwd">{formatCwd(line.cwd)}</span>
+                <span className="terminal-cwd">{line.cwd}</span>
                 <span className="terminal-dollar">$</span>
                 <span className="terminal-cmd-text">{line.text}</span>
               </div>
@@ -161,9 +194,9 @@ export function TerminalApp({ windowId }) {
 
         {/* Active prompt row */}
         <div className="terminal-line prompt-active-row">
-          <span className="terminal-user">{teamData.name || 'team'}@cyphora</span>
+          <span className="terminal-user">{userName}@cyphora</span>
           <span className="terminal-colon">:</span>
-          <span className="terminal-cwd">{formatCwd(cwd)}</span>
+          <span className="terminal-cwd">{cwd}</span>
           <span className="terminal-dollar">$</span>
           <input
             ref={inputRef}

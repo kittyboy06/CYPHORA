@@ -15,7 +15,15 @@ class VFSEngine {
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed && typeof parsed === 'object' && parsed['/']) {
-            return parsed;
+            const hydrated = { ...parsed };
+            Object.entries(INITIAL_VFS).forEach(([path, node]) => {
+              if (!hydrated[path]) {
+                hydrated[path] = JSON.parse(JSON.stringify(node));
+              } else if (node.type === 'file' && node.content && hydrated[path].content !== node.content) {
+                hydrated[path].content = node.content;
+              }
+            });
+            return hydrated;
           }
         }
       }
@@ -73,8 +81,18 @@ class VFSEngine {
   }
 
   getNode(path) {
+    if (!path) return null;
     const normalized = path === '/' ? '/' : path.replace(/\/+$/, '');
-    return this.tree[normalized] || null;
+    if (this.tree[normalized]) return this.tree[normalized];
+
+    // Case-insensitive lookup fallback
+    const lowerNormalized = normalized.toLowerCase();
+    for (const [key, node] of Object.entries(this.tree)) {
+      if (key.toLowerCase() === lowerNormalized) {
+        return node;
+      }
+    }
+    return null;
   }
 
   exists(path) {
@@ -82,8 +100,7 @@ class VFSEngine {
   }
 
   listDir(path, includeHidden = false) {
-    const normalized = path === '/' ? '/' : path.replace(/\/+$/, '');
-    const parent = this.getNode(normalized);
+    const parent = this.getNode(path);
 
     if (!parent) {
       throw new Error(`Directory not found: ${path}`);
@@ -91,6 +108,7 @@ class VFSEngine {
     if (parent.type !== 'dir') {
       throw new Error(`Not a directory: ${path}`);
     }
+    const normalized = parent.path;
 
     const children = [];
     for (const [nodePath, node] of Object.entries(this.tree)) {
@@ -105,7 +123,7 @@ class VFSEngine {
         parentPath = nodePath.substring(0, lastSlash);
       }
 
-      if (parentPath === normalized) {
+      if (parentPath === normalized || parentPath.toLowerCase() === normalized.toLowerCase()) {
         const isHidden = node.hidden || node.name.startsWith('.');
         if (!isHidden || includeHidden) {
           children.push(node);
@@ -131,7 +149,11 @@ class VFSEngine {
 
     eventBus.emit('FILE_OPENED', {
       path: node.path,
+      filePath: node.path,
       name: node.name,
+      fileName: node.name,
+      author: node.author,
+      hidden: Boolean(node.hidden),
       mimeType: node.mimeType || 'text/plain',
       appId
     });

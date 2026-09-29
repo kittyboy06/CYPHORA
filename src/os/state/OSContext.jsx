@@ -7,7 +7,7 @@ import { APP_REGISTRY } from '../apps/registry.js';
 const OSContext = createContext(null);
 const SESSION_STORAGE_KEY = 'cyphora_os_session';
 
-export function OSProvider({ children, teamData, onReturnToHub }) {
+export function OSProvider({ children, teamData, onReturnToHub, round1State, setRound1State }) {
   const [state, dispatch] = useReducer(osReducer, INITIAL_OS_STATE, (init) => {
     try {
       const saved = localStorage.getItem(SESSION_STORAGE_KEY);
@@ -46,12 +46,22 @@ export function OSProvider({ children, teamData, onReturnToHub }) {
     const handleFullscreenChange = () => {
       const isFull = !!document.fullscreenElement;
       dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: isFull });
+
+      if (!isFull) {
+        dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: true });
+      } else {
+        dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: false });
+      }
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    // Initial check
-    if (document.fullscreenElement) {
+    // Initial check when OSProvider mounts
+    if (!document.fullscreenElement) {
+      dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: false });
+      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: true });
+    } else {
       dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: true });
+      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: false });
     }
 
     return () => {
@@ -130,6 +140,7 @@ export function OSProvider({ children, teamData, onReturnToHub }) {
       dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: false });
     } catch (err) {
       console.warn('Fullscreen request denied or not supported', err);
+      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: true });
     }
   };
 
@@ -154,7 +165,9 @@ export function OSProvider({ children, teamData, onReturnToHub }) {
     toggleMute,
     requestFullscreen,
     dismissExitBanner,
-    onReturnToHub
+    onReturnToHub,
+    round1State: round1State || null,
+    setRound1State: setRound1State || (() => {})
   };
 
   return <OSContext.Provider value={value}>{children}</OSContext.Provider>;

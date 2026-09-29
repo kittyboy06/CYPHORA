@@ -1,0 +1,194 @@
+.qr-scanner-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #0d1117;
+  color: #c9d1d9;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  padding: 1.2rem;
+  gap: 1rem;
+  box-sizing: border-box;
+}
+
+.scanner-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.8rem;
+}
+
+.title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #79c0ff;
+}
+
+.scanner-sub {
+  margin: 0.2rem 0 0 0;
+  font-size: 0.82rem;
+  opacity: 0.7;
+}
+
+.scanner-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.scanner-controls label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #8b949e;
+}
+
+.control-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.scanner-select {
+  flex: 1;
+  background: #161b22;
+  border: 1px solid #30363d;
+  color: #c9d1d9;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.scan-btn {
+  background: #1f6feb;
+  color: #ffffff;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.scan-btn:hover:not(:disabled) {
+  background: #388bfd;
+}
+
+.scan-viewfinder {
+  background: #161b22;
+  border: 1px dashed #30363d;
+  border-radius: 8px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.viewfinder-frame {
+  position: relative;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  border: 2px solid #388bfd;
+}
+
+.qr-glyph {
+  color: #58a6ff;
+  opacity: 0.85;
+}
+
+.laser-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #7ee787;
+  box-shadow: 0 0 10px #7ee787;
+  animation: laserScan 1.2s infinite alternate ease-in-out;
+}
+
+@keyframes laserScan {
+  0% { top: 5%; }
+  100% { top: 95%; }
+}
+
+.viewfinder-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08rem;
+  color: #8b949e;
+}
+
+.scan-result-panel {
+  background: #0d131e;
+  border: 1px solid #238636;
+  border-radius: 6px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.result-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08rem;
+  color: #7ee787;
+}
+
+.result-value {
+  font-family: 'Cascadia Code', monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  word-break: break-all;
+}
+
+.result-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #21262d;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  padding: 0.45rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.action-btn:hover {
+  background: #30363d;
+}
+
+.action-btn.primary {
+  background: #238636;
+  color: #ffffff;
+  border-color: #2ea043;
+}
+
+.action-btn.primary:hover {
+  background: #2ea043;
+}
+
+.scanner-msg {
+  color: #7ee787;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: right;
+}

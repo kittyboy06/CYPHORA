@@ -3,9 +3,16 @@ import {
   Terminal,
   Folder,
   FileText,
-  RotateCcw,
+  Settings,
+  RefreshCw,
+  Info,
+  QrCode,
+  Image as ImageIcon,
+  BarChart2,
+  GitCompare,
+  Volume2,
   FilePlus,
-  Plus
+  RotateCcw
 } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
 
@@ -64,10 +71,46 @@ export function Desktop() {
 
   const systemApps = [
     {
-      id: 'terminal',
-      title: 'Terminal',
-      icon: <Terminal size={32} className="desktop-icon-svg terminal-color" />,
-      action: () => openApp('terminal')
+      id: 'converter',
+      title: 'Universal Converter',
+      icon: <RefreshCw size={32} className="desktop-icon-svg file-color" />,
+      action: () => openApp('converter')
+    },
+    {
+      id: 'metadata-inspector',
+      title: 'Metadata Inspector',
+      icon: <Info size={32} className="desktop-icon-svg terminal-color" />,
+      action: () => openApp('metadata-inspector')
+    },
+    {
+      id: 'qr-scanner',
+      title: 'QR Scanner',
+      icon: <QrCode size={32} className="desktop-icon-svg editor-color" />,
+      action: () => openApp('qr-scanner')
+    },
+    {
+      id: 'image-inspector',
+      title: 'Image Inspector',
+      icon: <ImageIcon size={32} className="desktop-icon-svg folder-color" />,
+      action: () => openApp('image-inspector')
+    },
+    {
+      id: 'text-analyzer',
+      title: 'Text Analyzer',
+      icon: <BarChart2 size={32} className="desktop-icon-svg terminal-color" />,
+      action: () => openApp('text-analyzer')
+    },
+    {
+      id: 'file-comparator',
+      title: 'File Comparison',
+      icon: <GitCompare size={32} className="desktop-icon-svg file-color" />,
+      action: () => openApp('file-comparator')
+    },
+    {
+      id: 'audio-inspector',
+      title: 'Audio Inspector',
+      icon: <Volume2 size={32} className="desktop-icon-svg editor-color" />,
+      action: () => openApp('audio-inspector')
     },
     {
       id: 'file-manager',
@@ -76,10 +119,22 @@ export function Desktop() {
       action: () => openApp('file-manager')
     },
     {
+      id: 'terminal',
+      title: 'Terminal',
+      icon: <Terminal size={32} className="desktop-icon-svg terminal-color" />,
+      action: () => openApp('terminal')
+    },
+    {
       id: 'text-editor',
       title: 'Text Editor',
       icon: <FileText size={32} className="desktop-icon-svg editor-color" />,
       action: () => openApp('text-editor')
+    },
+    {
+      id: 'settings',
+      title: 'Settings',
+      icon: <Settings size={32} className="desktop-icon-svg settings-color" />,
+      action: () => openApp('settings')
     }
   ];
 
@@ -144,6 +199,16 @@ export function Desktop() {
           style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
           onClick={(e) => e.stopPropagation()}
         >
+          <button
+            className="ctx-item"
+            onClick={() => {
+              setContextMenu(null);
+              openApp('converter');
+            }}
+          >
+            <RefreshCw size={14} />
+            <span>Open Universal Converter</span>
+          </button>
           <button
             className="ctx-item"
             onClick={() => {

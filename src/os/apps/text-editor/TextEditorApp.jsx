@@ -4,7 +4,7 @@ import { useOS } from '../../state/OSContext.jsx';
 import './TextEditorApp.css';
 
 export function TextEditorApp({ meta = {} }) {
-  const { vfs } = useOS();
+  const { vfs, eventBus } = useOS();
   const filePath = meta.filePath || '/Desktop/welcome.txt';
   const [content, setContent] = useState('');
   const [isDirty, setIsDirty] = useState(false);
@@ -18,6 +18,7 @@ export function TextEditorApp({ meta = {} }) {
         const text = vfs.readFile(filePath, 'text-editor');
         setContent(text);
         setIsDirty(false);
+        eventBus.emit('FILE_OPENED', { filePath, appId: 'text-editor' });
       } else {
         setContent('');
         setIsDirty(false);

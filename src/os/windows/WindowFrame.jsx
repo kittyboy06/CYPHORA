@@ -73,16 +73,16 @@ export function WindowFrame({ windowInstance, children }) {
       if (isDragging) {
         const dx = e.clientX - dragStart.mouseX;
         const dy = e.clientY - dragStart.mouseY;
-        const newX = Math.max(0, Math.min(window.innerWidth - 120, dragStart.winX + dx));
-        const newY = Math.max(38, Math.min(window.innerHeight - 80, dragStart.winY + dy));
+        const newX = Math.max(16, Math.min(window.innerWidth - width - 16, dragStart.winX + dx));
+        const newY = Math.max(64, Math.min(window.innerHeight - height - 72, dragStart.winY + dy));
         moveWindow(id, newX, newY);
       }
 
       if (isResizing) {
         const dx = e.clientX - resizeStart.mouseX;
         const dy = e.clientY - resizeStart.mouseY;
-        const newW = Math.max(360, Math.min(window.innerWidth, resizeStart.winW + dx));
-        const newH = Math.max(240, Math.min(window.innerHeight - 80, resizeStart.winH + dy));
+        const newW = Math.max(360, Math.min(window.innerWidth - x - 16, resizeStart.winW + dx));
+        const newH = Math.max(240, Math.min(window.innerHeight - y - 72, resizeStart.winH + dy));
         resizeWindow(id, newW, newH);
       }
     };

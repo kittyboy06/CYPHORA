@@ -109,7 +109,9 @@
 .window-content-area {
   flex: 1;
   position: relative;
-  overflow: hidden;
+  min-height: 0;
+  overflow: auto;
+  user-select: text;
 }
 
 /* Resize handle */
