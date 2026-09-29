@@ -1,45 +1,105 @@
 import React, { useState } from 'react';
 import './BlueScreenGate.css';
 
-const EXIT_PASSWORD = 'Sympo@789';
+/**
+ * Set of 5 authorized recovery passwords (each exactly 4 characters).
+ * Entering any of these 5 codes will unlock the screen, restore fullscreen,
+ * and allow the participant to resume the game and enter the OS.
+ */
+export const RECOVERY_PASSWORDS = [
+  'CYPH', // Password 1 (Length: 4)
+  '7492', // Password 2 (Length: 4)
+  'ROOT', // Password 3 (Length: 4)
+  '8080', // Password 4 (Length: 4)
+  'NOVA'  // Password 5 (Length: 4)
+];
 
-export function BlueScreenGate({ onUnlock }) {
+const REASON_CONFIGS = {
+  FULLSCREEN_EXIT: {
+    title: 'Fullscreen display mode was exited.',
+    code: 'CYPHORA_SECURITY_FULLSCREEN_EXIT',
+    description: 'You left the mandated fullscreen competition environment.'
+  },
+  SCREENSHOT_ATTEMPT: {
+    title: 'Screen capture attempt detected.',
+    code: 'CYPHORA_SECURITY_SCREENSHOT_DETECTED',
+    description: 'A screenshot shortcut (PrintScreen / Snipping Tool) was triggered.'
+  },
+  TAB_SWITCH: {
+    title: 'Tab switch or window unfocus detected.',
+    code: 'CYPHORA_SECURITY_TAB_SWITCH_DETECTED',
+    description: 'You switched browser tabs or minimized/blurred the expedition window.'
+  },
+  INSPECTOR_DEVTOOLS: {
+    title: 'Developer Tools / Inspector detected.',
+    code: 'CYPHORA_SECURITY_DEVTOOLS_INSPECTOR',
+    description: 'An attempt to inspect DOM elements or open developer tools was detected.'
+  }
+};
+
+export function BlueScreenGate({ reason = 'FULLSCREEN_EXIT', onUnlock }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
+  const config = REASON_CONFIGS[reason] || {
+    title: 'Security perimeter violation detected.',
+    code: `CYPHORA_SECURITY_${reason || 'VIOLATION'}`,
+    description: 'An unauthorized environment change was detected.'
+  };
+
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (password.trim() === EXIT_PASSWORD) {
+    const cleanPass = password.trim().toUpperCase();
+
+    if (RECOVERY_PASSWORDS.includes(cleanPass)) {
       setError('');
       onUnlock();
       return;
     }
-    setError('The password is incorrect.');
+
+    setError('Access Denied: Invalid 4-character recovery code.');
   };
 
   return (
-    <div className="blue-screen-gate">
+    <div
+      className="blue-screen-gate"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div className="blue-screen-face">:(</div>
-      <h1>Your PC ran into a problem and needs to restart.</h1>
-      <p>Fullscreen protection was interrupted. Enter the recovery password to resume the expedition.</p>
+      <h1>Your PC ran into a problem and was locked by expedition security.</h1>
+      <p>
+        <strong>{config.title}</strong> {config.description}
+      </p>
+      <p style={{ fontSize: '0.95rem', opacity: 0.85, marginTop: '-0.4rem' }}>
+        To prevent unauthorized activity, the operating system has been halted. Enter an authorized 4-character administrator password to resume.
+      </p>
+
       <form onSubmit={handleSubmit} className="blue-screen-form">
-        <label htmlFor="recovery-password">Recovery Password</label>
+        <label htmlFor="recovery-password">Authorized Recovery Code (4 Characters)</label>
         <div className="blue-screen-input-group">
           <input
             id="recovery-password"
             type="password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Enter password..."
+            onChange={(event) => {
+              setPassword(event.target.value.toUpperCase());
+              if (error) setError('');
+            }}
+            placeholder="****"
+            maxLength={4}
             autoFocus
             autoComplete="off"
+            spellCheck="false"
+            style={{ letterSpacing: '0.35rem', fontWeight: 700 }}
           />
-          <button type="submit">Resume expedition</button>
+          <button type="submit">Resume Expedition</button>
         </div>
         {error && <span className="blue-screen-error">⚠️ {error}</span>}
       </form>
+
       <div className="blue-screen-details">
-        <small>STOP CODE: CYPHORA_FULLSCREEN_EXIT</small>
+        <small>STOP CODE: {config.code}</small>
+        <small style={{ opacity: 0.7 }}>AUTHORIZED PROTOCOL: 4-CHARACTER OVERRIDE KEY REQUIRED</small>
       </div>
     </div>
   );

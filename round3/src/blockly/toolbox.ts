@@ -6,9 +6,14 @@ export const toolboxXml = `
     <block type="action_attack"></block>
     <block type="action_defend"></block>
     <block type="action_activate_totem"></block>
+    <block type="action_dodge"></block>
+    <block type="action_slide"></block>
+    <block type="action_activate_tile"></block>
   </category>
   <category name="Sensors" colour="#a5935b">
     <block type="sensor_beast_vulnerable"></block>
+    <block type="sensor_tile_color"></block>
+    <block type="color_value"></block>
   </category>
   <category name="Logic" colour="#5b80a5">
     <block type="controls_if"></block>

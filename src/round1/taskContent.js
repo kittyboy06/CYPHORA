@@ -1,6 +1,7 @@
 /**
  * CYPHORA Round 1 Task Content & Presentation Definitions
  * Exactly 12 structured tasks following the Round 1 Multi-Application Technical Investigation specification.
+ * Questions and hints are strictly natural language objectives providing evidence file context without revealing tool names, technical conversion types, or auto-steps.
  */
 
 export const TASK_DEFINITIONS = [
@@ -8,9 +9,9 @@ export const TASK_DEFINITIONS = [
     id: 'r1_t01',
     round: 1,
     order: 1,
-    title: 'Task 01 — Encoded Message',
-    story: 'An intercepted signal stream from an unknown relay has been saved to your workstation evidence files.',
-    question: 'Convert the encoded value into a readable format and enter the resulting message below.',
+    title: 'TASK 01 — ENCODED MESSAGE',
+    story: 'An intercepted signal stream from an unknown relay has been saved on your workstation.',
+    question: 'Convert the encoded value into a human-readable format and enter the resulting message below.',
     difficulty: 'easy',
     requiredInput: {
       type: 'file',
@@ -27,17 +28,16 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['converter', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'Inspect /Desktop/message.txt to find the encoded byte string.',
-      'Use the Universal Converter to transform the numeric representation step-by-step into readable text.'
+      'Think about what kind of representation the recovered value uses.'
     ]
   },
   {
     id: 'r1_t02',
     round: 1,
     order: 2,
-    title: 'Task 02 — File Information',
+    title: 'TASK 02 — FILE INFORMATION',
     story: 'An expedition photograph contains hidden structural credentials embedded within its metadata properties.',
-    question: 'The visible contents do not contain the requested information. Investigate the file\'s stored information and enter the value associated with the requested author field.',
+    question: 'Investigate the file\'s stored information and enter the recorded author below.',
     difficulty: 'easy',
     requiredInput: {
       type: 'file',
@@ -47,6 +47,7 @@ export const TASK_DEFINITIONS = [
     },
     answer: {
       expected: 'ARLO',
+      accepted: ['ARLO', 'DR. ARLO VANCE', 'DR ARLO VANCE', 'ARLO VANCE'],
       type: 'text',
       caseSensitive: false,
       trimWhitespace: true
@@ -54,17 +55,17 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['metadata-inspector', 'converter', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'Load /Pictures/evidence.jpg into the Metadata Inspector to view stored EXIF/author fields.',
-      'Convert the extracted encoded author value into readable text using the Universal Converter.'
+      'Think about what kind of information can be stored alongside the visible contents of a file.',
+      'One of the workstation applications can reveal additional information attached to the file.'
     ]
   },
   {
     id: 'r1_t03',
     round: 1,
     order: 3,
-    title: 'Task 03 — Image Message',
-    story: 'A technical poster image recovered from an abandoned terminal displays an optical code overlay.',
-    question: 'The image contains information that is not directly readable. Determine the message encoded inside it and enter the result below.',
+    title: 'TASK 03 — IMAGE MESSAGE',
+    story: 'An image recovered from an abandoned terminal displays machine-readable information.',
+    question: 'Determine what the information embedded in the image reveals and enter the resulting value below.',
     difficulty: 'easy',
     requiredInput: {
       type: 'image',
@@ -81,17 +82,17 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['qr-scanner', 'converter', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'Scan /Pictures/poster.png using the QR Scanner to extract the raw payload.',
-      'If the payload is encoded, use the Universal Converter to translate the data stream into text.'
+      'The image contains a pattern designed to be scanned by specialized software.',
+      'Use an application that can read machine-readable matrix graphics.'
     ]
   },
   {
     id: 'r1_t04',
     round: 1,
     order: 4,
-    title: 'Task 04 — Ordering / Reasoning',
+    title: 'TASK 04 — ORDERING / REASONING',
     story: 'An access log record from the central server contains unsorted timestamped entries.',
-    question: 'The records are not arranged in order. Determine the earliest recorded event and enter its associated value.',
+    question: 'The records are out of order. Determine the earliest recorded event and enter its associated value.',
     difficulty: 'easy',
     requiredInput: {
       type: 'file',
@@ -108,17 +109,17 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'Open /Documents/access.log and compare the timestamp values of each line.',
-      'Identify the line with the chronologically earliest time (04:03) and submit the color label paired with it.'
+      'Examine the timestamps at the beginning of each line.',
+      'Identify the line with the earliest time value and submit the word associated with it.'
     ]
   },
   {
     id: 'r1_t05',
     round: 1,
     order: 5,
-    title: 'Task 05 — File Comparison',
-    story: 'Two system transmission logs appear almost identical, but a critical numerical key has been modified.',
-    question: 'These files are almost identical. Compare them and identify the value that changed. Enter only the changed value below.',
+    title: 'TASK 05 — FILE COMPARISON',
+    story: 'Two system transmission logs appear almost identical.',
+    question: 'The two records are almost identical. Determine what value changed between them and enter that value below.',
     difficulty: 'easy',
     requiredInput: {
       type: 'files',
@@ -136,49 +137,51 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['file-comparator', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'Open the File Comparison tool and select message_old.txt and message_new.txt.',
-      'Locate the modified KEY_VAL line and enter the new numeric replacement value.'
+      'Comparing document contents line by line highlights modified parameter values.',
+      'Identify the updated numerical value that differs from the original record.'
     ]
   },
   {
     id: 'r1_t06',
     round: 1,
     order: 6,
-    title: 'Task 06 — Conversion Chain',
-    story: 'An encrypted data file contains a multi-layer encoded text string.',
-    question: 'The recovered value is not directly readable. Transform it into a useful intermediate representation, continue interpreting the result, and enter the final readable message.',
-    difficulty: 'medium',
+    title: 'TASK 06 — THE FRAGMENTED PASSWORD',
+    story: 'Three fragments of a recovered message were found separately on the workstation.',
+    question: 'Three fragments of a recovered message were found separately. Reconstruct them in the correct order, interpret the combined value, and enter the final message below.',
+    difficulty: 'hard',
     requiredInput: {
-      type: 'file',
+      type: 'files',
       assets: [
-        { id: 'asset_t6_data', name: 'data.txt', path: '/Documents/data.txt', mimeType: 'text/plain' }
+        { id: 'asset_t6_f1', name: 'fragment_01.txt', path: '/Documents/fragment_01.txt', mimeType: 'text/plain' },
+        { id: 'asset_t6_f2', name: 'fragment_02.txt', path: '/Documents/fragment_02.txt', mimeType: 'text/plain' },
+        { id: 'asset_t6_f3', name: 'fragment_03.txt', path: '/Documents/fragment_03.txt', mimeType: 'text/plain' }
       ]
     },
     answer: {
-      expected: 'INK',
+      expected: 'JUMP',
       type: 'text',
       caseSensitive: false,
       trimWhitespace: true
     },
-    allowedApps: ['converter', 'text-editor', 'file-manager'],
+    allowedApps: ['text-editor', 'converter', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'First convert the binary string in /Documents/data.txt to Decimal (0-9 format).',
-      'Then convert the resulting decimal values to ASCII codes, and finally convert ASCII to Text to reveal the word.'
+      'The fragments contain more than just data. Compare the information associated with each file.',
+      'The pieces need to be reconstructed before they can be interpreted.'
     ]
   },
   {
     id: 'r1_t07',
     round: 1,
     order: 7,
-    title: 'Task 07 — Metadata to File Discovery',
-    story: 'An evidence photograph holds a description tag pointing to a specific security report file.',
-    question: 'Important information is stored in the file metadata rather than its visible contents. Find the relevant value, interpret it correctly, and enter the readable result below.',
+    title: 'TASK 07 — METADATA → CONVERSION',
+    story: 'An archive photo contains hidden properties storing an encoded string.',
+    question: 'Important information is stored with the file rather than in its visible contents. Recover that value, interpret it, and enter the readable message below.',
     difficulty: 'medium',
     requiredInput: {
       type: 'file',
       assets: [
-        { id: 'asset_t7_evidence', name: 'evidence.jpg', path: '/Pictures/evidence.jpg', mimeType: 'image/jpeg' }
+        { id: 'asset_t7_photo', name: 'archive_photo.png', path: '/Pictures/archive_photo.png', mimeType: 'image/png' }
       ]
     },
     answer: {
@@ -190,72 +193,74 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['metadata-inspector', 'converter', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'Inspect metadata of /Pictures/evidence.jpg to discover the description tag (48 45 4C 50).',
-      'Convert the hexadecimal sequence step-by-step: Hex -> Decimal -> ASCII -> Text.'
+      'Useful information may exist outside the visible image.',
+      'Look for an application that can reveal information stored with a file.'
     ]
   },
   {
     id: 'r1_t08',
     round: 1,
     order: 8,
-    title: 'Task 08 — Hexadecimal Decoding Chain',
-    story: 'A recovered data payload uses hexadecimal byte notation to disguise an emergency signal.',
-    question: 'A code has been recovered in an unfamiliar representation. Determine what it represents and enter the resulting word.',
-    difficulty: 'medium',
+    title: 'TASK 08 — HIDDEN EVIDENCE',
+    story: 'A piece of evidence appears to have been concealed from standard directories.',
+    question: 'The visible folders do not contain the required evidence. Something appears to have been deliberately concealed. Locate the hidden information and enter the value you recover.',
+    difficulty: 'hard',
     requiredInput: {
       type: 'file',
       assets: [
-        { id: 'asset_t8_rec', name: 'recovered.dat', path: '/Downloads/recovered.dat', mimeType: 'text/plain' }
+        { id: 'asset_t8_clue', name: 'clue.txt', path: '/Archive/.hidden/clue.txt', mimeType: 'text/plain' }
       ]
     },
     answer: {
-      expected: 'JUMP',
+      expected: '7314',
       type: 'text',
       caseSensitive: false,
       trimWhitespace: true
     },
-    allowedApps: ['converter', 'text-editor', 'file-manager'],
+    allowedApps: ['file-manager', 'text-editor', 'terminal'],
     completionMode: 'answer_submission',
     hints: [
-      'Open /Downloads/recovered.dat to find the hex string ("48 45 4C 50" or "4A 55 4D 50").',
-      'Use the Universal Converter: Hex -> Decimal (0-9 format) -> ASCII -> Text.'
+      'Check for concealed locations in the workstation file system.',
+      'Some directories might be hidden from standard file listings.'
     ]
   },
   {
     id: 'r1_t09',
     round: 1,
     order: 9,
-    title: 'Task 09 — QR Reference to Analysis',
-    story: 'An archive map image contains an embedded optical pointer targeting a secondary document.',
-    question: 'Follow the information contained in the evidence to the next file, then use the recovered value to determine the final answer.',
-    difficulty: 'medium',
+    title: 'TASK 09 — THE EVIDENCE NETWORK',
+    story: 'Multiple pieces of evidence on the workstation point to one another in an investigation trail.',
+    question: 'Follow the information from the first piece of evidence to the next, then determine the final value associated with the requested activity.',
+    difficulty: 'hard',
     requiredInput: {
-      type: 'image',
+      type: 'files',
       assets: [
-        { id: 'asset_t9_map', name: 'archive_map.png', path: '/Pictures/archive_map.png', mimeType: 'image/png' }
+        { id: 'asset_t9_map', name: 'map.png', path: '/Pictures/map.png', mimeType: 'image/png' },
+        { id: 'asset_t9_index', name: 'index.txt', path: '/Documents/clues/index.txt', mimeType: 'text/plain' },
+        { id: 'asset_t9_log', name: 'activity.log', path: '/Documents/logs/activity.log', mimeType: 'text/plain' }
       ]
     },
     answer: {
       expected: '17',
-      type: 'number',
+      type: 'text',
       caseSensitive: false,
       trimWhitespace: true
     },
-    allowedApps: ['qr-scanner', 'text-editor', 'text-analyzer', 'file-manager'],
+    allowedApps: ['qr-scanner', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'Scan /Pictures/archive_map.png in QR Scanner to extract the file path (/Documents/clues/numbers.txt).',
-      'Open the target file and count number frequencies to find the value that appears most often.'
+      'The first result is not the final answer.',
+      'Use the recovered identifier to locate the next evidence.'
     ]
   },
   {
     id: 'r1_t10',
     round: 1,
     order: 10,
-    title: 'Task 10 — Compare to Convert Chain',
-    story: 'Two system archive records differ in a newly added encrypted string value.',
-    question: 'Compare the two records, identify the newly added value, interpret that value, and enter the resulting message.',
-    difficulty: 'medium',
+    title: 'TASK 10 — DIFF → INTERPRET → CONVERT',
+    story: 'Two system records contain a single altered key parameter.',
+    question: 'Two versions of the record contain one meaningful change. Identify the changed information, interpret it, and enter the resulting message below.',
+    difficulty: 'hard',
     requiredInput: {
       type: 'files',
       assets: [
@@ -272,23 +277,24 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['file-comparator', 'converter', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'Compare alpha.txt and beta.txt in the File Comparison tool to find the modified string ("4A 55 4D 50").',
-      'Convert the hexadecimal sequence using Universal Converter: Hex -> Decimal -> ASCII -> Text.'
+      'Compare the two records to locate the changed value.',
+      'The changed value is an encoded string that needs conversion.'
     ]
   },
   {
     id: 'r1_t11',
     round: 1,
     order: 11,
-    title: 'Task 11 — Multi-App Investigation',
-    story: 'Evidence for a system breach is distributed across metadata tags, document archives, and multi-stage conversions.',
-    question: 'The evidence is distributed across multiple files. Follow each useful result to determine what should be investigated next and continue until you can identify the final requested value.',
-    difficulty: 'hard',
+    title: 'TASK 11 — CROSS-APPLICATION INVESTIGATION',
+    story: 'A sequence of investigation notes leads across multiple file formats and metadata attributes.',
+    question: 'The evidence points from one file to another. Follow the trail across the workstation and recover the final value requested below.',
+    difficulty: 'very hard',
     requiredInput: {
       type: 'files',
       assets: [
-        { id: 'asset_t11_photo', name: 'photo.png', path: '/Pictures/photo.png', mimeType: 'image/png' },
-        { id: 'asset_t11_archive', name: 'Archive_04.txt', path: '/Documents/Archive_04.txt', mimeType: 'text/plain' }
+        { id: 'asset_t11_note', name: 'incident_note.txt', path: '/Documents/incident_note.txt', mimeType: 'text/plain' },
+        { id: 'asset_t11_arch', name: 'archive-17.txt', path: '/Archive/archive-17.txt', mimeType: 'text/plain' },
+        { id: 'asset_t11_dev', name: 'device-9.jpg', path: '/Pictures/device-9.jpg', mimeType: 'image/jpeg' }
       ]
     },
     answer: {
@@ -297,27 +303,28 @@ export const TASK_DEFINITIONS = [
       caseSensitive: false,
       trimWhitespace: true
     },
-    allowedApps: ['metadata-inspector', 'text-editor', 'converter', 'file-manager'],
+    allowedApps: ['text-editor', 'metadata-inspector', 'converter', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'Inspect metadata of /Pictures/photo.png to find the description clue (ARCHIVE_04).',
-      'Open /Documents/Archive_04.txt, extract the hex sequence "53 48 49 46 54", and convert it step-by-step to text.'
+      'The text note contains a reference code to another file.',
+      'Inspect the properties of the final image file to find the encoded value.'
     ]
   },
   {
     id: 'r1_t12',
     round: 1,
     order: 12,
-    title: 'Task 12 — Final Workstation Investigation',
-    story: 'The ultimate workstation investigation key requires combining concealed folder discovery, EXIF metadata inspection, optical QR scanning, document navigation, and multi-stage hexadecimal decoding.',
-    question: 'The final workstation log mentions a concealed location. Discover the concealed entry, analyze its metadata clue, locate the payload image, scan its embedded code to reveal a file path, inspect that record, and convert the hex sequence inside to readable format.',
+    title: 'TASK 12 — FINAL BOSS: TRACE THE TRANSFER',
+    story: 'Four pieces of evidence recovered from different areas of the workstation describe a single security event.',
+    question: 'Four pieces of evidence from the workstation describe the same trail. Follow the connections between them and recover the final clearance code.',
     difficulty: 'boss',
     requiredInput: {
       type: 'files',
       assets: [
-        { id: 'asset_t12_beacon', name: 'enclave_beacon.png', path: '/.hidden/enclave_beacon.png', mimeType: 'image/png' },
-        { id: 'asset_t12_scan', name: 'beacon_scan.png', path: '/System/logs/beacon_scan.png', mimeType: 'image/png' },
-        { id: 'asset_t12_cipher', name: 'final_cipher.txt', path: '/Documents/final_cipher.txt', mimeType: 'text/plain' }
+        { id: 'asset_t12_log', name: 'system.log', path: '/Documents/system.log', mimeType: 'text/plain' },
+        { id: 'asset_t12_img', name: 'device.png', path: '/Pictures/device.png', mimeType: 'image/png' },
+        { id: 'asset_t12_arch', name: 'VX-27.txt', path: '/Documents/Archive/VX-27.txt', mimeType: 'text/plain' },
+        { id: 'asset_t12_tr', name: 'TR-904.txt', path: '/Documents/Transfers/TR-904.txt', mimeType: 'text/plain' }
       ]
     },
     answer: {
@@ -326,12 +333,11 @@ export const TASK_DEFINITIONS = [
       caseSensitive: false,
       trimWhitespace: true
     },
-    allowedApps: ['file-manager', 'metadata-inspector', 'qr-scanner', 'text-editor', 'converter', 'terminal'],
+    allowedApps: ['file-manager', 'text-editor', 'metadata-inspector', 'converter', 'terminal'],
     completionMode: 'answer_submission',
     hints: [
-      'Step 1: Discover the hidden folder /.hidden/ and inspect metadata of enclave_beacon.png.',
-      'Step 2: Scan /System/logs/beacon_scan.png in QR Scanner to get /Documents/final_cipher.txt.',
-      'Step 3: Open /Documents/final_cipher.txt, extract "53 59 4D 50 4F", and convert Hex -> Decimal -> ASCII -> Text.'
+      'The evidence becomes useful when you connect information found in different files.',
+      'A value discovered in one piece of evidence can help you locate another.'
     ]
   }
 ];
@@ -339,10 +345,10 @@ export const TASK_DEFINITIONS = [
 export const TASK_PRESENTATIONS = TASK_DEFINITIONS.reduce((acc, task) => {
   acc[task.id] = {
     number: task.order.toString().padStart(2, '0'),
-    playerTitle: task.title.toUpperCase(),
+    playerTitle: task.title,
     objective: task.question,
     story: task.story,
-    fieldNote: `Required Evidence: ${task.requiredInput.assets.map(a => a.name).join(', ')}. Use available tools to investigate.`,
+    fieldNote: `Investigate workstation files and tools to solve this challenge.`,
     hints: task.hints
   };
   return acc;

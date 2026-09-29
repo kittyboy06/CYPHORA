@@ -10,6 +10,7 @@ export const INITIAL_OS_STATE = {
   isMuted: false,
   isFullscreen: false,
   showExitBanner: false,
+  exitReason: 'FULLSCREEN_EXIT',
 };
 
 export const OS_ACTIONS = {
@@ -209,9 +210,14 @@ export function osReducer(state, action) {
     }
 
     case OS_ACTIONS.SET_EXIT_BANNER: {
+      const isVisible = typeof action.payload === 'object' ? Boolean(action.payload.visible) : Boolean(action.payload);
+      const reason = typeof action.payload === 'object' && action.payload.reason
+        ? action.payload.reason
+        : (isVisible ? (state.exitReason || 'FULLSCREEN_EXIT') : state.exitReason);
       return {
         ...state,
-        showExitBanner: action.payload
+        showExitBanner: isVisible,
+        exitReason: reason
       };
     }
 

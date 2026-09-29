@@ -61,6 +61,36 @@ export const executeCode = async (code: string, gameRef: any, blocklyRef: any) =
       if (result === 'FAILED') isFailed = true;
       if (result === 'LEVEL_COMPLETE') throw new Error('LEVEL_COMPLETE');
       if (isFailed) throw new Error('Activate Totem failed');
+    },
+    dodgeStep: async (id: string) => {
+      if (isFailed) return;
+      blocklyRef.highlightBlock(id);
+      useGameStore.getState().incExecutedCommands();
+      const result = await gameRef.executeCommand({ type: 'DODGE' });
+      if (result === 'FAILED') isFailed = true;
+      if (result === 'LEVEL_COMPLETE') throw new Error('LEVEL_COMPLETE');
+      if (isFailed) throw new Error('Dodge failed');
+    },
+    slideStep: async (id: string) => {
+      if (isFailed) return;
+      blocklyRef.highlightBlock(id);
+      useGameStore.getState().incExecutedCommands();
+      const result = await gameRef.executeCommand({ type: 'SLIDE' });
+      if (result === 'FAILED') isFailed = true;
+      if (result === 'LEVEL_COMPLETE') throw new Error('LEVEL_COMPLETE');
+      if (isFailed) throw new Error('Slide failed');
+    },
+    activateTileStep: async (id: string) => {
+      if (isFailed) return;
+      blocklyRef.highlightBlock(id);
+      useGameStore.getState().incExecutedCommands();
+      const result = await gameRef.executeCommand({ type: 'ACTIVATE_TILE' });
+      if (result === 'FAILED') isFailed = true;
+      if (result === 'LEVEL_COMPLETE') throw new Error('LEVEL_COMPLETE');
+      if (isFailed) throw new Error('Activate Tile failed');
+    },
+    getTileColor: async () => {
+      return await gameRef.getTileColor();
     }
   };
 
