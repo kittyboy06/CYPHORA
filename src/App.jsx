@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Terminal, Users, X, ChevronRight, Shield } from 'lucide-react';
+import { Terminal, Users, X, ChevronRight, Shield, Compass } from 'lucide-react';
 import { BootScreen } from './os/boot/BootScreen.jsx';
 import { OSContainer } from './os/OSContainer.jsx';
 import { Prologue } from './components/Story/Prologue.jsx';
@@ -616,6 +616,23 @@ function App() {
                   }}
                 >
                   <span>Enter OS</span>
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+
+              {/* Stage 2 — Image Navigation */}
+              <div className="level-card unlocked" onClick={() => handleLevelClick(2, true)}>
+                <div className="icon-container"><Compass size={48} /></div>
+                <h2>Image Navigation</h2>
+                <p>Stage 2</p>
+                <button
+                  className="enter-os-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLevelClick(2, true);
+                  }}
+                >
+                  <span>Enter Stage 2</span>
                   <ChevronRight size={16} />
                 </button>
               </div>
