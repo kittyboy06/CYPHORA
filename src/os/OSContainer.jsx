@@ -50,9 +50,27 @@ function OSContent({ stage, setStage, teamData, round1State }) {
   );
 }
 
-export function OSContainer({ stage = 'os-desktop', setStage = () => {}, teamData, onReturnToHub, round1State, setRound1State }) {
+export function OSContainer({
+  stage = 'os-desktop',
+  setStage = () => {},
+  teamData,
+  onReturnToHub,
+  round1State,
+  setRound1State,
+  liveExplorers = [],
+  isWsConnected = false,
+  fetchLeaderboard = () => {}
+}) {
   return (
-    <OSProvider teamData={teamData} onReturnToHub={onReturnToHub} round1State={round1State} setRound1State={setRound1State}>
+    <OSProvider
+      teamData={teamData}
+      onReturnToHub={onReturnToHub}
+      round1State={round1State}
+      setRound1State={setRound1State}
+      liveExplorers={liveExplorers}
+      isWsConnected={isWsConnected}
+      fetchLeaderboard={fetchLeaderboard}
+    >
       <OSContent stage={stage} setStage={setStage} teamData={teamData} round1State={round1State} />
     </OSProvider>
   );

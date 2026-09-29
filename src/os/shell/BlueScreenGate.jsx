@@ -79,18 +79,18 @@ export function BlueScreenGate({ reason = 'FULLSCREEN_EXIT', onUnlock }) {
         <div className="blue-screen-input-group">
           <input
             id="recovery-password"
-            type="text"
+            type="password"
             value={password}
             onChange={(event) => {
               setPassword(event.target.value.toUpperCase());
               if (error) setError('');
             }}
-            placeholder="4-CHAR CODE"
+            placeholder="****"
             maxLength={4}
             autoFocus
             autoComplete="off"
             spellCheck="false"
-            style={{ textTransform: 'uppercase', letterSpacing: '0.2rem', fontWeight: 700 }}
+            style={{ letterSpacing: '0.35rem', fontWeight: 700 }}
           />
           <button type="submit">Resume Expedition</button>
         </div>

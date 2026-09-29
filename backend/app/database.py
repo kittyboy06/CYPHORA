@@ -90,8 +90,7 @@ async def migrate_columns():
             await conn.execute(text("ALTER TABLE teams ADD COLUMN started_at TIMESTAMP;"))
 
 async def init_db():
-    """Initializes tables, confirms WAL mode, migrates columns, and seeds default explorers."""
+    """Initializes tables, confirms WAL mode, and migrates columns. Only stores real teams."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await migrate_columns()
-    await seed_default_explorers()

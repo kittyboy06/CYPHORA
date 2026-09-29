@@ -15,17 +15,7 @@ import {
 } from './round1/round1Engine.js';
 import './App.css';
 
-// Fallback explorer data if server is unreachable
-const EXPLORERS = [
-  { name: 'Team Cipher', standing: '1st (350 pts)', status: 'active' },
-  { name: 'Team Vortex', standing: '2nd (280 pts)', status: 'active' },
-  { name: 'Team Nexus', standing: '3rd (220 pts)', status: 'active' },
-  { name: 'Team Phantom', standing: '4th (160 pts)', status: 'idle' },
-  { name: 'Team Glitch', standing: '5th (120 pts)', status: 'idle' },
-  { name: 'Team Rogue', standing: '6th (80 pts)', status: 'idle' },
-  { name: 'Team Epoch', standing: '7th (40 pts)', status: 'idle' },
-  { name: 'Team Blaze', standing: '8th (0 pts)', status: 'idle' },
-];
+
 
 const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
 const isDev = typeof window !== 'undefined' && window.location.port === '5173';
@@ -495,15 +485,19 @@ function App() {
         member1: e.member1,
         member2: e.member2,
         standing: `${formatOrdinal(e.rank)} (${e.score ?? 0} pts)`,
+        score: e.score ?? 0,
         status: e.status || 'idle'
       }))
-    : (
-      EXPLORERS.some(e => e.name.toLowerCase() === teamData.name.toLowerCase())
-        ? EXPLORERS
-        : [
-            { name: teamData.name, standing: teamData.standing, status: 'active' },
-            ...EXPLORERS
-          ]
+    : (teamData.name && teamData.name !== 'Wandering Nomad'
+        ? [{
+            name: teamData.name,
+            member1: teamData.member1,
+            member2: teamData.member2,
+            standing: `${teamData.standing || 'Unranked'} (${teamData.score ?? 0} pts)`,
+            score: teamData.score ?? 0,
+            status: 'active'
+          }]
+        : []
     );
 
   return (
@@ -717,6 +711,9 @@ function App() {
           onReturnToHub={() => setStage('main')}
           round1State={round1State}
           setRound1State={setRound1State}
+          liveExplorers={liveExplorers}
+          isWsConnected={isWsConnected}
+          fetchLeaderboard={fetchLeaderboard}
         />
       )}
     </div>
