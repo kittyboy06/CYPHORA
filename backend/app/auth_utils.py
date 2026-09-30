@@ -42,9 +42,19 @@ async def get_current_team(
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
             raw_sub = payload.get("sub")
             if raw_sub is not None:
-                team_id = int(raw_sub)
-                result = await db.execute(select(Team).filter(Team.id == team_id))
-                team = result.scalar_one_or_none()
+                try:
+                    team_id = int(raw_sub)
+                    result = await db.execute(select(Team).filter(Team.id == team_id))
+                    team = result.scalar_one_or_none()
+                    if team:
+                        return team
+                except (ValueError, TypeError):
+                    pass
+            team_claim = payload.get("team")
+            if team_claim:
+                from sqlalchemy import func
+                res = await db.execute(select(Team).filter(func.lower(Team.name) == str(team_claim).strip().lower()))
+                team = res.scalar_one_or_none()
                 if team:
                     return team
         except Exception:
@@ -70,6 +80,21 @@ async def get_current_team(
         team = res.scalar_one_or_none()
         if team:
             return team
+
+        # Substring / prefix fallback (e.g. KB0 vs KB06)
+        res = await db.execute(select(Team).filter(
+            (func.lower(Team.name).like(f"{clean_name.lower()}%")) |
+            (func.literal(clean_name.lower()).like(func.concat(func.lower(Team.name), '%')))
+        ))
+        team = res.scalars().first()
+        if team:
+            return team
+
+    # 3. Workstation single-team fallback
+    res_all = await db.execute(select(Team))
+    all_teams = res_all.scalars().all()
+    if len(all_teams) == 1:
+        return all_teams[0]
 
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

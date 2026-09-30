@@ -19,8 +19,11 @@ class VFSEngine {
             Object.entries(INITIAL_VFS).forEach(([path, node]) => {
               if (!hydrated[path]) {
                 hydrated[path] = JSON.parse(JSON.stringify(node));
-              } else if (node.type === 'file' && node.content && hydrated[path].content !== node.content) {
-                hydrated[path].content = node.content;
+              } else {
+                hydrated[path].hidden = node.hidden;
+                if (node.type === 'file' && node.content && hydrated[path].content !== node.content) {
+                  hydrated[path].content = node.content;
+                }
               }
             });
             return hydrated;
@@ -125,7 +128,8 @@ class VFSEngine {
 
       if (parentPath === normalized || parentPath.toLowerCase() === normalized.toLowerCase()) {
         const isHidden = node.hidden || node.name.startsWith('.');
-        if (!isHidden || includeHidden) {
+        const parentIsHidden = parent.name.startsWith('.') || Boolean(parent.hidden);
+        if (!isHidden || includeHidden || parentIsHidden) {
           children.push(node);
         }
       }

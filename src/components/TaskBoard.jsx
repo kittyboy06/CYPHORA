@@ -228,7 +228,7 @@ export function TaskBoard({ round1State }) {
 
               {/* Action Buttons Footer */}
               <div className="objective-modal-actions" style={{ marginTop: '1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                {presentation.hints && presentation.hints.length > 0 ? (
+                {presentation.hints && presentation.hints.length > 0 && !isCorrect ? (
                   <button
                     type="button"
                     className="objective-secondary-button"
@@ -239,7 +239,34 @@ export function TaskBoard({ round1State }) {
                     {hintLevel > 0 && <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>({hintLevel}/{presentation.hints.length})</span>}
                   </button>
                 ) : <div />}
-                <button className="objective-primary-button" onClick={() => setObjectiveMode('docked')}>MINIMIZE PANEL</button>
+                
+                {isCorrect ? (
+                  <button
+                    type="button"
+                    className="objective-primary-button"
+                    onClick={() => {
+                      setIsCorrect(false);
+                      setFeedbackMsg('');
+                      setSubmittedAnswer('');
+                    }}
+                    style={{
+                      background: '#238636',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '0.55rem 1.25rem',
+                      borderRadius: '4px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontSize: '0.9rem'
+                    }}
+                  >
+                    PROCEED TO NEXT TASK →
+                  </button>
+                ) : (
+                  <button className="objective-primary-button" onClick={() => setObjectiveMode('docked')}>
+                    MINIMIZE PANEL
+                  </button>
+                )}
               </div>
 
               {/* Hint Modal Display */}

@@ -27,7 +27,7 @@ import './Round2.css';
 export function Round2Page({ onReturnToHub }) {
   // Team state retrieved from local storage or default
   const [teamName, setTeamName] = useState(() => {
-    return localStorage.getItem('cyphora_team_name') || 'Wandering Nomad';
+    return localStorage.getItem('cyphora_team_name') || '';
   });
 
   // Form states
@@ -293,7 +293,7 @@ export function Round2Page({ onReturnToHub }) {
 
           <div className="team-status-chip">
             <span className="chip-label">Explorer</span>
-            <span className="chip-name">{teamName}</span>
+            <span className="chip-name">{teamName || 'Unregistered'}</span>
           </div>
         </div>
       </header>

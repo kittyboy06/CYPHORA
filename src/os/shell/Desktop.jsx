@@ -45,11 +45,7 @@ export function Desktop() {
     }
   }, [fetchLeaderboard]);
 
-  const displayTeams = Array.isArray(liveExplorers) && liveExplorers.length > 0
-    ? liveExplorers
-    : (teamData?.name && teamData.name !== 'Wandering Nomad' && teamData.name !== 'Explorer'
-        ? [{ rank: 1, name: teamData.name, score: teamData.score ?? 0, status: 'active' }]
-        : []);
+  const displayTeams = Array.isArray(liveExplorers) ? liveExplorers : [];
 
   const isCurrentTeam = (name, id) => {
     if (id && teamData?.id && id === teamData.id) return true;

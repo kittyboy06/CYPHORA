@@ -62,8 +62,9 @@ export function VirtualFilePicker({ isOpen, onClose, onSelectFile, title = 'Sele
     { name: 'Documents', path: '/Documents' },
     { name: 'Downloads', path: '/Downloads' },
     { name: 'Pictures', path: '/Pictures' },
+    { name: 'Archive', path: '/Archive' },
     { name: 'System Logs', path: '/System/logs' },
-    { name: 'Hidden Archive', path: '/.hidden' }
+    { name: 'Hidden Archive', path: '/Archive/.hidden' }
   ];
 
   const pathParts = currentPath.split('/').filter(Boolean);

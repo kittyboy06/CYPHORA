@@ -12,7 +12,7 @@ import { CompletionCelebration } from '../components/CompletionCelebration.jsx';
 import './OSContainer.css';
 
 function OSContent({ stage, setStage, teamData, round1State }) {
-  const { windows, openApp, showExitBanner, exitReason, unlockGate } = useOS();
+  const { windows = [], openApp = () => {}, showExitBanner = false, exitReason = '', unlockGate = () => {} } = useOS();
 
   return (
     <div className="os-desktop-root">

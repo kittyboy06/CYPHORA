@@ -96,6 +96,27 @@ export const INITIAL_VFS = {
     path: '/Documents/Archive',
     updatedAt: new Date().toISOString()
   },
+  '/Documents/Archive/.hidden': {
+    id: 'dir_docs_archive_hidden',
+    name: '.hidden',
+    type: 'dir',
+    parentId: 'dir_docs_archive',
+    path: '/Documents/Archive/.hidden',
+    hidden: true,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/Archive/.hidden/clue.txt': {
+    id: 'file_docs_archive_clue',
+    name: 'clue.txt',
+    type: 'file',
+    parentId: 'dir_docs_archive_hidden',
+    path: '/Documents/Archive/.hidden/clue.txt',
+    mimeType: 'text/plain',
+    hidden: false,
+    size: 35,
+    content: `The missing value is:\n7314`,
+    updatedAt: new Date().toISOString()
+  },
   '/Documents/Transfers': {
     id: 'dir_docs_transfers',
     name: 'Transfers',
@@ -111,6 +132,57 @@ export const INITIAL_VFS = {
     parentId: 'archive',
     path: '/Archive/.hidden',
     hidden: true,
+    updatedAt: new Date().toISOString()
+  },
+  '/.hidden': {
+    id: 'dir_root_hidden',
+    name: '.hidden',
+    type: 'dir',
+    parentId: 'root',
+    path: '/.hidden',
+    hidden: true,
+    updatedAt: new Date().toISOString()
+  },
+  '/.hidden/clue.txt': {
+    id: 'file_root_hidden_clue',
+    name: 'clue.txt',
+    type: 'file',
+    parentId: 'dir_root_hidden',
+    path: '/.hidden/clue.txt',
+    mimeType: 'text/plain',
+    hidden: false,
+    size: 35,
+    content: `The missing value is:\n7314`,
+    updatedAt: new Date().toISOString()
+  },
+  '/System': {
+    id: 'system_root',
+    name: 'System',
+    type: 'dir',
+    parentId: 'root',
+    path: '/System',
+    locked: true,
+    updatedAt: new Date().toISOString()
+  },
+  '/System/logs': {
+    id: 'system_logs_dir',
+    name: 'logs',
+    type: 'dir',
+    parentId: 'system_root',
+    path: '/System/logs',
+    locked: true,
+    updatedAt: new Date().toISOString()
+  },
+  '/System/logs/kernel.log': {
+    id: 'file_system_kernel_log',
+    name: 'kernel.log',
+    type: 'file',
+    parentId: 'system_logs_dir',
+    path: '/System/logs/kernel.log',
+    mimeType: 'text/plain',
+    locked: true,
+    size: 84,
+    content: `[0.000000] Linux version 6.5-cyphora\n[0.001200] Workstation secure subsystem initialized`,
     updatedAt: new Date().toISOString()
   },
 
@@ -293,7 +365,7 @@ END_LOG
     parentId: 'dir_archive_hidden',
     path: '/Archive/.hidden/clue.txt',
     mimeType: 'text/plain',
-    hidden: true,
+    hidden: false,
     size: 35,
     content: `The missing value is:\n7314`,
     updatedAt: new Date().toISOString()
