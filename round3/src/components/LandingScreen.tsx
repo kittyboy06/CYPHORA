@@ -25,7 +25,7 @@ export const LandingScreen: React.FC<Props> = ({ onEnter }) => {
   };
 
   return (
-    <div 
+    <div
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onMouseEnter={() => setIsVisible(true)}
@@ -33,12 +33,11 @@ export const LandingScreen: React.FC<Props> = ({ onEnter }) => {
     >
       {/* Background ambient effect */}
       <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-[var(--accent-gold)] via-transparent to-transparent" />
-      
+
       {/* Mouse Follow Glow Effect */}
       <div
-        className={`pointer-events-none absolute top-0 left-0 w-[220px] h-[220px] rounded-full transition-opacity duration-500 ease-out z-[5] ${
-          isVisible ? 'opacity-35' : 'opacity-0'
-        }`}
+        className={`pointer-events-none absolute top-0 left-0 w-[220px] h-[220px] rounded-full transition-opacity duration-500 ease-out z-[5] ${isVisible ? 'opacity-35' : 'opacity-0'
+          }`}
         style={{
           transform: `translate3d(${mousePos.x - 110}px, ${mousePos.y - 110}px, 0)`,
           transition: 'transform 180ms cubic-bezier(0.1, 0.2, 0.1, 1), opacity 500ms ease-out',
@@ -54,9 +53,9 @@ export const LandingScreen: React.FC<Props> = ({ onEnter }) => {
         <h2 className="text-xl md:text-2xl font-mono text-[var(--text-muted)] tracking-[0.3em] uppercase">
           Round 3 : The Temple Trials
         </h2>
-        
+
         <div className="pt-16">
-          <button 
+          <button
             onClick={onEnter}
             className="px-10 py-5 bg-[var(--bg-panel)] border border-[var(--border-gold)] text-[var(--accent-gold)] hover:bg-[var(--accent-gold)] hover:text-black transition-all uppercase tracking-widest font-bold flex items-center gap-3 mx-auto text-lg shadow-[0_0_20px_rgba(223,177,37,0.15)] hover:shadow-[0_0_30px_rgba(223,177,37,0.4)]"
           >
@@ -70,4 +69,3 @@ export const LandingScreen: React.FC<Props> = ({ onEnter }) => {
     </div>
   );
 };
-
