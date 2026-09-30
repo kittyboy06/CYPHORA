@@ -831,23 +831,6 @@
   transform: translateY(-1px);
 }
 
-.modal-skip-btn {
-  padding: 0.9rem 1.4rem;
-  background: transparent;
-  color: #888;
-  font-family: 'Montserrat', sans-serif;
-  font-size: 0.85rem;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.modal-skip-btn:hover {
-  color: #ccc;
-  border-color: rgba(255, 255, 255, 0.35);
-}
-
 .explorer-crew {
   font-size: 0.68rem;
   color: #8c8268;

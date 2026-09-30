@@ -573,44 +573,6 @@ function App() {
     }
   };
 
-  const handleSkip = async () => {
-    const finalName = teamInput.trim() || teamData.name || 'Wandering Nomad';
-    const finalPin = pinInput.trim() || '1234';
-    const finalMember1 = member1Input.trim();
-    const finalMember2 = member2Input.trim();
-
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/quick-join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: finalName,
-          pin: finalPin,
-          member1: finalMember1,
-          member2: finalMember2
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        localStorage.setItem('cyphora_token', data.token);
-        localStorage.setItem('cyphora_team_id', String(data.team.id));
-        localStorage.setItem('cyphora_team_name', data.team.name);
-        completeRegistration(
-          data.team.name,
-          finalPin,
-          data.team.member1 || finalMember1,
-          data.team.member2 || finalMember2,
-          data.team.id,
-          data.team.score,
-          data.team.standing ? formatOrdinal(data.team.standing) : 'Unranked'
-        );
-        return;
-      }
-    } catch (err) {}
-
-    completeRegistration(finalName, finalPin, finalMember1, finalMember2);
-  };
-
   const handleBeginExpedition = async () => {
     let started;
     try {
@@ -782,9 +744,6 @@ function App() {
               <div className="modal-actions">
                 <button type="submit" className="modal-submit-btn">
                   Proceed
-                </button>
-                <button type="button" className="modal-skip-btn" onClick={handleSkip}>
-                  Skip
                 </button>
               </div>
             </form>
