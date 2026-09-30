@@ -57,8 +57,15 @@ async def submit_stage2(
         token = authorization.split(" ")[1]
         payload = decode_access_token(token)
         if payload and "sub" in payload:
-            res = await db.execute(select(Team).filter(Team.name == payload["sub"]))
+            sub = str(payload["sub"])
+            if sub.isdigit():
+                res = await db.execute(select(Team).filter(Team.id == int(sub)))
+            else:
+                res = await db.execute(select(Team).filter(Team.name == sub))
             team = res.scalar_one_or_none()
+            if not team and "team" in payload:
+                res = await db.execute(select(Team).filter(Team.name == payload["team"]))
+                team = res.scalar_one_or_none()
 
     # Attempt 2: Match by team_name if not authenticated
     if not team and req.team_name:
