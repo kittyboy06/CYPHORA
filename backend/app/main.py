@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from .config import STATIC_DIST_DIR, BASE_DIR
 from .database import init_db, AsyncSessionLocal
 from .websocket_manager import ws_manager
-from .routers import auth, teams, stage1, admin
+from .routers import auth, teams, stage1, admin, stage2
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("cyphora.server")
@@ -65,6 +65,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(teams.router)
 app.include_router(stage1.router)
+app.include_router(stage2.router)
 app.include_router(admin.router)
 
 # Real-time WebSocket Gateway for 100 Workstations
