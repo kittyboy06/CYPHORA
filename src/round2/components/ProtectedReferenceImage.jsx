@@ -24,7 +24,6 @@ export function ProtectedReferenceImage({
   initialTimerSeconds = 15,
   enableTimer = false,
 }) {
-  const [isTabFocused, setIsTabFocused] = useState(true);
   const [warningMessage, setWarningMessage] = useState('');
   const [isRevealed, setIsRevealed] = useState(!enableTimer);
   const [timeLeft, setTimeLeft] = useState(initialTimerSeconds);
@@ -38,36 +37,6 @@ export function ProtectedReferenceImage({
       setWarningMessage('');
     }, 2800);
   };
-
-  // 1. Tab Focus & Visibility Monitoring
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        setIsTabFocused(false);
-      } else {
-        setIsTabFocused(true);
-      }
-    };
-
-    const handleWindowBlur = () => {
-      setIsTabFocused(false);
-    };
-
-    const handleWindowFocus = () => {
-      setIsTabFocused(true);
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleWindowBlur);
-    window.addEventListener('focus', handleWindowFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleWindowBlur);
-      window.removeEventListener('focus', handleWindowFocus);
-      if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
-    };
-  }, []);
 
   // 2. Keystroke intercept for common shortcuts (PrintScreen, Ctrl+S, Ctrl+P)
   useEffect(() => {
@@ -158,7 +127,7 @@ export function ProtectedReferenceImage({
         onDragStart={handleDragStart}
       >
         {/* The Reference Image */}
-        <div className={`image-canvas-container ${!isTabFocused ? 'tab-blurred' : ''} ${!isRevealed ? 'peek-hidden' : ''}`}>
+        <div className={`image-canvas-container ${!isRevealed ? 'peek-hidden' : ''}`}>
           <img
             src={src}
             alt={alt}
@@ -194,17 +163,8 @@ export function ProtectedReferenceImage({
           aria-hidden="true"
         />
 
-        {/* Loss of Tab Focus Shield */}
-        {!isTabFocused && (
-          <div className="focus-loss-shield">
-            <Lock size={36} className="lock-icon" />
-            <h4>Asset Shielded</h4>
-            <p>Active window lost focus. Click here to return to the challenge.</p>
-          </div>
-        )}
-
         {/* Timed Peek Expired / Hidden Overlay */}
-        {enableTimer && !isRevealed && isTabFocused && (
+        {enableTimer && !isRevealed && (
           <div className="peek-expired-shield">
             <EyeOff size={34} className="lock-icon" />
             <h4>Reference Observation Closed</h4>

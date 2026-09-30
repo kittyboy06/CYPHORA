@@ -4,15 +4,37 @@
    and client-side protection against copy/drag/print.
    ========================================================================== */
 
+/* ── Round 2 Scroll Relaxation (Overrides global index.css overflow: hidden) ── */
+html.round2-scroll-active,
+body.round2-scroll-active {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  min-height: 100% !important;
+  max-height: none !important;
+  overscroll-behavior: auto !important;
+}
+
+body.round2-scroll-active #root {
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  min-height: 100% !important;
+  max-height: none !important;
+  overscroll-behavior: auto !important;
+}
+
 /* ── Global Page Wrapper & Background ── */
 .round2-wrapper {
   position: relative;
   min-height: 100vh;
+  height: auto !important;
   width: 100%;
   background-color: #060905;
   color: #eae0c8;
   font-family: 'Montserrat', sans-serif;
   overflow-x: hidden;
+  overflow-y: visible !important;
   display: flex;
   flex-direction: column;
 }
@@ -162,6 +184,36 @@
 .navbar-right {
   display: flex;
   align-items: center;
+  gap: 1rem;
+}
+
+.round2-fullscreen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(223, 177, 37, 0.08);
+  border: 1px solid rgba(223, 177, 37, 0.3);
+  color: #dfb125;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.round2-fullscreen-btn:hover {
+  background: rgba(223, 177, 37, 0.2);
+  border-color: #dfb125;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(223, 177, 37, 0.3);
+}
+
+.round2-fullscreen-btn:focus-visible {
+  outline: 2px solid #dfb125;
+  outline-offset: 2px;
 }
 
 .team-status-chip {

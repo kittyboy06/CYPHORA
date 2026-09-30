@@ -492,14 +492,23 @@ export function AdminPortal() {
             </span>
             <h1>EXPEDITION CONTROL</h1>
             <p>Enter Master Administrator Password to access CYPHORA Command.</p>
-            <form onSubmit={handleLoginSubmit}>
+            <form onSubmit={handleLoginSubmit} autoComplete="off" data-lpignore="true" data-form-type="other">
               <div className="admin-input-group">
                 <Lock size={18} color="#dfb125" />
                 <input
-                  type="password"
+                  type="text"
+                  name="master_admin_token"
+                  className="pin-mask-input"
                   placeholder="Master Password..."
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-form-type="other"
                   autoFocus
                 />
               </div>

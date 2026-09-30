@@ -8,7 +8,9 @@ import {
   RotateCcw,
   Sparkles,
   Info,
-  CheckCircle2
+  CheckCircle2,
+  Maximize,
+  Minimize
 } from 'lucide-react';
 import { ProtectedReferenceImage } from './components/ProtectedReferenceImage.jsx';
 import { PromptSection } from './components/PromptSection.jsx';
@@ -43,6 +45,55 @@ export function Round2Page({ onReturnToHub }) {
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [submittedData, setSubmittedData] = useState(null);
   const [formGlobalError, setFormGlobalError] = useState('');
+
+  // Fullscreen state tracking (Allowed and unrestricted in Round 2)
+  const [isFullscreen, setIsFullscreen] = useState(() => {
+    return typeof document !== 'undefined' ? !!document.fullscreenElement : false;
+  });
+
+  // Enable scrolling, clear any OS locks, and track fullscreen status
+  useEffect(() => {
+    // Explicitly enable vertical scrolling for Round 2 (overcoming index.css overflow:hidden)
+    document.documentElement.classList.add('round2-scroll-active');
+    document.body.classList.add('round2-scroll-active');
+
+    // Remove any Stage 1 security lock flags from sessionStorage
+    try {
+      sessionStorage.removeItem('cyphora_os_locked');
+      sessionStorage.removeItem('cyphora_os_lock_reason');
+    } catch {
+      // ignore
+    }
+
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.documentElement.classList.remove('round2-scroll-active');
+      document.body.classList.remove('round2-scroll-active');
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  // Fullscreen toggle handler (Exit/Enter fullscreen permitted freely in Round 2)
+  const toggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+      }
+    } catch (err) {
+      console.warn('Fullscreen toggle failed:', err);
+    }
+  };
 
   // Clean up object URL on unmount
   useEffect(() => {
@@ -229,6 +280,17 @@ export function Round2Page({ onReturnToHub }) {
         </div>
 
         <div className="navbar-right">
+          <button
+            type="button"
+            className="round2-fullscreen-btn"
+            onClick={toggleFullscreen}
+            aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            title="Toggle Fullscreen (Freely permitted in Round 2)"
+          >
+            {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+            <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+          </button>
+
           <div className="team-status-chip">
             <span className="chip-label">Explorer</span>
             <span className="chip-name">{teamName}</span>

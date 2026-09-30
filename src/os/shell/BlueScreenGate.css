@@ -80,6 +80,11 @@
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
 }
 
+.pin-mask-input {
+  -webkit-text-security: disc !important;
+  text-security: disc !important;
+}
+
 .blue-screen-form button {
   border: 2px solid #ffffff;
   background: #ffffff;

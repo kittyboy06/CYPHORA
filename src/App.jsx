@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Terminal, Users, X, ChevronRight, Shield, Compass } from 'lucide-react';
 import { BootScreen } from './os/boot/BootScreen.jsx';
 import { OSContainer } from './os/OSContainer.jsx';
@@ -112,7 +112,7 @@ function App() {
   };
 
   // Synchronize global event countdown timer from backend
-  const applyGlobalTimer = (timer) => {
+  const applyGlobalTimer = useCallback((timer) => {
     if (!timer) return;
     if (timer.action === 'start' && timer.ends_at) {
       const remainingMs = Math.max(0, new Date(timer.ends_at).getTime() - Date.now());
@@ -148,7 +148,7 @@ function App() {
         remainingTimeMs: durationMs
       }));
     }
-  };
+  }, []);
 
   useEffect(() => {
     const unsubscribe = eventBus.on('*', (event) => {
@@ -278,7 +278,17 @@ function App() {
     }
   }, [stage]);
 
-  const fetchLeaderboard = async (currentTeamName) => {
+  const lastLeaderboardFetchRef = useRef(0);
+  const isFetchingLeaderboardRef = useRef(false);
+
+  // Refresh leaderboard at most once every 5 seconds to reduce rate limit
+  const fetchLeaderboard = useCallback(async (currentTeamName, force = false) => {
+    const now = Date.now();
+    if (!force && (now - lastLeaderboardFetchRef.current < 5000 || isFetchingLeaderboardRef.current)) {
+      return;
+    }
+    lastLeaderboardFetchRef.current = now;
+    isFetchingLeaderboardRef.current = true;
     try {
       const res = await fetch(`${API_BASE}/api/teams/leaderboard`);
       if (res.ok) {
@@ -313,8 +323,10 @@ function App() {
       }
     } catch (err) {
       console.warn('[CYPHORA] REST leaderboard fetch error:', err);
+    } finally {
+      isFetchingLeaderboardRef.current = false;
     }
-  };
+  }, [applyGlobalTimer]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -363,8 +375,12 @@ function App() {
   useEffect(() => {
     if (panelOpen) {
       fetchLeaderboard();
+      const interval = setInterval(() => {
+        fetchLeaderboard();
+      }, 5000);
+      return () => clearInterval(interval);
     }
-  }, [panelOpen]);
+  }, [panelOpen, fetchLeaderboard]);
 
   useEffect(() => {
     let reconnectTimeout;
@@ -624,6 +640,9 @@ function App() {
   const handleLevelClick = (level, unlocked) => {
     if (!unlocked) return;
     if (level === 1) {
+      try {
+        sessionStorage.removeItem('cyphora_os_locked');
+      } catch (e) {}
       if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
@@ -681,17 +700,24 @@ function App() {
           <div className="team-modal">
             <h2>Identify Your Team</h2>
             <p>Declare your expedition team name, two crew members, and secret PIN.</p>
-            <form onSubmit={handleTeamSubmit}>
+            <form onSubmit={handleTeamSubmit} autoComplete="off" data-lpignore="true" data-form-type="other">
               {/* Team Name */}
               <div className="team-input-wrapper">
                 <input
                   type="text"
+                  name="cyphora_team_identity"
+                  id="cyphora_team_identity"
                   className="team-input"
                   placeholder="Enter Team Name..."
                   value={teamInput}
                   onChange={(e) => setTeamInput(e.target.value)}
                   autoFocus
                   maxLength={30}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                  data-lpignore="true"
                   required
                 />
               </div>
@@ -701,34 +727,52 @@ function App() {
                 <div className="team-input-wrapper">
                   <input
                     type="text"
+                    name="cyphora_crew_alpha"
                     className="team-input"
                     placeholder="Member 1 Name..."
                     value={member1Input}
                     onChange={(e) => setMember1Input(e.target.value)}
                     maxLength={30}
+                    autoComplete="off"
+                    spellCheck="false"
+                    data-lpignore="true"
                   />
                 </div>
                 <div className="team-input-wrapper">
                   <input
                     type="text"
+                    name="cyphora_crew_beta"
                     className="team-input"
                     placeholder="Member 2 Name..."
                     value={member2Input}
                     onChange={(e) => setMember2Input(e.target.value)}
                     maxLength={30}
+                    autoComplete="off"
+                    spellCheck="false"
+                    data-lpignore="true"
                   />
                 </div>
               </div>
 
-              {/* Secret Team PIN */}
+              {/* Secret Team PIN - Uses text type with CSS text-security disc to prevent browser breached-password popups */}
               <div className="team-input-wrapper" style={{ marginTop: '0.8rem' }}>
                 <input
-                  type="password"
-                  className="team-input"
+                  type="text"
+                  name="cyphora_team_key"
+                  id="cyphora_team_key"
+                  inputMode="numeric"
+                  className="team-input pin-mask-input"
                   placeholder="Secret Team PIN (e.g. 1234)..."
                   value={pinInput}
                   onChange={(e) => setPinInput(e.target.value)}
                   maxLength={8}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-form-type="other"
                 />
               </div>
 

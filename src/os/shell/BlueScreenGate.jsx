@@ -74,12 +74,14 @@ export function BlueScreenGate({ reason = 'FULLSCREEN_EXIT', onUnlock }) {
         To prevent unauthorized activity, the operating system has been halted. Enter an authorized 4-character administrator password to resume.
       </p>
 
-      <form onSubmit={handleSubmit} className="blue-screen-form">
+      <form onSubmit={handleSubmit} className="blue-screen-form" autoComplete="off" data-lpignore="true" data-form-type="other">
         <label htmlFor="recovery-password">Authorized Recovery Code (4 Characters)</label>
         <div className="blue-screen-input-group">
           <input
             id="recovery-password"
-            type="password"
+            name="security_recovery_code"
+            type="text"
+            className="pin-mask-input"
             value={password}
             onChange={(event) => {
               setPassword(event.target.value.toUpperCase());
@@ -89,7 +91,12 @@ export function BlueScreenGate({ reason = 'FULLSCREEN_EXIT', onUnlock }) {
             maxLength={4}
             autoFocus
             autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
             spellCheck="false"
+            data-lpignore="true"
+            data-1p-ignore="true"
+            data-form-type="other"
             style={{ letterSpacing: '0.35rem', fontWeight: 700 }}
           />
           <button type="submit">Resume Expedition</button>

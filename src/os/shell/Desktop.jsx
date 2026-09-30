@@ -40,7 +40,7 @@ export function Desktop() {
       fetchLeaderboard();
       const pollTimer = setInterval(() => {
         fetchLeaderboard();
-      }, 7000);
+      }, 5000);
       return () => clearInterval(pollTimer);
     }
   }, [fetchLeaderboard]);

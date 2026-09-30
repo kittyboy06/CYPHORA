@@ -29,3 +29,10 @@ html, body {
   overflow: hidden !important;
   overscroll-behavior: none;
 }
+
+/* PIN / Sensitive Code Masking without triggering browser password manager / breach dialogs */
+.pin-mask-input {
+  -webkit-text-security: disc !important;
+  text-security: disc !important;
+}
+

@@ -798,6 +798,11 @@
   color: #777;
 }
 
+.pin-mask-input {
+  -webkit-text-security: disc !important;
+  text-security: disc !important;
+}
+
 .modal-actions {
   display: flex;
   gap: 1rem;
