@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 import { level1 } from '../levels/level1';
 import { Command, TileType, LevelDefinition } from '../types/game';
 
-const TILE_W = 100;
-const TILE_H = 65;
+const TILE_W = 180;
+const TILE_H = 117;
 
 export default class GameScene extends Phaser.Scene {
   private levelData: LevelDefinition = level1;
@@ -27,14 +27,23 @@ export default class GameScene extends Phaser.Scene {
 
   preload() {
     this.load.image('bg_forest', '/assets/bg_new.png');
-    this.load.image('char_idle', '/assets/clean_char1_0.png');
-    for (let i = 0; i < 8; i++) {
-        this.load.image(`char_run_${i}`, `/assets/clean_char1_${12 + i}.png`);
-    }
-    this.load.image('char_jump', '/assets/clean_char2_0.png');
-    this.load.image('char_fall', '/assets/clean_char2_4.png');
-    this.load.image('tile_ground', '/assets/new_tile_ground.png');
-    this.load.image('tile_spikes', '/assets/new_tile_spikes2.png');
+    this.load.image('char_idle', '/assets/story/running_action_1.png');
+    this.load.image('char_run_1', '/assets/story/running_action_1.png');
+    this.load.image('char_run_2', '/assets/story/running_action_2.png');
+    this.load.image('char_jump_1', '/assets/story/jumping_getting_ready.png');
+    this.load.image('char_jump_2', '/assets/story/jumping_getting_ready_2.png');
+    this.load.image('char_fall_1', '/assets/story/landing_on_air.png');
+    this.load.image('char_fall_2', '/assets/story/landing_impact.png');
+    this.load.image('char_fall_3', '/assets/story/recovery_from_landing_impact.png');
+    
+    // New unified bridge chunks
+    this.load.image('bridge_2', '/assets/2_block_bridge.png');
+    this.load.image('bridge_3', '/assets/3_block_bridge.png');
+    this.load.image('bridge_4', '/assets/4_block_bridge.png');
+    this.load.image('bridge_5', '/assets/5_block_bridge.png');
+
+    this.load.image('tile_ground', '/assets/2_block_bridge.png'); // Fallback/single
+    this.load.image('tile_spikes', '/assets/2_block_bridge.png'); // Fallback
     this.load.image('beast', '/assets/beast.png');
   }
 
@@ -50,19 +59,45 @@ export default class GameScene extends Phaser.Scene {
     this.beastVisual = undefined;
     this.beastShieldVisual = undefined;
     
-    // Create animations
+    // Create animations from individual frames
     if (!this.anims.exists('run')) {
       this.anims.create({
         key: 'run',
-        frames: [0,1,2,3,4,5,6,7].map(i => ({ key: `char_run_${i}` })),
-        frameRate: 12, // slightly faster looks better for 8 frames
+        frames: [
+          { key: 'char_run_1' },
+          { key: 'char_run_2' }
+        ],
+        frameRate: 6,
         repeat: -1
+      });
+    }
+    if (!this.anims.exists('jump')) {
+      this.anims.create({
+        key: 'jump',
+        frames: [
+          { key: 'char_jump_1' },
+          { key: 'char_jump_2' }
+        ],
+        frameRate: 6,
+        repeat: 0
+      });
+    }
+    if (!this.anims.exists('fall')) {
+      this.anims.create({
+        key: 'fall',
+        frames: [
+          { key: 'char_fall_1' },
+          { key: 'char_fall_2' },
+          { key: 'char_fall_3' }
+        ],
+        frameRate: 6,
+        repeat: 0
       });
     }
     
     const h = this.scale.height;
     // Lower groundY to give more room for larger character/tiles
-    this.groundY = h * 0.78;
+    this.groundY = h * 0.70;
     this.startX = 150;
 
     this.drawBackground();
@@ -83,11 +118,11 @@ export default class GameScene extends Phaser.Scene {
 
     // Use the beast image (flipped if it naturally faces right, assuming we want it facing left towards the player)
     const body = this.add.image(0, -70, 'beast').setOrigin(0.5, 1);
-    body.setDisplaySize(180, 150); // Scale appropriately
+    body.setDisplaySize(240, 200); // Scale appropriately
     body.setFlipX(true); // Assuming the original art faces right
 
     // Glowing shield
-    this.beastShieldVisual = this.add.circle(0, -110, 80, 0x5555ff, 0.3);
+    this.beastShieldVisual = this.add.circle(0, -110, 100, 0x5555ff, 0.3);
     this.beastShieldVisual.setStrokeStyle(4, 0xaaaaff);
     
     this.beastVisual = this.add.container(bx, by + 20, [body, this.beastShieldVisual]); // offset Y slightly so feet touch ground
@@ -113,6 +148,7 @@ export default class GameScene extends Phaser.Scene {
     this.beastHp = this.levelData.beast?.hp || 0;
     this.pIndex = this.levelData.playerStartX;
     this.player.setAlpha(1);
+    this.player.stop();
     this.player.setTexture('char_idle');
     this.updatePlayerVisuals(false);
     this.updateBeastVisuals();
@@ -125,15 +161,12 @@ export default class GameScene extends Phaser.Scene {
     const w = this.startX + this.levelData.length * TILE_W + 300;
     const h = this.scale.height;
 
-    // Use a regular image and scale it to cover the height, letting it stretch/scroll naturally
-    // The original forest image is 1024x222.
-    const bg = this.add.image(0, 0, 'bg_forest').setOrigin(0, 0);
-    // Scale height to match canvas, scale width proportionally
-    const scaleY = h / 222;
-    bg.setScale(scaleY);
-    //bg.setTint(0x7a7a7a); // Dim the background to make foreground pop
+    // Use tileSprite to prevent stretching. We set it to cover the full scroll width.
+    const bg = this.add.tileSprite(0, 0, w, h, 'bg_forest').setOrigin(0, 0);
     
-    bg.setDisplaySize(w, h);
+    // Scale the texture up so it covers the height of the screen properly
+    const scale = h / 724; 
+    bg.setTileScale(scale, scale);
   }
 
   createPlatforms() {
@@ -144,40 +177,70 @@ export default class GameScene extends Phaser.Scene {
     graphics.generateTexture('fire_particle', 16, 16);
     graphics.destroy();
 
-    for (let i = 0; i < this.levelData.length; i++) {
+    let i = 0;
+    while (i < this.levelData.length) {
       const tile = this.levelData.tiles[i];
       const x = this.startX + i * TILE_W;
       const y = this.groundY;
 
+      // Check for contiguous ground blocks to use the unified bridge assets
       if (tile === TileType.GROUND) {
-        this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, TILE_W * 0.8).setOrigin(0.5, 0);
+        let runLength = 0;
+        while (i + runLength < this.levelData.length && this.levelData.tiles[i + runLength] === TileType.GROUND) {
+          runLength++;
+        }
+        
+        let tilesRemaining = runLength;
+        let currentX = x;
+        while (tilesRemaining > 0) {
+          let chunk = Math.min(tilesRemaining, 5);
+          // Prevent leaving exactly 1 tile if we have options
+          if (tilesRemaining > 5 && (tilesRemaining - chunk) === 1) {
+             chunk = 4; // leaves 2 instead of 1
+          }
+          
+          if (chunk === 1) {
+             // We only have a 1-block gap to fill, but we only have bridge_2 minimum.
+             // We'll just squish a bridge_2 into 1 block.
+             this.add.image(currentX + TILE_W / 2, y + 2, 'bridge_2')
+                 .setDisplaySize(TILE_W, TILE_W * 0.56).setOrigin(0.5, 0);
+             tilesRemaining -= 1;
+             currentX += TILE_W;
+          } else {
+             const blockCenterX = currentX + (chunk * TILE_W) / 2;
+             this.add.image(blockCenterX, y + 2, `bridge_${chunk}`)
+                 .setDisplaySize(chunk * TILE_W, (chunk * TILE_W) * 0.56).setOrigin(0.5, 0);
+             tilesRemaining -= chunk;
+             currentX += chunk * TILE_W;
+          }
+        }
+        i += runLength - 1; // -1 because i++ is at the end of the main loop
       } else if (tile === TileType.GOAL) {
         const block = this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, TILE_W * 0.8).setOrigin(0.5, 0).setTint(0xdfb125);
+            .setDisplaySize(TILE_W + 2, (TILE_W + 2) * 0.56).setOrigin(0.5, 0).setTint(0xdfb125);
         const glow = this.add.circle(x + TILE_W / 2, y + TILE_H / 2, TILE_W * 0.6, 0xdfb125);
         glow.setAlpha(0.15);
       } else if (tile === TileType.TRAP) {
-        this.add.image(x + TILE_W / 2, y + 2, 'tile_spikes')
-            .setDisplaySize(TILE_W, TILE_W * 0.7).setOrigin(0.5, 0);
+        // Render nothing for TRAP since we don't have spikes anymore. It's a bottomless pit!
+        // Maybe some dark fog or just leave it empty.
       } else if (tile === TileType.COLOR_RED) {
         this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, TILE_W * 0.8).setOrigin(0.5, 0).setTint(0xff4444);
+            .setDisplaySize(TILE_W + 2, (TILE_W + 2) * 0.56).setOrigin(0.5, 0).setTint(0xff4444);
         // Blood/Fire visual
         this.add.circle(x + TILE_W / 2, y + TILE_H / 2, 10, 0xff0000).setAlpha(0.5);
       } else if (tile === TileType.COLOR_BLUE) {
         this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, TILE_W * 0.8).setOrigin(0.5, 0).setTint(0x4444ff);
+            .setDisplaySize(TILE_W + 2, (TILE_W + 2) * 0.56).setOrigin(0.5, 0).setTint(0x4444ff);
         // Sky/Water visual
         this.add.circle(x + TILE_W / 2, y + TILE_H / 2, 10, 0x0000ff).setAlpha(0.5);
       } else if (tile === TileType.COLOR_GOLD) {
         this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, TILE_W * 0.8).setOrigin(0.5, 0).setTint(0xffcc00);
+            .setDisplaySize(TILE_W + 2, (TILE_W + 2) * 0.56).setOrigin(0.5, 0).setTint(0xffcc00);
         // Sun visual
         this.add.circle(x + TILE_W / 2, y + TILE_H / 2, 10, 0xffaa00).setAlpha(0.5);
       } else if (tile === TileType.FIRE || tile === TileType.TOTEM_FIRE) {
         this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, TILE_W * 0.8).setOrigin(0.5, 0).setTint(0x333333); // Burnt ground
+            .setDisplaySize(TILE_W + 2, (TILE_W + 2) * 0.56).setOrigin(0.5, 0).setTint(0x333333); // Burnt ground
         
         // Realistic Fire Emitter
         this.add.particles(x + TILE_W / 2, y, 'fire_particle', {
@@ -198,7 +261,7 @@ export default class GameScene extends Phaser.Scene {
         }
       } else if (tile === TileType.GOBLIN || tile === TileType.TOTEM_GOBLIN) {
         this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, TILE_W * 0.8).setOrigin(0.5, 0);
+            .setDisplaySize(TILE_W + 2, (TILE_W + 2) * 0.56).setOrigin(0.5, 0);
         // Goblin body
         this.add.rectangle(x + TILE_W / 2, y - 10, 20, 20, 0x228b22);
         this.add.circle(x + TILE_W / 2 - 4, y - 14, 2, 0xff0000);
@@ -210,18 +273,19 @@ export default class GameScene extends Phaser.Scene {
         }
       } else if (tile === TileType.TOTEM_FINAL) {
         this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, TILE_W * 0.8).setOrigin(0.5, 0).setTint(0xaaaaaa);
+            .setDisplaySize(TILE_W + 2, (TILE_W + 2) * 0.56).setOrigin(0.5, 0).setTint(0xaaaaaa);
         const diamond = this.add.polygon(x + TILE_W / 2, y - 25, [0, -20, 20, 0, 0, 20, -20, 0], 0xffd700);
         diamond.setStrokeStyle(2, 0xffaa00);
         this.add.circle(x + TILE_W / 2, y - 25, 30, 0xffd700).setAlpha(0.1);
       }
+      i++;
     }
   }
 
   spawnPlayer() {
     this.pIndex = this.levelData.playerStartX;
     this.player = this.add.sprite(0, 0, 'char_idle').setOrigin(0.5, 1);
-    this.player.setDisplaySize(70, 115); // Scale the sprite appropriately (aspect ratio ~ 1:1.64)
+    this.player.setDisplaySize(200, 190); // Scale the new sprite appropriately
     this.updatePlayerVisuals(false);
   }
 
@@ -233,7 +297,7 @@ export default class GameScene extends Phaser.Scene {
     return new Promise<void>((resolve) => {
       if (animate) {
         if (jump) {
-          this.player.setTexture('char_jump');
+          this.player.play('jump');
           this.tweens.add({
             targets: this.player,
             x: targetX,
@@ -242,13 +306,14 @@ export default class GameScene extends Phaser.Scene {
           });
           this.tweens.add({
             targets: this.player,
-            y: targetY - 140, // Increased jump height for larger character
+            y: targetY - 240, // Increased jump height for larger character
             yoyo: true,
             duration: 250,
             ease: 'Sine.easeOut',
             onComplete: () => {
               this.player.y = targetY;
-              this.player.setTexture('char_idle');
+              this.player.stop();
+this.player.setTexture('char_idle');
               resolve();
             }
           });
@@ -261,7 +326,8 @@ export default class GameScene extends Phaser.Scene {
             ease: 'Linear',
             onComplete: () => {
               this.player.stop();
-              this.player.setTexture('char_idle');
+              this.player.stop();
+this.player.setTexture('char_idle');
               resolve();
             }
           });
@@ -275,7 +341,8 @@ export default class GameScene extends Phaser.Scene {
         );
       } else {
         this.player.setPosition(targetX, targetY);
-        this.player.setTexture('char_idle');
+        this.player.stop();
+this.player.setTexture('char_idle');
         this.cameras.main.centerOn(
           Math.max(targetX, this.scale.width / 2),
           this.scale.height / 2
@@ -523,9 +590,9 @@ export default class GameScene extends Phaser.Scene {
         this.beastHp--;
         // Flash beast white
         if (this.beastVisual) {
-          const body = this.beastVisual.list[0] as Phaser.GameObjects.Rectangle;
-          body.fillColor = 0xffffff;
-          setTimeout(() => { body.fillColor = 0x991111; }, 150);
+          const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
+          body.setTintFill(0xffffff);
+          setTimeout(() => { body.clearTint(); }, 150);
         }
         
         if (this.beastHp <= 0) {
@@ -578,7 +645,7 @@ export default class GameScene extends Phaser.Scene {
 
   // ──── Shared Animations ────
   private async playerFallDeath(): Promise<void> {
-    this.player.setTexture('char_fall');
+    this.player.play('fall');
     this.tweens.add({
       targets: this.player,
       y: this.player.y + 150,
@@ -590,16 +657,17 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private jumpInPlace(): Promise<void> {
-    this.player.setTexture('char_jump');
+    this.player.play('jump');
     return new Promise((resolve) => {
       this.tweens.add({
         targets: this.player,
-        y: this.player.y - 120, // Increased for larger character scale
+        y: this.player.y - 240, // Increased for larger character scale
         yoyo: true,
         duration: 200,
         ease: 'Sine.easeOut',
         onComplete: () => {
-          this.player.setTexture('char_idle');
+          this.player.stop();
+this.player.setTexture('char_idle');
           resolve();
         }
       });
@@ -626,7 +694,7 @@ export default class GameScene extends Phaser.Scene {
         // Correct! Dodge animation
         this.pIndex = nextIndex;
         const targetX = this.startX + this.pIndex * TILE_W + TILE_W / 2;
-        this.player.setTexture('char_jump');
+        this.player.play('jump');
         
         await new Promise<void>((resolve) => {
           this.tweens.add({
@@ -637,7 +705,8 @@ export default class GameScene extends Phaser.Scene {
             duration: 200,
             ease: 'Sine.easeOut',
             onComplete: () => {
-              this.player.setTexture('char_idle');
+              this.player.stop();
+this.player.setTexture('char_idle');
               resolve();
             }
           });
@@ -652,7 +721,7 @@ export default class GameScene extends Phaser.Scene {
         // Correct! Slide animation
         this.pIndex = nextIndex;
         const targetX = this.startX + this.pIndex * TILE_W + TILE_W / 2;
-        this.player.setTexture('char_fall');
+        this.player.play('fall');
         
         await new Promise<void>((resolve) => {
           this.tweens.add({
@@ -663,7 +732,8 @@ export default class GameScene extends Phaser.Scene {
             yoyo: true,
             duration: 200,
             onComplete: () => {
-              this.player.setTexture('char_idle');
+              this.player.stop();
+this.player.setTexture('char_idle');
               resolve();
             }
           });
