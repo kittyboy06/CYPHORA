@@ -97,13 +97,7 @@ function App() {
                 Current Task: The Broken Bridge
               </h3>
               <p className="text-sm leading-relaxed text-[var(--text-primary)]">
-                The bridge has gaps at every 4th tile. Run across 3 tiles, then{' '}
-                <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code>{' '}
-                over the gap. Find the pattern and use a loop with{' '}
-                <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">run()</code>{' '}
-                and{' '}
-                <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code>{' '}
-                to reach the goal.
+                The bridge gaps are expanding! First you must run 1 tile and jump, then run 2 tiles and jump, then 3 tiles, and so on... (a triangular number progression). Use variables and nested loops with <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">run()</code> and <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code> to reach the other side!
               </p>
             </>
           )}
