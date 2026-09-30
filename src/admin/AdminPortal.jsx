@@ -27,10 +27,10 @@ import {
 import './AdminPortal.css';
 
 const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
-const isDev = typeof window !== 'undefined' && window.location.port === '5173';
-const API_BASE = isDev ? `http://${hostname}:8000` : '';
+const isDevPort = typeof window !== 'undefined' && window.location.port && window.location.port !== '8000';
+const API_BASE = isDevPort ? `http://${hostname}:8000` : '';
 const WS_PROTOCOL = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const WS_HOST = isDev ? `${hostname}:8000` : (typeof window !== 'undefined' ? window.location.host : 'localhost:8000');
+const WS_HOST = isDevPort ? `${hostname}:8000` : (typeof window !== 'undefined' ? window.location.host : 'localhost:8000');
 const WS_URL = `${WS_PROTOCOL}//${WS_HOST}/ws/live`;
 
 const HARDCODED_ADMIN_PASS = "JCEAIML";
@@ -46,6 +46,7 @@ export function AdminPortal() {
   const [systemStatus, setSystemStatus] = useState(null);
   const [isWsConnected, setIsWsConnected] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [globalTimer, setGlobalTimer] = useState(null);
 
   // Search & Filter & Sort
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,11 +114,62 @@ export function AdminPortal() {
     } catch (err) {}
   };
 
+  const fetchTimer = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/timer`, {
+        headers: { 'X-Admin-Password': HARDCODED_ADMIN_PASS }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGlobalTimer(data);
+      }
+    } catch (err) {}
+  };
+
+  // Timer controls
+  const handleControlTimer = async (action, durationMinutes = 60) => {
+    try {
+      const remSec = globalTimer?.remaining_seconds !== undefined ? globalTimer.remaining_seconds : (durationMinutes * 60);
+      const res = await fetch(`${API_BASE}/api/admin/timer?duration_minutes=${durationMinutes}&action=${action}&remaining_seconds=${remSec}`, {
+        method: 'POST',
+        headers: { 'X-Admin-Password': HARDCODED_ADMIN_PASS }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setGlobalTimer(data.timer);
+      }
+    } catch (e) {
+      alert('Error updating event timer');
+    }
+  };
+
+  const getRemainingTimeString = () => {
+    if (!globalTimer) return '60:00 (STOPPED)';
+    if (globalTimer.action === 'start' && globalTimer.ends_at) {
+      const diffMs = Math.max(0, new Date(globalTimer.ends_at) - currentTime);
+      const totalSec = Math.floor(diffMs / 1000);
+      const m = Math.floor(totalSec / 60);
+      const s = totalSec % 60;
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+    if (globalTimer.action === 'pause') {
+      const sec = globalTimer.remaining_seconds || 0;
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')} (PAUSED)`;
+    }
+    return `${globalTimer.duration_minutes || 60}:00 (STOPPED)`;
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       fetchTeams();
       fetchStatus();
-      const statusInterval = setInterval(fetchStatus, 15000);
+      fetchTimer();
+      const statusInterval = setInterval(() => {
+        fetchStatus();
+        fetchTimer();
+      }, 15000);
       return () => clearInterval(statusInterval);
     }
   }, [isAuthenticated]);
@@ -144,6 +196,11 @@ export function AdminPortal() {
                 setTeams(payload.data);
                 fetchStatus();
               }
+              if (payload.timer) {
+                setGlobalTimer(payload.timer);
+              }
+            } else if (payload.event === 'EVENT_TIMER_SYNC') {
+              setGlobalTimer(payload.data);
             }
           } catch (e) {}
         };
@@ -306,6 +363,26 @@ export function AdminPortal() {
     }
   };
 
+  // Reset / Clear all mock or test data
+  const handleResetLeaderboard = async () => {
+    if (!window.confirm("WARNING: This will permanently purge all mock and test team data, resetting to 0 real participants. Are you sure?")) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/reset-leaderboard`, {
+        method: 'POST',
+        headers: { 'X-Admin-Password': HARDCODED_ADMIN_PASS }
+      });
+      if (res.ok) {
+        alert('Leaderboard reset. All mock data cleared.');
+        fetchTeams();
+        fetchStatus();
+      } else {
+        alert('Failed to reset leaderboard');
+      }
+    } catch (e) {
+      alert('Error communicating with backend');
+    }
+  };
+
   // Export CSV
   const handleExportCSV = () => {
     window.open(`${API_BASE}/api/admin/export/csv?auth=${HARDCODED_ADMIN_PASS}`, '_blank');
@@ -415,14 +492,23 @@ export function AdminPortal() {
             </span>
             <h1>EXPEDITION CONTROL</h1>
             <p>Enter Master Administrator Password to access CYPHORA Command.</p>
-            <form onSubmit={handleLoginSubmit}>
+            <form onSubmit={handleLoginSubmit} autoComplete="off" data-lpignore="true" data-form-type="other">
               <div className="admin-input-group">
                 <Lock size={18} color="#dfb125" />
                 <input
-                  type="password"
+                  type="text"
+                  name="master_admin_token"
+                  className="pin-mask-input"
                   placeholder="Master Password..."
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-form-type="other"
                   autoFocus
                 />
               </div>
@@ -470,6 +556,10 @@ export function AdminPortal() {
           <button className="admin-btn" onClick={handleTriggerBackup} title="Trigger ACID backup snapshot">
             <Database size={14} />
             <span>Backup Snapshot</span>
+          </button>
+          <button className="admin-btn danger" onClick={handleResetLeaderboard} title="Purge mock and test data so only real workstations appear">
+            <Trash2 size={14} />
+            <span>Clear Mock Data</span>
           </button>
           <a href="/" className="admin-btn" style={{ textDecoration: 'none' }} target="_blank" rel="noreferrer">
             <ExternalLink size={14} />
@@ -529,6 +619,35 @@ export function AdminPortal() {
               <span className="metric-sub">
                 {systemStatus ? `${systemStatus.database_size_kb} KB | WAL ${systemStatus.wal_journal_size_kb} KB` : 'Active'}
               </span>
+            </div>
+          </div>
+
+          <div className="admin-metric-card" style={{ borderColor: globalTimer?.action === 'start' ? '#dfb125' : 'rgba(223, 177, 37, 0.25)' }}>
+            <div className="metric-icon-wrap" style={{ color: '#dfb125', background: 'rgba(223,177,37,0.1)' }}>
+              <Clock size={22} />
+            </div>
+            <div className="metric-data">
+              <span className="metric-label">Event Countdown</span>
+              <span className="metric-val" style={{ color: globalTimer?.action === 'start' ? '#dfb125' : '#eae0c8' }}>
+                {getRemainingTimeString()}
+              </span>
+              <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                {globalTimer?.action === 'start' ? (
+                  <button className="admin-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => handleControlTimer('pause')}>
+                    <Pause size={10} /> Pause
+                  </button>
+                ) : (
+                  <button className="admin-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => handleControlTimer(globalTimer?.action === 'pause' ? 'resume' : 'start', globalTimer?.duration_minutes || 60)}>
+                    <Play size={10} /> {globalTimer?.action === 'pause' ? 'Resume' : 'Start'}
+                  </button>
+                )}
+                <button className="admin-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => setTimerModal({ open: true, durationMinutes: globalTimer?.duration_minutes || 60 })}>
+                  <Clock size={10} /> Config
+                </button>
+                <button className="admin-btn danger" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => handleControlTimer('reset')}>
+                  <RotateCcw size={10} /> Reset
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -961,6 +1080,61 @@ export function AdminPortal() {
               </button>
               <button className="admin-btn" style={{ background: '#dfb125', color: '#000', fontWeight: 'bold' }} onClick={handleSaveNote}>
                 Save Note
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: Configure Event Timer ── */}
+      {timerModal.open && (
+        <div className="admin-modal-backdrop" onClick={() => setTimerModal({ open: false, durationMinutes: 60 })}>
+          <div className="admin-modal" onClick={e => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h3>Configure Global Event Timer</h3>
+            </div>
+            <p style={{ color: '#a89d80', fontSize: '0.85rem', marginBottom: '1rem' }}>
+              Broadcasts a synchronized countdown clock to all 100 workstations.
+            </p>
+            <div className="admin-field">
+              <label>Duration (Minutes)</label>
+              <input
+                type="number"
+                min="1"
+                max="240"
+                value={timerModal.durationMinutes}
+                onChange={e => setTimerModal(prev => ({ ...prev, durationMinutes: parseInt(e.target.value, 10) || 60 }))}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+              {[15, 30, 45, 60, 90, 120].map(mins => (
+                <button
+                  key={mins}
+                  type="button"
+                  className="filter-pill"
+                  onClick={() => setTimerModal(prev => ({ ...prev, durationMinutes: mins }))}
+                >
+                  {mins}m
+                </button>
+              ))}
+            </div>
+            <div className="modal-btns">
+              <button
+                className="admin-btn"
+                style={{ background: 'transparent' }}
+                onClick={() => setTimerModal({ open: false, durationMinutes: 60 })}
+              >
+                Cancel
+              </button>
+              <button
+                className="admin-btn"
+                style={{ background: '#dfb125', color: '#000', fontWeight: 'bold' }}
+                onClick={async () => {
+                  await handleControlTimer('start', timerModal.durationMinutes);
+                  setTimerModal({ open: false, durationMinutes: 60 });
+                }}
+              >
+                Start Countdown
               </button>
             </div>
           </div>

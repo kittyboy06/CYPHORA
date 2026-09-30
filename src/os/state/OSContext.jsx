@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
 import { osReducer, INITIAL_OS_STATE, OS_ACTIONS } from './osStore.js';
 import { vfs } from '../vfs/vfsEngine.js';
 import { eventBus } from '../events/eventBus.js';
@@ -15,7 +15,7 @@ export function OSProvider({
   setRound1State,
   liveExplorers = [],
   isWsConnected = false,
-  fetchLeaderboard = () => {}
+  fetchLeaderboard = () => { }
 }) {
   const [state, dispatch] = useReducer(osReducer, INITIAL_OS_STATE, (init) => {
     try {
@@ -59,68 +59,88 @@ export function OSProvider({
     }
   }, [state.windows, state.activeWindowId, state.nextZIndex, state.isMuted]);
 
+  const unlockCooldownRef = useRef(0);
+  const hasEnteredFullscreenRef = useRef(false);
+
   const triggerLock = (reason = 'FULLSCREEN_EXIT') => {
+    // If within post-unlock immunity grace period (3.5s), ignore trigger
+    if (Date.now() < unlockCooldownRef.current) {
+      return;
+    }
+
     try {
       if (typeof sessionStorage !== 'undefined') {
         sessionStorage.setItem('cyphora_os_locked', reason);
       }
-    } catch (e) {}
+    } catch (e) { }
     dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: true, reason } });
   };
 
-  const unlockGate = async () => {
+  const unlockGate = () => {
+    // 1. Clear stored lock in session
     try {
       if (typeof sessionStorage !== 'undefined') {
         sessionStorage.removeItem('cyphora_os_locked');
       }
-    } catch (e) {}
+    } catch (e) { }
+
+    // 2. Set generous 3.5-second immunity cooldown to prevent immediate re-locking while window focus settles
+    unlockCooldownRef.current = Date.now() + 3500;
+
+    // 3. Immediately dismiss the Blue Screen gate
     dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
-    await requestFullscreen();
+
+    // 4. Synchronously request fullscreen on the user submit gesture (never re-lock on catch)
+    try {
+      if (typeof document !== 'undefined' && !document.fullscreenElement && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch((err) => {
+          console.warn('[OS] Fullscreen restore rejected or pending:', err);
+        });
+      }
+    } catch (err) {
+      console.warn('[OS] Fullscreen request error:', err);
+    }
   };
 
   // Track security triggers: Fullscreen exit, Screenshots, Tab Switch, DevTools Inspector
   useEffect(() => {
-    const isTestMode = typeof window !== 'undefined' && (
-      window.location.search.includes('unlock') ||
-      window.location.search.includes('test') ||
-      window.location.search.includes('noblock')
-    );
-
-    if (isTestMode) {
-      dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: true });
-      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
-      return;
-    }
-
-    // 1. Initial lock state recovery from sessionStorage or fullscreen check
+    // 1. Initial lock state recovery from sessionStorage
     let initialLock = null;
     try {
       if (typeof sessionStorage !== 'undefined') {
         initialLock = sessionStorage.getItem('cyphora_os_locked');
       }
-    } catch (e) {}
+    } catch (e) { }
 
+    // If an initial lock exists, restore it.
+    // Otherwise, do NOT immediately lock! Check if in fullscreen or allow user to transition.
     if (initialLock) {
       triggerLock(initialLock);
-    } else if (!document.fullscreenElement) {
-      dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: false });
-      triggerLock('FULLSCREEN_EXIT');
     } else {
-      dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: true });
       dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
+      if (typeof document !== 'undefined' && document.fullscreenElement) {
+        hasEnteredFullscreenRef.current = true;
+        dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: true });
+      }
     }
 
     // 2. Fullscreen monitor
     const handleFullscreenChange = () => {
       const isFull = !!document.fullscreenElement;
       dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: isFull });
-      if (!isFull) {
-        triggerLock('FULLSCREEN_EXIT');
+      if (isFull) {
+        hasEnteredFullscreenRef.current = true;
+      } else {
+        // Only trigger lock if the user was previously in fullscreen and explicitly exited
+        if (hasEnteredFullscreenRef.current && Date.now() >= unlockCooldownRef.current) {
+          triggerLock('FULLSCREEN_EXIT');
+        }
       }
     };
 
     // 3. Tab switch / visibility monitor
     const handleVisibilityChange = () => {
+      if (Date.now() < unlockCooldownRef.current) return;
       if (document.hidden || document.visibilityState === 'hidden') {
         triggerLock('TAB_SWITCH');
       }
@@ -128,11 +148,20 @@ export function OSProvider({
 
     // 4. Window blur monitor (switching to other apps or desktop)
     const handleWindowBlur = () => {
-      triggerLock('TAB_SWITCH');
+      if (Date.now() < unlockCooldownRef.current) return;
+      // Brief debounce to prevent false triggers during OS transitions or browser dialogs
+      setTimeout(() => {
+        if (Date.now() < unlockCooldownRef.current) return;
+        if (document.hidden || document.visibilityState === 'hidden') {
+          triggerLock('TAB_SWITCH');
+        }
+      }, 250);
     };
 
     // 5. Screenshots and Inspector keyboard shortcuts
     const handleSecurityKeyDown = (e) => {
+      if (Date.now() < unlockCooldownRef.current) return;
+
       // Screenshot shortcut: PrintScreen
       if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
         e.preventDefault();
@@ -185,21 +214,11 @@ export function OSProvider({
     };
 
     const handleSecurityKeyUp = (e) => {
+      if (Date.now() < unlockCooldownRef.current) return;
       if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
         triggerLock('SCREENSHOT_ATTEMPT');
       }
     };
-
-    // 6. Docked DevTools dimension inspection detector
-    const checkDevTools = () => {
-      const threshold = 160;
-      const widthDiff = window.outerWidth - window.innerWidth > threshold;
-      const heightDiff = window.outerHeight - window.innerHeight > threshold;
-      if (widthDiff || heightDiff) {
-        triggerLock('INSPECTOR_DEVTOOLS');
-      }
-    };
-    const devtoolsInterval = setInterval(checkDevTools, 800);
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -208,7 +227,6 @@ export function OSProvider({
     window.addEventListener('keyup', handleSecurityKeyUp, true);
 
     return () => {
-      clearInterval(devtoolsInterval);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleWindowBlur);
@@ -282,13 +300,12 @@ export function OSProvider({
 
   const requestFullscreen = async () => {
     try {
-      if (!document.fullscreenElement) {
+      if (typeof document !== 'undefined' && !document.fullscreenElement && document.documentElement.requestFullscreen) {
         await document.documentElement.requestFullscreen();
       }
       dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: false });
     } catch (err) {
-      console.warn('Fullscreen request denied or not supported', err);
-      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: true });
+      console.warn('[OS] Fullscreen request rejected/denied:', err);
     }
   };
 
@@ -320,7 +337,7 @@ export function OSProvider({
     unlockGate,
     onReturnToHub,
     round1State: round1State || null,
-    setRound1State: setRound1State || (() => {})
+    setRound1State: setRound1State || (() => { })
   };
 
   return <OSContext.Provider value={value}>{children}</OSContext.Provider>;

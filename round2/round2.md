@@ -4,3 +4,8 @@
 * participants prompt to recreate the image 
 * submit it in a evaluation portal 
 * cosine evaluation to calculate similarity scores
+
+
+* The Path
+* The Vision
+* The Code

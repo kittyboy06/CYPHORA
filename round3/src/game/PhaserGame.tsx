@@ -3,6 +3,7 @@ import Phaser from 'phaser';
 import GameScene from './GameScene';
 import { level1 } from '../levels/level1';
 import { level2 } from '../levels/level2';
+import { level3 } from '../levels/level3';
 import { level4 } from '../levels/level4';
 
 interface Props {
@@ -46,7 +47,10 @@ const PhaserGame = forwardRef((props: Props, ref) => {
     if (gameRef.current) {
       const scene = gameRef.current.scene.getScene('GameScene') as GameScene;
       if (scene) {
-        const levelDef = props.levelIndex === 4 ? level4 : props.levelIndex === 2 ? level2 : level1;
+        let levelDef = level1;
+        if (props.levelIndex === 2) levelDef = level2;
+        if (props.levelIndex === 3) levelDef = level3;
+        if (props.levelIndex === 4) levelDef = level4;
         scene.loadLevel(levelDef);
       }
     }
@@ -72,6 +76,13 @@ const PhaserGame = forwardRef((props: Props, ref) => {
         return scene.isBeastVulnerable();
       }
       return false;
+    },
+    getTileColor: () => {
+      if (gameRef.current) {
+        const scene = gameRef.current.scene.getScene('GameScene') as GameScene;
+        return scene.getTileColor();
+      }
+      return 'none';
     }
   }));
 

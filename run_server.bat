@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 title CYPHORA Local Event Server
 echo ========================================================
 echo        Starting CYPHORA Local Event Server (100 Nodes)

@@ -97,13 +97,7 @@ function App() {
                 Current Task: The Broken Bridge
               </h3>
               <p className="text-sm leading-relaxed text-[var(--text-primary)]">
-                The bridge has gaps at every 4th tile. Run across 3 tiles, then{' '}
-                <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code>{' '}
-                over the gap. Find the pattern and use a loop with{' '}
-                <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">run()</code>{' '}
-                and{' '}
-                <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code>{' '}
-                to reach the goal.
+                The bridge gaps are expanding! First you must run 1 tile and jump, then run 2 tiles and jump, then 3 tiles, and so on... (a triangular number progression). Use variables and nested loops with <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">run()</code> and <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code> to reach the other side!
               </p>
             </>
           )}
@@ -113,10 +107,21 @@ function App() {
                 Current Task: The Beast's Lair
               </h3>
               <p className="text-sm leading-relaxed text-[var(--text-primary)]">
-                The path is blocked! You must defeat the beast to proceed. Use{' '}
-                <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">is_beast_vulnerable()</code>{' '}
-                to check its shield. If vulnerable, <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">attack()</code>. 
-                Otherwise, <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">defend()</code>. Use a loop to keep fighting until the beast falls!
+                The Guardian blocks the path! 
+                Run forward, <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code> over the fire at the 5th block, and <strong>stop exactly 2 blocks before the beast</strong> (at block 8).
+                Then check its shield: if <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">is_beast_vulnerable()</code>, use <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">attack()</code>. 
+                Otherwise, <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">defend()</code>.
+              </p>
+            </>
+          )}
+          {level === 3 && (
+            <>
+              <h3 className="text-[11px] text-[var(--accent-gold)] tracking-[3px] uppercase mb-1 font-bold font-mono">
+                Current Task: The Ancient Colour Cipher
+              </h3>
+              <p className="text-sm leading-relaxed text-[var(--text-primary)]">
+                Decode the Guardian's clue: "Where blood burns, dodge. Where the sky flows, slide. Where the sun rests, awaken."
+                Use <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">tile_color()</code> to check the floor, then choose the correct action!
               </p>
             </>
           )}
@@ -149,6 +154,7 @@ function App() {
             >
               <option value={1}>Level 1: Bridge</option>
               <option value={2}>Level 2: Beast</option>
+              <option value={3}>Level 3: Colour Cipher</option>
               <option value={4}>Level 4: The Final Trial</option>
             </select>
           ) : (

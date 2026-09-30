@@ -35,6 +35,7 @@ export default class GameScene extends Phaser.Scene {
     this.load.image('char_fall', '/assets/clean_char2_4.png');
     this.load.image('tile_ground', '/assets/new_tile_ground.png');
     this.load.image('tile_spikes', '/assets/new_tile_spikes2.png');
+    this.load.image('beast', '/assets/beast.png');
   }
 
   loadLevel(levelDef: LevelDefinition) {
@@ -80,15 +81,16 @@ export default class GameScene extends Phaser.Scene {
     const bx = this.startX + this.levelData.beast.positionIndex * TILE_W + TILE_W / 2;
     const by = this.groundY;
 
-    // A large red rectangle
-    const body = this.add.rectangle(0, -60, 60, 90, 0x991111).setOrigin(0.5, 1);
-    body.setStrokeStyle(3, 0xff5555);
+    // Use the beast image (flipped if it naturally faces right, assuming we want it facing left towards the player)
+    const body = this.add.image(0, -70, 'beast').setOrigin(0.5, 1);
+    body.setDisplaySize(180, 150); // Scale appropriately
+    body.setFlipX(true); // Assuming the original art faces right
 
     // Glowing shield
-    this.beastShieldVisual = this.add.circle(0, -60, 65, 0x5555ff, 0.3);
+    this.beastShieldVisual = this.add.circle(0, -110, 80, 0x5555ff, 0.3);
     this.beastShieldVisual.setStrokeStyle(4, 0xaaaaff);
     
-    this.beastVisual = this.add.container(bx, by, [body, this.beastShieldVisual]);
+    this.beastVisual = this.add.container(bx, by + 20, [body, this.beastShieldVisual]); // offset Y slightly so feet touch ground
     
     this.updateBeastVisuals();
   }
@@ -129,12 +131,19 @@ export default class GameScene extends Phaser.Scene {
     // Scale height to match canvas, scale width proportionally
     const scaleY = h / 222;
     bg.setScale(scaleY);
-    bg.setTint(0x7a7a7a); // Dim the background to make foreground pop
+    //bg.setTint(0x7a7a7a); // Dim the background to make foreground pop
     
     bg.setDisplaySize(w, h);
   }
 
   createPlatforms() {
+    // Generate a particle texture for the fire
+    const graphics = this.add.graphics();
+    graphics.fillStyle(0xffffff, 1);
+    graphics.fillCircle(8, 8, 8);
+    graphics.generateTexture('fire_particle', 16, 16);
+    graphics.destroy();
+
     for (let i = 0; i < this.levelData.length; i++) {
       const tile = this.levelData.tiles[i];
       const x = this.startX + i * TILE_W;
@@ -151,12 +160,37 @@ export default class GameScene extends Phaser.Scene {
       } else if (tile === TileType.TRAP) {
         this.add.image(x + TILE_W / 2, y + 2, 'tile_spikes')
             .setDisplaySize(TILE_W, TILE_W * 0.7).setOrigin(0.5, 0);
+      } else if (tile === TileType.COLOR_RED) {
+        this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
+            .setDisplaySize(TILE_W + 2, TILE_W * 0.8).setOrigin(0.5, 0).setTint(0xff4444);
+        // Blood/Fire visual
+        this.add.circle(x + TILE_W / 2, y + TILE_H / 2, 10, 0xff0000).setAlpha(0.5);
+      } else if (tile === TileType.COLOR_BLUE) {
+        this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
+            .setDisplaySize(TILE_W + 2, TILE_W * 0.8).setOrigin(0.5, 0).setTint(0x4444ff);
+        // Sky/Water visual
+        this.add.circle(x + TILE_W / 2, y + TILE_H / 2, 10, 0x0000ff).setAlpha(0.5);
+      } else if (tile === TileType.COLOR_GOLD) {
+        this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
+            .setDisplaySize(TILE_W + 2, TILE_W * 0.8).setOrigin(0.5, 0).setTint(0xffcc00);
+        // Sun visual
+        this.add.circle(x + TILE_W / 2, y + TILE_H / 2, 10, 0xffaa00).setAlpha(0.5);
       } else if (tile === TileType.FIRE || tile === TileType.TOTEM_FIRE) {
         this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, TILE_W * 0.8).setOrigin(0.5, 0).setTint(0xffaa55);
-        for (let s = 0; s < 3; s++) {
-          this.add.triangle(x + 15 + s * 16, y, 0, 0, 8, -16, 16, 0, 0xff4500).setOrigin(0, 1);
-        }
+            .setDisplaySize(TILE_W + 2, TILE_W * 0.8).setOrigin(0.5, 0).setTint(0x333333); // Burnt ground
+        
+        // Realistic Fire Emitter
+        this.add.particles(x + TILE_W / 2, y, 'fire_particle', {
+            color: [ 0xffff00, 0xff4500, 0x220000 ],
+            colorEase: 'quad.out',
+            lifespan: 600,
+            angle: { min: 250, max: 290 },
+            speed: { min: 80, max: 140 },
+            scale: { start: 2.5, end: 0 },
+            blendMode: 'ADD',
+            frequency: 40
+        });
+
         if (tile === TileType.TOTEM_FIRE) {
           const diamond = this.add.polygon(x + TILE_W / 2, y - 40, [0, -12, 12, 0, 0, 12, -12, 0], 0xffd700);
           diamond.setStrokeStyle(2, 0xffaa00);
@@ -261,10 +295,13 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // ──── Level 2: Beast Fight ────
-    if (cmd.type === 'ATTACK') {
-      return this.handleAttack();
-    } else if (cmd.type === 'DEFEND') {
-      return this.handleDefend();
+    if (this.levelData.id === 'level_02') {
+      return this.executeLevel2Command(cmd);
+    }
+
+    // ──── Level 3: Ancient Colour Cipher ────
+    if (this.levelData.id === 'level_03') {
+      return this.executeLevel3Command(cmd);
     }
 
     // ──── Level 1: The Broken Bridge ────
@@ -401,6 +438,71 @@ export default class GameScene extends Phaser.Scene {
   }
 
   // ──── Level 2: Beast Fight ────
+  private async executeLevel2Command(cmd: Command): Promise<string> {
+    if (cmd.type === 'ATTACK') {
+      if (this.levelData.beast && this.pIndex !== this.levelData.beast.positionIndex - 2) {
+        // Attacked from the wrong distance!
+        await this.playerFallDeath();
+        return 'FAILED';
+      }
+      return this.handleAttack();
+    } else if (cmd.type === 'DEFEND') {
+      if (this.levelData.beast && this.pIndex !== this.levelData.beast.positionIndex - 2) {
+        await this.playerFallDeath();
+        return 'FAILED';
+      }
+      return this.handleDefend();
+    }
+
+    if (cmd.type === 'RUN') {
+      const nextIndex = this.pIndex + 1;
+      if (nextIndex >= this.levelData.length) return 'OK';
+
+      this.pIndex = nextIndex;
+      await this.updatePlayerVisuals(true, false);
+
+      const nextTile = this.levelData.tiles[nextIndex];
+      // Run dies if hitting FIRE or BEAST (which is at positionIndex)
+      if (nextTile === TileType.FIRE || (this.levelData.beast && nextIndex >= this.levelData.beast.positionIndex)) {
+        await this.playerFallDeath();
+        return 'FAILED';
+      }
+      if (nextTile === TileType.GOAL) return 'LEVEL_COMPLETE';
+      return 'OK';
+
+    } else if (cmd.type === 'JUMP') {
+      const nextIndex = this.pIndex + 1;
+      if (nextIndex >= this.levelData.length) {
+        await this.jumpInPlace();
+        return 'OK';
+      }
+
+      const nextTile = this.levelData.tiles[nextIndex];
+      if (nextTile === TileType.FIRE || (this.levelData.beast && nextIndex >= this.levelData.beast.positionIndex)) {
+        const landIndex = this.pIndex + 2;
+        if (landIndex >= this.levelData.length) {
+          await this.jumpInPlace();
+          return 'OK';
+        }
+        this.pIndex = landIndex;
+        await this.updatePlayerVisuals(true, true);
+
+        // Jump survives on FIRE, but if you land on BEAST you die.
+        const landTile = this.levelData.tiles[landIndex];
+        if (this.levelData.beast && landIndex >= this.levelData.beast.positionIndex) {
+          await this.playerFallDeath();
+          return 'FAILED';
+        }
+        if (landTile === TileType.GOAL) return 'LEVEL_COMPLETE';
+        return 'OK';
+      } else {
+        await this.jumpInPlace();
+        return 'OK';
+      }
+    }
+    return 'OK';
+  }
+
   private async handleAttack(): Promise<string> {
     const startX = this.player.x;
     const attackX = startX + 40;
@@ -502,5 +604,101 @@ export default class GameScene extends Phaser.Scene {
         }
       });
     });
+  }
+
+  // ──── Level 3: Ancient Colour Cipher ────
+  public getTileColor(): string {
+    const tile = this.levelData.tiles[this.pIndex];
+    if (tile === TileType.COLOR_RED) return 'red';
+    if (tile === TileType.COLOR_BLUE) return 'blue';
+    if (tile === TileType.COLOR_GOLD) return 'gold';
+    return 'none';
+  }
+
+  private async executeLevel3Command(cmd: Command): Promise<string> {
+    const nextIndex = this.pIndex + 1;
+    if (this.pIndex >= this.levelData.length) return 'OK';
+
+    const currentTile = this.levelData.tiles[this.pIndex];
+
+    if (cmd.type === 'DODGE') {
+      if (currentTile === TileType.COLOR_RED) {
+        // Correct! Dodge animation
+        this.pIndex = nextIndex;
+        const targetX = this.startX + this.pIndex * TILE_W + TILE_W / 2;
+        this.player.setTexture('char_jump');
+        
+        await new Promise<void>((resolve) => {
+          this.tweens.add({
+            targets: this.player,
+            x: targetX,
+            y: this.player.y - 80,
+            yoyo: true,
+            duration: 200,
+            ease: 'Sine.easeOut',
+            onComplete: () => {
+              this.player.setTexture('char_idle');
+              resolve();
+            }
+          });
+        });
+        await this.updatePlayerVisuals(false);
+      } else {
+        await this.playerFallDeath();
+        return 'FAILED';
+      }
+    } else if (cmd.type === 'SLIDE') {
+      if (currentTile === TileType.COLOR_BLUE) {
+        // Correct! Slide animation
+        this.pIndex = nextIndex;
+        const targetX = this.startX + this.pIndex * TILE_W + TILE_W / 2;
+        this.player.setTexture('char_fall');
+        
+        await new Promise<void>((resolve) => {
+          this.tweens.add({
+            targets: this.player,
+            x: targetX,
+            scaleY: 0.6,
+            y: this.player.y + 25,
+            yoyo: true,
+            duration: 200,
+            onComplete: () => {
+              this.player.setTexture('char_idle');
+              resolve();
+            }
+          });
+        });
+        await this.updatePlayerVisuals(false);
+      } else {
+        await this.playerFallDeath();
+        return 'FAILED';
+      }
+    } else if (cmd.type === 'ACTIVATE_TILE') {
+      if (currentTile === TileType.COLOR_GOLD) {
+        // Correct! Activate animation
+        const glow = this.add.circle(this.player.x, this.player.y - 50, 60, 0xffd700, 0.6);
+        this.tweens.add({
+          targets: glow, alpha: 0, scale: 2, duration: 400,
+          onComplete: () => glow.destroy()
+        });
+        await new Promise(r => setTimeout(r, 400));
+        
+        this.pIndex = nextIndex;
+        await this.updatePlayerVisuals(true, false);
+      } else {
+        await this.playerFallDeath();
+        return 'FAILED';
+      }
+    } else {
+      // Any other command is an invalid move in this strict cipher sequence!
+      await this.playerFallDeath();
+      return 'FAILED';
+    }
+
+    if (this.pIndex < this.levelData.length && this.levelData.tiles[this.pIndex] === TileType.GOAL) {
+      return 'LEVEL_COMPLETE';
+    }
+    
+    return 'OK';
   }
 }
