@@ -129,10 +129,10 @@ export function TaskBoard({ round1State }) {
 
     if (isAnswerCorrect) {
       setIsCorrect(true);
-      setFeedbackMsg('✓ Correct! Investigation complete.');
+      setFeedbackMsg('✓ CORRECT\n\nTask complete.');
     } else {
       setIsCorrect(false);
-      setFeedbackMsg('Not quite. Review the evidence and try again.');
+      setFeedbackMsg('Not quite.\n\nReview the information you recovered and try again.');
     }
   };
 
@@ -159,8 +159,12 @@ export function TaskBoard({ round1State }) {
               {/* Header Bar */}
               <div className="objective-modal-header">
                 <div>
-                  <span className="objective-set-label">{setPresentation?.label} — {setPresentation?.title}</span>
-                  <span className="objective-task-label">TASK {presentation.number} / 12</span>
+                  <span className="objective-set-label" style={{ fontSize: '0.78rem', fontWeight: 800, color: '#58a6ff', letterSpacing: '0.1rem', textTransform: 'uppercase' }}>
+                    {setPresentation?.label} — {setPresentation?.title}
+                  </span>
+                  <span className="objective-task-label" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8b949e', marginLeft: '0.75rem' }}>
+                    TASK {presentation.number} / 12
+                  </span>
                 </div>
                 <button
                   className="objective-icon-button"
@@ -171,24 +175,24 @@ export function TaskBoard({ round1State }) {
                   <Minus size={16} />
                 </button>
               </div>
-              <div className="objective-rule" />
+              <div className="objective-rule" style={{ margin: '0.5rem 0 0.8rem 0', borderBottom: '1px solid #30363d' }} />
 
-              {/* Title & Story */}
-              <h2 id="objective-title" style={{ marginTop: '0.6rem', fontSize: '1.25rem', color: '#f0f6fc' }}>
+              {/* Title & Story / Scenario */}
+              <h2 id="objective-title" style={{ marginTop: '0.4rem', marginBottom: '0.5rem', fontSize: '1.2rem', fontWeight: 700, color: '#f0f6fc', letterSpacing: '0.02rem' }}>
                 {presentation.playerTitle}
               </h2>
               {presentation.story && (
-                <p className="objective-story" style={{ fontSize: '0.85rem', color: '#8b949e', fontStyle: 'italic', marginBottom: '0.6rem' }}>
+                <p className="objective-story" style={{ fontSize: '0.9rem', color: '#8b949e', lineHeight: 1.5, marginBottom: '0.85rem' }}>
                   {presentation.story}
                 </p>
               )}
 
-              {/* Question */}
+              {/* Objective Box */}
               <div className="objective-question-box" style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '6px', padding: '0.85rem 1rem', marginBottom: '1rem' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#58a6ff', letterSpacing: '0.08rem', display: 'block', marginBottom: '0.3rem' }}>
-                  CHALLENGE BRIEFING
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#58a6ff', letterSpacing: '0.1rem', display: 'block', marginBottom: '0.35rem', textTransform: 'uppercase' }}>
+                  OBJECTIVE
                 </span>
-                <p className="objective-copy" style={{ fontSize: '0.95rem', color: '#c9d1d9', lineHeight: 1.5, margin: 0 }}>
+                <p className="objective-copy" style={{ fontSize: '0.95rem', color: '#c9d1d9', lineHeight: 1.5, margin: 0, fontWeight: 500, whiteSpace: 'pre-line' }}>
                   {presentation.objective}
                 </p>
               </div>
@@ -216,7 +220,7 @@ export function TaskBoard({ round1State }) {
                 </div>
 
                 {feedbackMsg && (
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: isCorrect ? '#7ee787' : '#f85149', background: isCorrect ? 'rgba(46, 160, 67, 0.15)' : 'rgba(248, 81, 73, 0.15)', padding: '0.5rem 0.75rem', borderRadius: '4px', border: `1px solid ${isCorrect ? '#2ea043' : '#f85149'}` }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'pre-line', color: isCorrect ? '#7ee787' : '#f85149', background: isCorrect ? 'rgba(46, 160, 67, 0.15)' : 'rgba(248, 81, 73, 0.15)', padding: '0.5rem 0.75rem', borderRadius: '4px', border: `1px solid ${isCorrect ? '#2ea043' : '#f85149'}` }}>
                     {feedbackMsg}
                   </div>
                 )}

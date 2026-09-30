@@ -5,10 +5,10 @@ import { VirtualFilePicker } from '../../components/VirtualFilePicker.jsx';
 import './MetadataInspectorApp.css';
 
 const DEFAULT_METADATA_FILES = [
-  { label: 'evidence.jpg (Pictures - Task 02 & Task 07 Evidence)', path: '/Pictures/evidence.jpg' },
-  { label: 'expedition_photo.png (Pictures)', path: '/Pictures/expedition_photo.png' },
-  { label: 'photo.png (Pictures - Task 11 Evidence)', path: '/Pictures/photo.png' },
-  { label: 'enclave_beacon.png (.hidden - Task 12 Concealed Evidence)', path: '/.hidden/enclave_beacon.png' },
+  { label: 'evidence.jpg (Pictures - Task 02)', path: '/Pictures/evidence.jpg' },
+  { label: 'archive_photo.png (Pictures - Task 07)', path: '/Pictures/archive_photo.png' },
+  { label: 'device-9.jpg (Pictures - Task 11)', path: '/Pictures/device-9.jpg' },
+  { label: 'device.png (Pictures - Task 12)', path: '/Pictures/device.png' },
   { label: 'poster.png (Pictures)', path: '/Pictures/poster.png' }
 ];
 

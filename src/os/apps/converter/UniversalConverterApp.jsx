@@ -41,6 +41,9 @@ export function UniversalConverterApp() {
         } else if (targetType === 'hex') {
           // Binary -> Hexadecimal
           result = tokens.map(b => parseInt(b, 2).toString(16).toUpperCase().padStart(2, '0')).join(' ');
+        } else if (targetType === 'text') {
+          // Binary -> Text
+          result = tokens.map(b => String.fromCharCode(parseInt(b, 2))).join('');
         } else if (targetType === 'octal') {
           // Binary -> Octal
           result = tokens.map(b => parseInt(b, 2).toString(8)).join(' ');
@@ -59,6 +62,9 @@ export function UniversalConverterApp() {
         } else if (targetType === 'ascii') {
           // Decimal -> ASCII character codes
           result = tokens.map(d => parseInt(d, 10)).filter(n => !isNaN(n)).join(' ');
+        } else if (targetType === 'text') {
+          // Decimal -> Text
+          result = tokens.map(d => String.fromCharCode(parseInt(d, 10))).join('');
         } else if (targetType === 'octal') {
           // Decimal -> Octal
           result = tokens.map(d => parseInt(d, 10).toString(8)).join(' ');
@@ -74,6 +80,9 @@ export function UniversalConverterApp() {
         } else if (targetType === 'binary') {
           // Hexadecimal -> Binary
           result = tokens.map(h => parseInt(h, 16).toString(2).padStart(8, '0')).join(' ');
+        } else if (targetType === 'text') {
+          // Hexadecimal -> Text
+          result = tokens.map(h => String.fromCharCode(parseInt(h, 16))).join('');
         } else {
           result = tokens.map(h => parseInt(h, 16)).filter(n => !isNaN(n)).join(' ');
         }

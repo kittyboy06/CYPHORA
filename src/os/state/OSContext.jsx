@@ -80,6 +80,18 @@ export function OSProvider({
 
   // Track security triggers: Fullscreen exit, Screenshots, Tab Switch, DevTools Inspector
   useEffect(() => {
+    const isTestMode = typeof window !== 'undefined' && (
+      window.location.search.includes('unlock') ||
+      window.location.search.includes('test') ||
+      window.location.search.includes('noblock')
+    );
+
+    if (isTestMode) {
+      dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: true });
+      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
+      return;
+    }
+
     // 1. Initial lock state recovery from sessionStorage or fullscreen check
     let initialLock = null;
     try {

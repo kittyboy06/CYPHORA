@@ -39,7 +39,8 @@ export const ROUND_1_TASKS = TASK_DEFINITIONS.map(def => {
     validator: (payload = {}) => {
       const rawInput = (payload.answer || '').toString();
       let userVal = rawInput;
-      let expectedVal = (def.answer.expected || '').toString();
+      if (def.answer.trimWhitespace !== false) userVal = userVal.trim();
+      if (!def.answer.caseSensitive) userVal = userVal.toUpperCase();
 
       const acceptedList = (def.answer.accepted || [def.answer.expected]).map(a => {
         let v = a.toString();

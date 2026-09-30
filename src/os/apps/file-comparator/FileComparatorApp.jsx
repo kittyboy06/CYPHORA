@@ -53,7 +53,7 @@ export function FileComparatorApp() {
         });
       }
 
-      const finalDiffVal = foundDiffValue || (fileBPath.includes('beta') ? '4A 55 4D 50' : '9941');
+      const finalDiffVal = foundDiffValue || (fileBPath.includes('beta') ? '56 45 43 54 4F 52' : '9941');
 
       setDiffResult({
         diffLines,

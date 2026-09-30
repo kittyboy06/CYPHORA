@@ -6,10 +6,10 @@ import './QRScannerApp.css';
 
 const DEFAULT_QR_IMAGES = [
   { label: 'poster.png (Pictures - Task 03 Poster)', path: '/Pictures/poster.png' },
+  { label: 'map.png (Pictures - Task 09 Survey Map)', path: '/Pictures/map.png' },
+  { label: 'archive_map.png (Pictures)', path: '/Pictures/archive_map.png' },
   { label: 'sector_qr.png (Pictures)', path: '/Pictures/sector_qr.png' },
-  { label: 'archive_map.png (Pictures - Task 09 Map)', path: '/Pictures/archive_map.png' },
-  { label: 'location_qr.png (Pictures)', path: '/Pictures/location_qr.png' },
-  { label: 'beacon_scan.png (System/logs - Task 12 Scan)', path: '/System/logs/beacon_scan.png' }
+  { label: 'location_qr.png (Pictures)', path: '/Pictures/location_qr.png' }
 ];
 
 export function QRScannerApp() {

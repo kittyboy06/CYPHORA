@@ -243,8 +243,8 @@ END_LOG
     path: '/Documents/fragment_01.txt',
     mimeType: 'text/plain',
     size: 30,
-    content: `4A\n[TIMESTAMP: 09:31]`,
-    updatedAt: '2026-09-29T09:31:00.000Z'
+    content: `Q1lQ\n[TIMESTAMP: 09:10]`,
+    updatedAt: '2026-09-29T09:10:00.000Z'
   },
   '/Documents/fragment_02.txt': {
     id: 'file_fragment_02',
@@ -253,9 +253,9 @@ END_LOG
     parentId: 'documents',
     path: '/Documents/fragment_02.txt',
     mimeType: 'text/plain',
-    size: 35,
-    content: `55 4D\n[TIMESTAMP: 09:42]`,
-    updatedAt: '2026-09-29T09:42:00.000Z'
+    size: 30,
+    content: `SE9S\n[TIMESTAMP: 09:25]`,
+    updatedAt: '2026-09-29T09:25:00.000Z'
   },
   '/Documents/fragment_03.txt': {
     id: 'file_fragment_03',
@@ -265,8 +265,8 @@ END_LOG
     path: '/Documents/fragment_03.txt',
     mimeType: 'text/plain',
     size: 30,
-    content: `50\n[TIMESTAMP: 09:56]`,
-    updatedAt: '2026-09-29T09:56:00.000Z'
+    content: `QQ==\n[TIMESTAMP: 09:40]`,
+    updatedAt: '2026-09-29T09:40:00.000Z'
   },
 
   // TASK 07 EVIDENCE
@@ -278,10 +278,10 @@ END_LOG
     path: '/Pictures/archive_photo.png',
     mimeType: 'image/png',
     author: 'ARCHIVIST-01',
-    description: '72 69 76 80',
+    description: '82 69 83 67 85 69',
     dimensions: '1920x1080',
     size: 1540000,
-    content: '[ARCHIVE PHOTO — METADATA DESCRIPTION: 72 69 76 80]',
+    content: '[ARCHIVE PHOTO — METADATA DESCRIPTION: 82 69 83 67 85 69]',
     updatedAt: new Date().toISOString()
   },
 
@@ -368,10 +368,10 @@ NOTE=48 45 4C 50
     parentId: 'documents',
     path: '/Documents/beta.txt',
     mimeType: 'text/plain',
-    size: 60,
+    size: 65,
     content: `STATUS=READY
 TOKEN=ACTIVE
-NOTE=4A 55 4D 50
+NOTE=56 45 43 54 4F 52
 `,
     updatedAt: new Date().toISOString()
   },

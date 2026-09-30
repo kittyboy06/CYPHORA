@@ -14,12 +14,6 @@ import './OSContainer.css';
 function OSContent({ stage, setStage, teamData, round1State }) {
   const { windows, openApp, showExitBanner, exitReason, unlockGate } = useOS();
 
-  useEffect(() => {
-    if (stage === 'os-desktop' && windows.length === 0) {
-      openApp('terminal');
-    }
-  }, [stage]);
-
   return (
     <div className="os-desktop-root">
       {stage === 'os-boot' ? (

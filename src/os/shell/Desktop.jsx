@@ -246,7 +246,7 @@ export function Desktop() {
           {setPresentation?.label ? (
             <small>{setPresentation.label} — {setPresentation.title}</small>
           ) : (
-            <small>TIER 1 — ONE-STEP TECHNICAL RECONNAISSANCE</small>
+            <small>STAGE 1 — DISCOVERY</small>
           )}
         </div>
 
