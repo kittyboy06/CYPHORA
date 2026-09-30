@@ -131,7 +131,7 @@ export default class GameScene extends Phaser.Scene {
     // Scale height to match canvas, scale width proportionally
     const scaleY = h / 222;
     bg.setScale(scaleY);
-    bg.setTint(0x7a7a7a); // Dim the background to make foreground pop
+    //bg.setTint(0x7a7a7a); // Dim the background to make foreground pop
     
     bg.setDisplaySize(w, h);
   }

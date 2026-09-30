@@ -165,6 +165,11 @@ round1_dir = BASE_DIR / "round1"
 if round1_dir.exists():
     app.mount("/round1", StaticFiles(directory=round1_dir.as_posix(), html=True), name="round1")
 
+# Mount round3 static directory (Vite build)
+round3_dir = BASE_DIR / "round3" / "dist"
+if round3_dir.exists():
+    app.mount("/round3", StaticFiles(directory=round3_dir.as_posix(), html=True), name="round3")
+
 from fastapi.responses import FileResponse, HTMLResponse
 
 @app.get("/admin")
