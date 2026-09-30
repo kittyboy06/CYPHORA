@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, Eye, EyeOff, Lock, AlertTriangle, Clock } from 'lucide-react';
+import { ShieldAlert, Eye, EyeOff, Lock, AlertTriangle, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 
 /**
  * ProtectedReferenceImage Component
@@ -18,7 +18,8 @@ import { ShieldAlert, Eye, EyeOff, Lock, AlertTriangle, Clock } from 'lucide-rea
  * screen clippers, hardware capture, or devtools.
  */
 export function ProtectedReferenceImage({
-  src = '/assets/round2/reference.jpg',
+  src,
+  images = [],
   alt = 'Organizer Reference Target',
   teamName = 'CYPHORA Explorer',
   initialTimerSeconds = 15,
@@ -28,7 +29,19 @@ export function ProtectedReferenceImage({
   const [isRevealed, setIsRevealed] = useState(!enableTimer);
   const [timeLeft, setTimeLeft] = useState(initialTimerSeconds);
   const [timerRunning, setTimerRunning] = useState(enableTimer);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const warningTimeoutRef = useRef(null);
+
+  const targetImages = images.length > 0 ? images : (src ? [src] : ['/assets/round2/targets/target1.jpg', '/assets/round2/targets/target2.jpg']);
+  const activeImage = targetImages[currentImageIndex];
+
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % targetImages.length);
+  };
+  
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + targetImages.length) % targetImages.length);
+  };
 
   const showSecurityNotice = (msg) => {
     setWarningMessage(msg);
@@ -120,6 +133,18 @@ export function ProtectedReferenceImage({
         Observe this target image carefully. Generate your recreated prompt and upload your resulting image below.
       </p>
 
+      {targetImages.length > 1 && (
+        <div className="image-slider-controls">
+          <button type="button" onClick={prevImage} className="slider-btn">
+            <ChevronLeft size={16} /> Previous Image
+          </button>
+          <span className="slider-indicator">Image {currentImageIndex + 1} of {targetImages.length}</span>
+          <button type="button" onClick={nextImage} className="slider-btn">
+            Next Image <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Main Image Viewport */}
       <div 
         className="image-viewport-wrapper"
@@ -129,8 +154,8 @@ export function ProtectedReferenceImage({
         {/* The Reference Image */}
         <div className={`image-canvas-container ${!isRevealed ? 'peek-hidden' : ''}`}>
           <img
-            src={src}
-            alt={alt}
+            src={activeImage}
+            alt={`${alt} ${currentImageIndex + 1}`}
             className="protected-img"
             draggable="false"
             loading="eager"
@@ -194,10 +219,9 @@ export function ProtectedReferenceImage({
           <ShieldAlert size={16} />
         </div>
         <div className="notice-content">
-          <strong>Best-Effort Asset Protection Active</strong>
+          <strong>WARNING</strong>
           <p>
             Right-click, dragging, and printing are disabled. Dynamic forensic watermark is embedded.
-            <span className="disclaimer-subtext"> (Note: Browser sandboxes cannot prevent external OS-level clipping or cameras).</span>
           </p>
         </div>
       </div>

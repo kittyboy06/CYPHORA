@@ -1283,6 +1283,40 @@ body {
   margin-bottom: 1.5rem;
 }
 
+.modal-score-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(223, 177, 37, 0.05);
+  border: 1px solid rgba(223, 177, 37, 0.3);
+  padding: 1.2rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  width: 100%;
+}
+
+.score-banner-label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 1px;
+  color: #b0ada8;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.score-banner-val {
+  font-family: 'Cinzel', serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+  line-height: 1;
+}
+
+.score-banner-sub {
+  font-size: 0.85rem;
+  color: #8c8880;
+}
+
 .modal-summary-box {
   width: 100%;
   background: rgba(0, 0, 0, 0.4);
