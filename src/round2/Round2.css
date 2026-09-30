@@ -4,9 +4,9 @@
    and client-side protection against copy/drag/print.
    ========================================================================== */
 
-/* ── Round 2 Scroll Relaxation (Overrides global index.css overflow: hidden) ── */
-html.round2-scroll-active,
-body.round2-scroll-active {
+/* ── Remove Screen Scroll Lock ── */
+html,
+body {
   overflow-y: auto !important;
   overflow-x: hidden !important;
   height: auto !important;
@@ -15,7 +15,7 @@ body.round2-scroll-active {
   overscroll-behavior: auto !important;
 }
 
-body.round2-scroll-active #root {
+#root {
   overflow-y: visible !important;
   overflow-x: hidden !important;
   height: auto !important;
@@ -153,7 +153,8 @@ body.round2-scroll-active #root {
 .navbar-title-wrap {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
+  flex-wrap: wrap;
 }
 
 .stage-tag {
@@ -181,10 +182,75 @@ body.round2-scroll-active #root {
   margin: 0;
 }
 
+/* ── Live Points Bar for Current Team (Positioned in Top Navbar after IMAGE NAVIGATION) ── */
+.current-team-pts-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, rgba(223, 177, 37, 0.16), rgba(15, 20, 14, 0.92));
+  border: 1px solid rgba(223, 177, 37, 0.45);
+  border-radius: 20px;
+  padding: 0.35rem 0.85rem;
+  box-shadow: 0 0 15px rgba(223, 177, 37, 0.2);
+  margin-left: 0.4rem;
+  transition: all 0.3s ease;
+  user-select: none;
+}
+
+.current-team-pts-bar:hover {
+  border-color: #dfb125;
+  box-shadow: 0 0 20px rgba(223, 177, 37, 0.4);
+}
+
+.pts-bar-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #c4d2bf;
+}
+
+.pts-bar-number {
+  font-family: 'Fira Code', monospace;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #dfb125;
+  text-shadow: 0 0 8px rgba(223, 177, 37, 0.5);
+}
+
+.pts-bar-unit {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #8c9b88;
+}
+
+.pts-delta-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(152, 195, 121, 0.25);
+  border: 1px solid #98c379;
+  color: #98c379;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.1rem 0.4rem;
+  border-radius: 10px;
+  animation: pulsePts 2s infinite ease-in-out;
+}
+
+@keyframes pulsePts {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(152, 195, 121, 0); }
+  50% { transform: scale(1.08); box-shadow: 0 0 8px rgba(152, 195, 121, 0.5); }
+}
+
 .navbar-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.85rem;
+  row-gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .round2-fullscreen-btn {
@@ -325,6 +391,30 @@ body.round2-scroll-active #root {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+/* ── Vertical Spacing for Bars & Cards in the Right Column ── */
+.submission-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.submission-col form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  width: 100%;
+}
+
+.phase-2-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+}
+
+.single-phase-container {
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Card Containers ── */
@@ -1038,6 +1128,144 @@ body.round2-scroll-active #root {
   to { transform: translateY(0); opacity: 1; }
 }
 
+/* ── Image 1 Evaluation Celebration Pop-Up Interface ── */
+.image1-celebration-card {
+  background: linear-gradient(145deg, rgba(18, 24, 16, 0.98), rgba(10, 14, 10, 0.98));
+  border: 1px solid #735a11;
+  border-top: 3px solid #dfb125;
+  border-radius: 12px;
+  max-width: 520px;
+  width: 100%;
+  padding: 2.2rem 2rem;
+  text-align: center;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95), 0 0 30px rgba(223, 177, 37, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  animation: celebrationPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes celebrationPop {
+  0% { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.celebration-icon-wrap {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(223, 177, 37, 0.25) 0%, rgba(223, 177, 37, 0.05) 70%, transparent 100%);
+  border: 1px solid rgba(223, 177, 37, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  box-shadow: 0 0 20px rgba(223, 177, 37, 0.3);
+  animation: glowOrbit 3s infinite ease-in-out;
+}
+
+@keyframes glowOrbit {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(223, 177, 37, 0.3); }
+  50% { transform: scale(1.06); box-shadow: 0 0 30px rgba(223, 177, 37, 0.6); }
+}
+
+.celebration-tag {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #dfb125;
+  background: rgba(223, 177, 37, 0.12);
+  border: 1px solid rgba(223, 177, 37, 0.3);
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  margin-bottom: 0.8rem;
+  text-transform: uppercase;
+}
+
+.celebration-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 1px;
+  margin: 0 0 1rem 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+
+.celebration-score-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: linear-gradient(135deg, rgba(223, 177, 37, 0.2), rgba(152, 195, 121, 0.2));
+  border: 1px solid #dfb125;
+  padding: 0.55rem 1.6rem;
+  border-radius: 30px;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 4px 20px rgba(223, 177, 37, 0.25);
+  animation: scoreBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes scoreBounce {
+  0% { transform: scale(0.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.pts-plus {
+  font-family: 'Fira Code', monospace;
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #dfb125;
+  text-shadow: 0 0 12px rgba(223, 177, 37, 0.6);
+}
+
+.pts-txt {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #98c379;
+}
+
+.celebration-desc {
+  font-size: 0.9rem;
+  color: #b8c4b2;
+  line-height: 1.55;
+  margin-bottom: 1.75rem;
+  max-width: 440px;
+}
+
+.celebration-desc strong {
+  color: #dfb125;
+}
+
+.celebration-continue-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  background: #dfb125;
+  border: 1px solid #dfb125;
+  color: #080c06;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 0.8rem 2.2rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 18px rgba(223, 177, 37, 0.4);
+}
+
+.celebration-continue-btn:hover {
+  background: #f0c33a;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(223, 177, 37, 0.6);
+}
+
 .modal-icon-badge {
   color: #98c379;
   margin-bottom: 0.8rem;
@@ -1160,7 +1388,7 @@ body.round2-scroll-active #root {
   }
   .navbar-right {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: space-between;
   }
   .round2-main {
     padding: 1rem;
@@ -1172,4 +1400,164 @@ body.round2-scroll-active #root {
   .modal-actions-bar {
     flex-direction: column;
   }
+  .round2-hud-banner {
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  .dual-slot-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* --- Cinematic Slideshow Prologue Styles --- */
+.prologue-slideshow-container {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: background-image 0.8s ease-in-out;
+  position: relative;
+}
+
+.prologue-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* Dark gradient overlay to ensure text is readable regardless of the background image */
+  background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.85) 100%);
+  z-index: 1;
+}
+
+.prologue-slide-content {
+  position: relative;
+  z-index: 2;
+  max-width: 900px;
+  width: 90%;
+  animation: fadeInSlide 1s ease-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes fadeInSlide {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.prologue-text-box {
+  background: rgba(10, 15, 10, 0.7);
+  border: 1px solid rgba(201, 166, 83, 0.4);
+  padding: 3rem;
+  border-radius: 8px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  text-align: center;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+}
+
+.prologue-title {
+  font-family: 'Cinzel', 'Playfair Display', serif; 
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  letter-spacing: 4px;
+  color: #c9a653; /* CYPHORA Gold */
+  border-bottom: 1px solid rgba(201, 166, 83, 0.3);
+  padding-bottom: 1rem;
+  margin-bottom: 2rem;
+  text-transform: uppercase;
+}
+
+.prologue-text-box p {
+  font-size: 1.15rem;
+  line-height: 1.8;
+  margin-bottom: 1.5rem;
+  color: #e0e0e0;
+}
+
+.prologue-highlight {
+  font-family: serif;
+  font-size: clamp(1.4rem, 3vw, 1.8rem);
+  color: #c9a653;
+  margin: 2rem 0;
+  line-height: 1.5;
+  letter-spacing: 2px;
+}
+
+.prologue-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 2rem auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.prologue-list li {
+  color: #c9a653;
+  font-size: 0.95rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(201, 166, 83, 0.4);
+  background: rgba(201, 166, 83, 0.05);
+  border-radius: 4px;
+}
+
+.prologue-goal {
+  margin-top: 3rem;
+  padding: 2rem;
+  background: rgba(201, 166, 83, 0.05);
+  border: 1px solid rgba(201, 166, 83, 0.2);
+  border-radius: 8px;
+}
+
+.prologue-goal h3 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #a0a0a0;
+  margin-bottom: 0.5rem;
+}
+
+.prologue-goal h2 {
+  font-family: serif;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  letter-spacing: 3px;
+  color: #c9a653;
+  margin-bottom: 1rem;
+}
+
+.prologue-controls {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 2rem;
+}
+
+.nav-button {
+  padding: 1rem 2rem;
+  background: rgba(0, 0, 0, 0.6);
+  color: #c9a653;
+  border: 1px solid #c9a653;
+  font-family: serif;
+  font-size: 1rem;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.nav-button:hover {
+  background: rgba(201, 166, 83, 0.2);
+  box-shadow: 0 0 15px rgba(201, 166, 83, 0.3);
+  color: #fff;
 }

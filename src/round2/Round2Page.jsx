@@ -27,7 +27,7 @@ import './Round2.css';
 export function Round2Page({ onReturnToHub }) {
   // Team state retrieved from local storage or default
   const [teamName, setTeamName] = useState(() => {
-    return localStorage.getItem('cyphora_team_name') || '';
+    return localStorage.getItem('cyphora_team_name') || 'Wandering Nomad';
   });
 
   // Form states
@@ -51,231 +51,286 @@ export function Round2Page({ onReturnToHub }) {
     return typeof document !== 'undefined' ? !!document.fullscreenElement : false;
   });
 
-  // Enable scrolling, clear any OS locks, and track fullscreen status
   useEffect(() => {
-    // Explicitly enable vertical scrolling for Round 2 (overcoming index.css overflow:hidden)
-    document.documentElement.classList.add('round2-scroll-active');
-    document.body.classList.add('round2-scroll-active');
+    const handleFocus = () => setIsFocused(true);
+    const handleBlur = () => setIsFocused(false);
 
-    // Remove any Stage 1 security lock flags from sessionStorage
-    try {
-      sessionStorage.removeItem('cyphora_os_locked');
-      sessionStorage.removeItem('cyphora_os_lock_reason');
-    } catch {
-      // ignore
-    }
-
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
 
     return () => {
-      document.documentElement.classList.remove('round2-scroll-active');
-      document.body.classList.remove('round2-scroll-active');
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
     };
   }, []);
 
-  // Fullscreen toggle handler (Exit/Enter fullscreen permitted freely in Round 2)
-  const toggleFullscreen = async () => {
-    try {
-      if (!document.fullscreenElement) {
-        if (document.documentElement.requestFullscreen) {
-          await document.documentElement.requestFullscreen();
-        }
-      } else {
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
-        }
-      }
-    } catch (err) {
-      console.warn('Fullscreen toggle failed:', err);
+  return (
+    <div className="protected-image-container">
+      <div
+        className={`image-wrapper ${!isFocused ? 'blurred' : ''}`}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        {!imgError ? (
+          <img
+            src={src}
+            alt={alt}
+            className="reference-image"
+            draggable="false"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <div className="image-placeholder">
+            <p>📷 Target Reference Image</p>
+            <span>(Place image at: <code>{src}</code>)</span>
+          </div>
+        )}
+        <div className="watermark-overlay">{watermarkText}</div>
+        <div className="interaction-blocker"></div>
+      </div>
+
+      <div className="asset-protection-box">
+        <div className="protection-title">
+          <span>🛡</span> <strong>Best-Effort Asset Protection Active</strong>
+        </div>
+        <p className="protection-subtext">
+          Right-click, dragging, and printing are disabled. Dynamic forensic watermark is embedded. <em>(Note: Browser sandboxes cannot prevent external OS-level clipping or cameras).</em>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// --- Prologue Component (100% UNTOUCHED) ---
+const Prologue = ({ explorerId = "SFGHIOP", onStart }) => {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const slides = [
+    {
+      location: "SECTOR 4 — EXPEDITION SITE",
+      title: "THE MISSING MEMORY",
+      image: "/images/prologue-1.jpg",
+      transcript: [
+        "This is the natural narrative continuation after the OS investigation.",
+        "The first round establishes what was left behind.",
+        "The next stage should establish what happened."
+      ],
+      speaker: "EXPLORER",
+      speech1: "What... happened here?",
+      speech2: "The memories aren't matching the surviving records.",
+      metadata: [
+        "LOCATION: SECTOR 4 — EXPEDITION SITE",
+        "STATUS: MEMORY CORRUPTION DETECTED",
+        "LOG SOURCE: OS INVESTIGATION RECOVERY"
+      ]
+    },
+    {
+      location: "RECOVERED LOGS",
+      title: "CORRUPTED MEMORIES",
+      image: "/images/prologue-2.jpg",
+      transcript: [
+        "The recovered information from Round 1 points toward the missing expedition.",
+        "The Explorer begins reconstructing events from damaged logs and system fragments."
+      ],
+      speaker: "EXPLORER",
+      speech1: "Reconstructing records...",
+      speech2: "Radio traces, system fragments, and the recurring symbol.",
+      metadata: [
+        "RECOVERED RECORDS: 7 DATA FRAGMENTS",
+        "RADIO TRACES: INTERMITTENT",
+        "CORRUPTION LEVEL: 84%"
+      ]
+    },
+    {
+      location: "DATA ARCHIVE",
+      title: "THE CENTRAL MYSTERY",
+      image: "/images/prologue-3.jpg",
+      transcript: [
+        "A central contradiction emerges in the archives.",
+        "Why does the Explorer remember things that appear nowhere in the surviving records?"
+      ],
+      speaker: "EXPLORER",
+      speech1: "Why do I remember this?",
+      speech2: "It appears nowhere in the surviving files.",
+      metadata: [
+        "ARCHIVED EVIDENCE: INCONSISTENT",
+        "RECURRING SYMBOL: ACTIVE",
+        "ANOMALY DETECTED: MEMORY MISMATCH"
+      ]
+    },
+    {
+      location: "EVIDENCE ANALYSIS",
+      title: "CONTRADICTIONS",
+      image: "/images/prologue-4.jpg",
+      transcript: [
+        "The player starts discovering contradictions everywhere.",
+        "Some files suggest one version of events. Other evidence suggests something completely different."
+      ],
+      speaker: "EXPLORER",
+      speech1: "Two different stories...",
+      speech2: "Which version of events actually occurred?",
+      metadata: [
+        "FILE VERSION A: OFFICIAL EXPEDITION LOG",
+        "FILE VERSION B: CLASSIFIED FRAGMENT",
+        "STATUS: DIVERGENT HISTORIES"
+      ]
+    },
+    {
+      location: "THE ANOMALY",
+      title: "THE SPIRE INCIDENT",
+      image: "/images/prologue-5.jpg",
+      transcript: [
+        "The glowing structure is no longer just a distant landmark.",
+        "It appears to be directly connected to the incident."
+      ],
+      speaker: "EXPLORER",
+      speech1: "The structure...",
+      speech2: "It was at the center of the incident all along.",
+      metadata: [
+        "STRUCTURE DISTANCE: 0m",
+        "FIELD ANOMALY: CRITICAL",
+        "INCIDENT LINK: CONFIRMED"
+      ]
+    },
+    {
+      location: "EXPEDITION OBJECTIVE",
+      title: "RECONSTRUCT THE EVENT",
+      image: "/images/prologue-6.jpg",
+      transcript: [
+        "You will finish this round with more questions than answers.",
+        "Possess enough information to understand that the original expedition was investigating something extraordinary."
+      ],
+      speaker: "SYSTEM",
+      speech1: "Objective active.",
+      speech2: "Reconstruct the lost event.",
+      metadata: [
+        "FINAL OBJECTIVE: RECONSTRUCT THE LOST EVENT",
+        "TARGET: RESTORE FIELD DATA",
+        "STATUS: READY FOR STAGE 2"
+      ]
     }
-  };
+  ];
 
-  // Clean up object URL on unmount
-  useEffect(() => {
-    return () => {
-      if (resultPreviewUrl && resultPreviewUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(resultPreviewUrl);
-      }
-    };
-  }, [resultPreviewUrl]);
+  const slide = slides[currentSlide];
 
-  // Handle return to hub
-  const handleBack = () => {
-    if (onReturnToHub) {
-      onReturnToHub();
+  const handleNext = () => {
+    if (currentSlide < slides.length - 1) {
+      setCurrentSlide(currentSlide + 1);
     } else {
-      window.location.href = '/';
+      onStart();
     }
-  };
-
-  // Prompt change handler
-  const handlePromptChange = (val) => {
-    setPrompt(val);
-    setPromptTouched(true);
-    setFormGlobalError('');
-    if (!val.trim()) {
-      setPromptError('Prompt is required.');
-    } else if (val.trim().length < 10) {
-      setPromptError('Prompt must be at least 10 characters.');
-    } else {
-      setPromptError('');
-    }
-  };
-
-  // Image select handler
-  const handleFileSelect = (file, customError) => {
-    setUploadTouched(true);
-    setFormGlobalError('');
-
-    if (customError) {
-      setUploadError(customError);
-      setResultFile(null);
-      if (resultPreviewUrl && resultPreviewUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(resultPreviewUrl);
-      }
-      setResultPreviewUrl('');
-      return;
-    }
-
-    if (!file) {
-      setUploadError('Result image is required.');
-      setResultFile(null);
-      setResultPreviewUrl('');
-      return;
-    }
-
-    setUploadError('');
-    setResultFile(file);
-    const newUrl = URL.createObjectURL(file);
-    setResultPreviewUrl(newUrl);
-  };
-
-  // Image remove handler
-  const handleFileRemove = () => {
-    if (resultPreviewUrl && resultPreviewUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(resultPreviewUrl);
-    }
-    setResultFile(null);
-    setResultPreviewUrl('');
-    setUploadTouched(true);
-    setUploadError('Result image is required.');
-  };
-
-  // Submission handler
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setPromptTouched(true);
-    setUploadTouched(true);
-
-    let hasError = false;
-
-    // Validate prompt
-    if (!prompt.trim()) {
-      setPromptError('Prompt is required.');
-      hasError = true;
-    } else if (prompt.trim().length < 10) {
-      setPromptError('Prompt must be at least 10 characters.');
-      hasError = true;
-    } else {
-      setPromptError('');
-    }
-
-    // Validate image
-    if (!resultFile) {
-      setUploadError('Please upload your generated result image.');
-      hasError = true;
-    } else {
-      setUploadError('');
-    }
-
-    if (hasError) {
-      setFormGlobalError('Please resolve the highlighted validation errors above.');
-      return;
-    }
-
-    setFormGlobalError('');
-    setIsSubmitting(true);
-
-    try {
-      // Simulate submission network request / evaluation pipeline
-      await new Promise((resolve) => setTimeout(resolve, 1400));
-
-      const payload = {
-        team: teamName,
-        prompt: prompt.trim(),
-        fileName: resultFile.name,
-        fileSize: resultFile.size,
-        timestamp: new Date().toLocaleTimeString(),
-        date: new Date().toLocaleDateString(),
-      };
-
-      // Store in localStorage for persistence
-      const history = JSON.parse(localStorage.getItem('cyphora_round2_submissions') || '[]');
-      history.push(payload);
-      localStorage.setItem('cyphora_round2_submissions', JSON.stringify(history));
-
-      setSubmittedData(payload);
-      setSubmissionSuccess(true);
-    } catch (err) {
-      setFormGlobalError('Network error submitting to evaluation portal. Please retry.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleResetForm = () => {
-    setPrompt('');
-    setPromptTouched(false);
-    setPromptError('');
-    handleFileRemove();
-    setUploadTouched(false);
-    setUploadError('');
-    setSubmissionSuccess(false);
-    setSubmittedData(null);
-    setFormGlobalError('');
   };
 
   return (
-    <div className="round2-wrapper">
-      {/* Background ambient container */}
-      <div className="round2-ambient-bg" aria-hidden="true" />
+    <div className="prologue-screen">
+      <div className="story-card">
+        <div className="card-header">
+          <span className="location-tag">{slide.location}</span>
+          <h1 className="chapter-title">{slide.title}</h1>
+        </div>
 
-      {/* Screen reader skip link */}
-      <a href="#round2-main-content" className="sr-skip-link">
-        Skip to main content
-      </a>
+        <div className="card-image-area" style={{ backgroundImage: `url(${slide.image})` }}>
+          <div className="transcript-box">
+            {slide.transcript.map((line, idx) => (
+              <p key={idx}>{line}</p>
+            ))}
+          </div>
 
-      {/* Printable Warning Notice for @media print */}
-      <div className="print-restricted-notice" aria-hidden="true">
-        <h2>CYPHORA SECURITY RESTRICTION</h2>
-        <p>Printing this evaluation target or prompt assessment sheet is prohibited by symposium protocol.</p>
-        <p>Asset ID: ROUND-2-TARGET &bull; Team: {teamName}</p>
+          <div className="speech-bubbles-container">
+            <div className="speaker-pill">
+              <span className="speaker-name">{slide.speaker}:</span> {slide.speech1}
+            </div>
+            <div className="parchment-bubble">{slide.speech2}</div>
+          </div>
+        </div>
+
+        <div className="card-footer">
+          {slide.metadata.map((item, idx) => (
+            <div key={idx} className="meta-line">{item}</div>
+          ))}
+        </div>
       </div>
 
-      {/* Navigation Header */}
-      <header className="round2-navbar" role="banner">
-        <div className="navbar-left">
-          <button
-            type="button"
-            className="round2-back-btn"
-            onClick={handleBack}
-            aria-label="Return to Expedition Hub"
-          >
-            <ArrowLeft size={16} />
-            <span>Expedition Hub</span>
+      <div className="bottom-bar">
+        <div className="explorer-id">
+          {explorerId} &nbsp;&nbsp; {currentSlide + 1} / {slides.length}
+        </div>
+
+        <div className="center-controls">
+          <div className="pagination-dots">
+            {slides.map((_, i) => (
+              <span
+                key={i}
+                className={`dot ${i === currentSlide ? 'active' : ''}`}
+                onClick={() => setCurrentSlide(i)}
+              />
+            ))}
+          </div>
+          <div className="expedition-objective">
+            EXPEDITION OBJECTIVE: RECONSTRUCT THE LOST EVENT
+          </div>
+        </div>
+
+        <button className="continue-btn" onClick={handleNext}>
+          {currentSlide === slides.length - 1 ? 'ENTER STAGE 2' : 'CONTINUE'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// --- Main Stage 2 Image Navigation Challenge Component ---
+export default function Round2Page() {
+  const [hasStarted, setHasStarted] = useState(false);
+  const [prompt, setPrompt] = useState('forest adventure theme');
+  const [resultImage, setResultImage] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [errors, setErrors] = useState({});
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setErrors({ ...errors, resultImage: 'Please upload a valid image file.' });
+        return;
+      }
+      setResultImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setErrors({ ...errors, resultImage: null });
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const newErrors = {};
+    if (!prompt.trim() || prompt.trim().length < 10) {
+      newErrors.prompt = 'Minimum 10 characters required for evaluation model.';
+    }
+    if (!resultImage) {
+      newErrors.resultImage = 'Please upload Image 1 before submitting.';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    alert('Image 1 submitted for evaluation!');
+  };
+
+  if (!hasStarted) {
+    return <Prologue onStart={() => setHasStarted(true)} />;
+  }
+
+  return (
+    <main className="stage2-page fade-in">
+      {/* Top Navigation Bar */}
+      <header className="stage2-nav-header">
+        <div className="nav-left">
+          <button className="nav-hub-btn" onClick={() => window.history.back()}>
+            ← EXPEDITION HUB
           </button>
-          
-          <div className="navbar-title-wrap">
-            <div className="stage-tag">
-              <Compass size={14} />
-              <span>STAGE 2</span>
-            </div>
-            <h1 className="page-heading">IMAGE NAVIGATION</h1>
+          <div className="nav-title-group">
+            <span className="stage-badge">🧭 STAGE 2</span>
+            <h1 className="nav-main-title">IMAGE NAVIGATION</h1>
           </div>
         </div>
 
@@ -293,177 +348,165 @@ export function Round2Page({ onReturnToHub }) {
 
           <div className="team-status-chip">
             <span className="chip-label">Explorer</span>
-            <span className="chip-name">{teamName || 'Unregistered'}</span>
+            <span className="chip-name">{teamName}</span>
           </div>
         </div>
       </header>
 
-      {/* Main Content Arena */}
-      <main id="round2-main-content" className="round2-main" role="main">
-        {/* Banner introduction */}
-        <section className="round2-intro-banner" aria-label="Mission Briefing">
-          <div className="intro-badge">
-            <Sparkles size={16} />
-            <span>MISSION OBJECTIVE</span>
+      {/* Main Container */}
+      <div className="stage2-container">
+
+        {/* Game Clock & Speed Evaluation Widget */}
+        <section className="game-status-bar">
+          <div className="status-clock-panel">
+            <div className="status-header">
+              <span className="status-icon">⏱</span>
+              <span className="status-label">15-MINUTE GAME CLOCK</span>
+            </div>
+            <div className="timer-display">
+              <div className="timer-bar-track">
+                <div className="timer-bar-fill" style={{ width: '100%' }}></div>
+              </div>
+              <span className="timer-digits">00:00</span>
+            </div>
+            <p className="timer-subtext">TIME EXPIRED &bull; Complete submission immediately</p>
           </div>
-          <h2>Inverse Image Synthesis & Cosine Similarity</h2>
-          <p>
-            Study the protected reference target provided by event organizers. Formulate a prompt capable of generating
-            an identical visual recreation, then submit your prompt and rendered image for cosine similarity scoring.
-          </p>
+
+          <div className="status-speed-panel">
+            <div className="status-header">
+              <span className="status-icon">🔥</span>
+              <span className="status-label">SPEED EVALUATION POTENTIAL</span>
+            </div>
+            <div className="speed-calc">
+              <span>400 Base + +0 Speed Bonus = </span>
+              <span className="pts-highlight-box">400 PTS</span>
+            </div>
+          </div>
         </section>
 
-        {/* Global validation error banner if triggered */}
-        {formGlobalError && (
-          <div className="global-error-banner" role="alert">
-            <AlertTriangle size={18} />
-            <span>{formGlobalError}</span>
-          </div>
-        )}
+        {/* Content Columns: Left (Target Reference) & Right (Form & Upload) */}
+        <div className="stage2-grid">
 
-        {/* Challenge Interactive Grid */}
-        <form onSubmit={handleSubmit} noValidate className="round2-grid-layout">
-          {/* Column 1: Protected Organizer Target Image */}
-          <div className="grid-col target-col">
-            <ProtectedReferenceImage
-              src="/assets/round2/reference.jpg"
-              alt="Organizer Target Reference Image"
-              teamName={teamName}
-              initialTimerSeconds={15}
-              enableTimer={false}
-            />
-          </div>
-
-          {/* Column 2: Prompt and Result Image Upload */}
-          <div className="grid-col submission-col">
-            {/* 1. Prompt Textarea */}
-            <PromptSection
-              value={prompt}
-              onChange={handlePromptChange}
-              error={promptError}
-              touched={promptTouched}
-              minLength={10}
-              maxLength={1500}
-            />
-
-            {/* 2. Result Image Upload Section */}
-            <ResultImageUpload
-              file={resultFile}
-              previewUrl={resultPreviewUrl}
-              onFileSelect={handleFileSelect}
-              onFileRemove={handleFileRemove}
-              error={uploadError}
-              touched={uploadTouched}
-              maxSizeBytes={10 * 1024 * 1024}
-              allowedTypes={['image/png', 'image/jpeg', 'image/webp']}
-            />
-
-            {/* 3. Action Submittal Bar */}
-            <div className="form-submit-panel">
-              <div className="submit-info-text">
-                <Info size={15} />
-                <span>Ensure prompt matches the generation parameters used for the uploaded image.</span>
-              </div>
-
-              <div className="submit-buttons-row">
-                <button
-                  type="button"
-                  className="round2-clear-btn"
-                  onClick={handleResetForm}
-                  disabled={isSubmitting}
-                >
-                  <RotateCcw size={15} />
-                  <span>Reset</span>
-                </button>
-
-                <button
-                  type="submit"
-                  className={`round2-submit-btn ${isSubmitting ? 'submitting' : ''}`}
-                  disabled={isSubmitting}
-                  aria-busy={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="spinner-dot" aria-hidden="true" />
-                      <span>Transmitting Entry...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send size={16} />
-                      <span>Submit Entry</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </form>
-      </main>
-
-      {/* Successful Submission Modal Dialog */}
-      {submissionSuccess && submittedData && (
-        <div 
-          className="submission-modal-backdrop" 
-          role="dialog" 
-          aria-modal="true" 
-          aria-labelledby="modal-success-title"
-        >
-          <div className="submission-modal-card">
-            <div className="modal-icon-badge">
-              <CheckCircle size={44} />
+          {/* Left Column: Target Reference Image */}
+          <div className="left-column">
+            <div className="category-tags">
+              <span className="tag gold-tag">ORGANIZER TARGET</span>
+              <span className="tag dark-tag">Protected Evaluation Goal</span>
             </div>
 
-            <h3 id="modal-success-title">Submission Successfully Received!</h3>
-            <p className="modal-description">
-              Your prompt and re-created image have been logged into the CYPHORA evaluation portal for similarity scoring.
-            </p>
+            <div className="card-box">
+              <h2 className="card-title">
+                <span className="title-icon">🛡</span> TARGET REFERENCE IMAGE
+              </h2>
+              <p className="card-description">
+                Observe this target image carefully. Generate your recreated prompt and upload your resulting image below.
+              </p>
 
-            <div className="modal-summary-box">
-              <div className="summary-field">
-                <span className="summary-label">Explorer Team:</span>
-                <span className="summary-value gold-text">{submittedData.team}</span>
-              </div>
-              <div className="summary-field">
-                <span className="summary-label">Timestamp:</span>
-                <span className="summary-value">{submittedData.date} at {submittedData.timestamp}</span>
-              </div>
-              <div className="summary-field">
-                <span className="summary-label">File Submitted:</span>
-                <span className="summary-value">{submittedData.fileName}</span>
-              </div>
-              <div className="summary-prompt-preview">
-                <span className="summary-label">Recorded Prompt:</span>
-                <p className="prompt-quote">&ldquo;{submittedData.prompt}&rdquo;</p>
+              <ProtectedImage
+                src="/images/round2-reference.jpg"
+                alt="Target Reference Image"
+                watermarkText="ROUND 2 CYPHORA EVALUATION [SPARTANS]"
+              />
+            </div>
+          </div>
+
+          {/* Right Column: Prompt & Upload */}
+          <div className="right-column">
+
+            {/* Recreation Prompt Box */}
+            <div className="card-box">
+              <div className="card-header-row">
+                <h2 className="card-title">
+                  <span className="title-icon">✨</span> RECREATION PROMPT
+                </h2>
+                <span className="char-count">{prompt.length} / 1500 chars</span>
               </div>
 
-              {resultPreviewUrl && (
-                <div className="modal-img-preview">
-                  <img src={resultPreviewUrl} alt="Submitted recreation output" />
+              <div className="form-group">
+                <label className="field-label">ENTER YOUR PROMPT <span className="req">*</span></label>
+                <span className="field-sublabel">Describe the image composition, subject, style, lighting & details</span>
+
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  rows={5}
+                  placeholder="Type your prompt here..."
+                />
+                <span className="field-footer-note">Minimum 10 characters required for evaluation model.</span>
+                {errors.prompt && <p className="field-error">{errors.prompt}</p>}
+              </div>
+            </div>
+
+            {/* Step 1: Upload Image Box */}
+            <div className="card-box">
+              <div className="card-header-row">
+                <h2 className="card-title">
+                  <span className="title-icon">📚</span> STEP 1: UPLOAD IMAGE 1
+                </h2>
+                <span className="phase-badge">Phase 1 of 2 • Max 10MB</span>
+              </div>
+
+              <p className="card-description">Upload your initial re-creation below as <strong>Image 1</strong>.</p>
+
+              <div className="dropzone-outer">
+                <div className="dropzone-header">
+                  <span>✨ <strong>IMAGE 1</strong></span>
+                  <span className="draft-label">Initial Synthesis Draft</span>
+                </div>
+
+                <div className="dropzone-box">
+                  <input
+                    type="file"
+                    id="stage2Upload"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden-file-input"
+                  />
+                  <label htmlFor="stage2Upload" className="dropzone-content">
+                    <div className="upload-icon-circle">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                      </svg>
+                    </div>
+
+                    {resultImage ? (
+                      <div className="file-info">
+                        <span className="file-name">{resultImage.name}</span>
+                        <span className="file-action">Click to change file</span>
+                      </div>
+                    ) : (
+                      <div className="file-prompt">
+                        <span className="main-prompt">Upload Image 1</span>
+                        <span className="sub-prompt">Click to browse or drag & drop</span>
+                      </div>
+                    )}
+                  </label>
+                </div>
+              </div>
+
+              {previewUrl && (
+                <div className="image-preview-wrapper">
+                  <img src={previewUrl} alt="Preview" />
+                  <button type="button" className="remove-btn" onClick={() => {
+                    setResultImage(null);
+                    setPreviewUrl(null);
+                  }}>Remove File</button>
                 </div>
               )}
+
+              {errors.resultImage && <p className="field-error">{errors.resultImage}</p>}
             </div>
 
-            <div className="modal-actions-bar">
-              <button
-                type="button"
-                className="modal-primary-btn"
-                onClick={handleResetForm}
-              >
-                Submit Another Entry
-              </button>
-              <button
-                type="button"
-                className="modal-secondary-btn"
-                onClick={handleBack}
-              >
-                Return to Expedition Hub
-              </button>
-            </div>
+            {/* Large Yellow Submit Button */}
+            <button className="submit-challenge-btn" onClick={handleSubmit}>
+              <span>✈</span> SUBMIT IMAGE 1 FOR EVALUATION &rarr;
+            </button>
+
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    </main>
   );
 }
-
-export default Round2Page;
