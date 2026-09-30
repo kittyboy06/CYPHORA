@@ -12,6 +12,7 @@ import {
   persistRound1State,
   updateRound1TimerFromNow,
   formatCountdown,
+  recalculateRound1State,
 } from './round1/round1Engine.js';
 import './App.css';
 
@@ -51,7 +52,7 @@ function App() {
   const [isWsConnected, setIsWsConnected] = useState(false);
   const [teamData, setTeamData] = useState({
     id: null,
-    name: 'Wandering Nomad',
+    name: '',
     member1: '',
     member2: '',
     standing: 'Unranked',
@@ -105,11 +106,66 @@ function App() {
             score: data.new_total_score
           }));
         }
+        // Guarantee round1State marks this task as COMPLETED and unblocks the next task
+        if (data.success !== false) {
+          setRound1State(prev => {
+            const taskObj = prev.tasks.find(t => t.id === taskId);
+            if (taskObj && taskObj.status !== 'COMPLETED') {
+              const updatedTasks = prev.tasks.map(t => t.id === taskId ? { ...t, status: 'COMPLETED' } : t);
+              return recalculateRound1State({
+                ...prev,
+                tasks: updatedTasks
+              });
+            }
+            return prev;
+          });
+        }
       }
     } catch (err) {
       console.warn('[CYPHORA] Error syncing task submission to backend:', err);
     }
   };
+
+  // Sync all verified task completions from backend on load/refresh
+  const syncCompletedTasksFromBackend = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('cyphora_token');
+      const teamId = teamDataRef.current?.id || localStorage.getItem('cyphora_team_id');
+      const teamName = teamDataRef.current?.name || localStorage.getItem('cyphora_team_name');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (teamId) headers['X-Team-Id'] = String(teamId);
+      if (teamName) headers['X-Team-Name'] = teamName;
+
+      const res = await fetch(`${API_BASE}/api/stage1/tasks`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.tasks)) {
+          const completedKeys = new Set(data.tasks.filter(t => t.is_completed).map(t => t.key));
+          if (completedKeys.size > 0) {
+            setRound1State(prev => {
+              const updatedTasks = prev.tasks.map(t => {
+                if (completedKeys.has(t.id)) {
+                  return { ...t, status: 'COMPLETED' };
+                }
+                return t;
+              });
+              return recalculateRound1State({
+                ...prev,
+                round1StartedAt: prev.round1StartedAt || new Date().toISOString(),
+                round1Status: completedKeys.size === 12 ? 'COMPLETED' : 'IN_PROGRESS',
+                isExpired: false,
+                isTimerRunning: true,
+                tasks: updatedTasks
+              });
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[CYPHORA] Error fetching stage1 tasks from backend:', err);
+    }
+  }, []);
 
   // Synchronize global event countdown timer from backend
   const applyGlobalTimer = useCallback((timer) => {
@@ -302,7 +358,7 @@ function App() {
           const self = data.teams.find(e => (savedId && e.id === savedId) || (searchName && e.name.toLowerCase() === searchName));
           if (self) {
             setTeamData(prev => {
-              if (self.name && self.name !== prev.name && self.name !== 'Wandering Nomad') {
+              if (self.name && self.name !== prev.name) {
                 localStorage.setItem('cyphora_team_name', self.name);
               }
               return {
@@ -350,7 +406,7 @@ function App() {
       setStage(paramStage);
     }
 
-    const initialName = paramTeam || savedTeam || 'Wandering Nomad';
+    const initialName = paramTeam || savedTeam || '';
     setTeamData(prev => ({
       ...prev,
       id: savedId || prev.id,
@@ -369,8 +425,13 @@ function App() {
     if (savedMember1) setMember1Input(savedMember1);
     if (savedMember2) setMember2Input(savedMember2);
 
-    fetchLeaderboard(initialName);
-  }, []);
+    if (initialName) {
+      fetchLeaderboard(initialName);
+    } else {
+      fetchLeaderboard();
+    }
+    syncCompletedTasksFromBackend();
+  }, [syncCompletedTasksFromBackend]);
 
   useEffect(() => {
     if (panelOpen) {
@@ -389,7 +450,7 @@ function App() {
     const connect = () => {
       try {
         const current = teamDataRef.current;
-        const currentName = current.name && current.name !== 'Wandering Nomad' ? current.name : (localStorage.getItem('cyphora_team_name') || '');
+        const currentName = current.name || (localStorage.getItem('cyphora_team_name') || '');
         const currentId = current.id || localStorage.getItem('cyphora_team_id');
         const encodedName = encodeURIComponent(currentName || '');
         const wsUrl = encodedName ? `${WS_BASE_URL}?team=${encodedName}` : WS_BASE_URL;
@@ -421,7 +482,7 @@ function App() {
                 const self = payload.data.find(e => (savedId && e.id === savedId) || (searchName && e.name.toLowerCase() === searchName));
                 if (self) {
                   setTeamData(prev => {
-                    if (self.name && self.name !== prev.name && self.name !== 'Wandering Nomad') {
+                    if (self.name && self.name !== prev.name) {
                       localStorage.setItem('cyphora_team_name', self.name);
                     }
                     return {
@@ -519,8 +580,16 @@ function App() {
   const handleTeamSubmit = async (e) => {
     if (e) e.preventDefault();
     setAuthError('');
-    const finalName = teamInput.trim() || 'Wandering Nomad';
-    const finalPin = pinInput.trim() || '1234';
+    const finalName = teamInput.trim();
+    if (!finalName) {
+      setAuthError('Please enter your team name.');
+      return;
+    }
+    const finalPin = pinInput.trim();
+    if (!finalPin) {
+      setAuthError('Please enter your 4-digit team PIN.');
+      return;
+    }
     const finalMember1 = member1Input.trim();
     const finalMember2 = member2Input.trim();
 
@@ -614,7 +683,7 @@ function App() {
     window.location.href = `/round${level}/index.html`;
   };
 
-  const explorerList = liveExplorers.length > 0
+  const explorerList = Array.isArray(liveExplorers)
     ? liveExplorers.map(e => ({
         name: e.name,
         member1: e.member1,
@@ -623,17 +692,7 @@ function App() {
         score: e.score ?? 0,
         status: e.status || 'idle'
       }))
-    : (teamData.name && teamData.name !== 'Wandering Nomad'
-        ? [{
-            name: teamData.name,
-            member1: teamData.member1,
-            member2: teamData.member2,
-            standing: `${teamData.standing || 'Unranked'} (${teamData.score ?? 0} pts)`,
-            score: teamData.score ?? 0,
-            status: 'active'
-          }]
-        : []
-    );
+    : [];
 
   return (
     <div className={`app-container ${stage === 'main' ? 'main-stage' : ''}`}>

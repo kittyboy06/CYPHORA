@@ -69,13 +69,17 @@ export function FileManagerApp() {
     };
   }, [currentPath, showHidden]);
 
-  const navigateTo = (path) => {
-    if (path === currentPath) return;
+  const navigateTo = (path, forceHidden = null) => {
+    const nextHidden = forceHidden !== null ? forceHidden : (path.includes('.hidden') ? true : showHidden);
+    if (nextHidden !== showHidden) {
+      setShowHidden(nextHidden);
+    }
+    if (path === currentPath && nextHidden === showHidden) return;
     const newHistory = history.slice(0, historyIdx + 1);
     newHistory.push(path);
     setHistory(newHistory);
     setHistoryIdx(newHistory.length - 1);
-    loadDirectory(path, showHidden);
+    loadDirectory(path, nextHidden);
   };
 
   const handleBack = () => {
@@ -163,8 +167,9 @@ export function FileManagerApp() {
     { name: 'Documents', path: '/Documents', icon: <Folder size={16} /> },
     { name: 'Downloads', path: '/Downloads', icon: <Folder size={16} /> },
     { name: 'Pictures', path: '/Pictures', icon: <ImageIcon size={16} /> },
+    { name: 'Archive', path: '/Archive', icon: <Folder size={16} /> },
     { name: 'System', path: '/System', icon: <Lock size={16} /> },
-    { name: 'Hidden Archive', path: '/.hidden', icon: <Folder size={16} className="hidden-link" /> }
+    { name: 'Hidden Archive', path: '/Archive/.hidden', icon: <Folder size={16} className="hidden-link" /> }
   ];
 
   const pathParts = currentPath.split('/').filter(Boolean);

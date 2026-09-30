@@ -315,7 +315,7 @@ const EVENT_TYPE_MAP = {
 
 export function processRound1Event(state, eventName, payload = {}) {
   const next = normalizeRound1State(state || buildDefaultRound1State());
-  if (!next.isTimerRunning || next.isExpired || next.isCompleted || next.round1Status === 'COMPLETED') {
+  if (next.isCompleted || next.round1Status === 'COMPLETED') {
     return next;
   }
 

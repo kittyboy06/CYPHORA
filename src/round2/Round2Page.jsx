@@ -1,18 +1,63 @@
 import React, { useState, useEffect } from 'react';
-import './Round2Page.css';
+import {
+  Compass,
+  ArrowLeft,
+  Send,
+  CheckCircle,
+  AlertTriangle,
+  RotateCcw,
+  Sparkles,
+  Info,
+  CheckCircle2,
+  Maximize,
+  Minimize
+} from 'lucide-react';
+import { ProtectedReferenceImage } from './components/ProtectedReferenceImage.jsx';
+import { PromptSection } from './components/PromptSection.jsx';
+import { ResultImageUpload } from './components/ResultImageUpload.jsx';
+import './Round2.css';
 
-// --- Protected Image Component for Challenge ---
-const ProtectedImage = ({ src, alt, watermarkText }) => {
-  const [isFocused, setIsFocused] = useState(true);
-  const [imgError, setImgError] = useState(false);
+/**
+ * Round2Page Component
+ * 
+ * Main container for Stage 2: Image Navigation.
+ * Orchestrates the protected target observation, participant prompt generation,
+ * output image submission, and validation pipeline.
+ */
+export function Round2Page({ onReturnToHub }) {
+  // Team state retrieved from local storage or default
+  const [teamName, setTeamName] = useState(() => {
+    return localStorage.getItem('cyphora_team_name') || 'Wandering Nomad';
+  });
+
+  // Form states
+  const [prompt, setPrompt] = useState('');
+  const [promptTouched, setPromptTouched] = useState(false);
+  const [promptError, setPromptError] = useState('');
+
+  const [resultFile, setResultFile] = useState(null);
+  const [resultPreviewUrl, setResultPreviewUrl] = useState('');
+  const [uploadTouched, setUploadTouched] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+
+  // Submission lifecycle states
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [submittedData, setSubmittedData] = useState(null);
+  const [formGlobalError, setFormGlobalError] = useState('');
+
+  // Fullscreen state tracking (Allowed and unrestricted in Round 2)
+  const [isFullscreen, setIsFullscreen] = useState(() => {
+    return typeof document !== 'undefined' ? !!document.fullscreenElement : false;
+  });
 
   useEffect(() => {
     const handleFocus = () => setIsFocused(true);
     const handleBlur = () => setIsFocused(false);
-    
+
     window.addEventListener('focus', handleFocus);
     window.addEventListener('blur', handleBlur);
-    
+
     return () => {
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('blur', handleBlur);
@@ -21,15 +66,15 @@ const ProtectedImage = ({ src, alt, watermarkText }) => {
 
   return (
     <div className="protected-image-container">
-      <div 
+      <div
         className={`image-wrapper ${!isFocused ? 'blurred' : ''}`}
         onContextMenu={(e) => e.preventDefault()}
       >
         {!imgError ? (
-          <img 
-            src={src} 
-            alt={alt} 
-            className="reference-image" 
+          <img
+            src={src}
+            alt={alt}
+            className="reference-image"
             draggable="false"
             onError={() => setImgError(true)}
           />
@@ -42,7 +87,7 @@ const ProtectedImage = ({ src, alt, watermarkText }) => {
         <div className="watermark-overlay">{watermarkText}</div>
         <div className="interaction-blocker"></div>
       </div>
-      
+
       <div className="asset-protection-box">
         <div className="protection-title">
           <span>🛡</span> <strong>Best-Effort Asset Protection Active</strong>
@@ -213,8 +258,8 @@ const Prologue = ({ explorerId = "SFGHIOP", onStart }) => {
         <div className="center-controls">
           <div className="pagination-dots">
             {slides.map((_, i) => (
-              <span 
-                key={i} 
+              <span
+                key={i}
                 className={`dot ${i === currentSlide ? 'active' : ''}`}
                 onClick={() => setCurrentSlide(i)}
               />
@@ -263,7 +308,7 @@ export default function Round2Page() {
     if (!resultImage) {
       newErrors.resultImage = 'Please upload Image 1 before submitting.';
     }
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
@@ -289,20 +334,28 @@ export default function Round2Page() {
           </div>
         </div>
 
-        <div className="nav-right">
-          <span className="nav-stat-badge">🏆 PTS: 0</span>
-          <span className="nav-stat-badge highlight">STEP 1: IMAGE 1</span>
-          <button className="nav-action-btn">🏆 STANDINGS</button>
-          <div className="workstation-badge">
-            <span className="ws-label">WORKSTATION</span>
-            <span className="ws-val">SPARTANS</span>
+        <div className="navbar-right">
+          <button
+            type="button"
+            className="round2-fullscreen-btn"
+            onClick={toggleFullscreen}
+            aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+            title="Toggle Fullscreen (Freely permitted in Round 2)"
+          >
+            {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+            <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+          </button>
+
+          <div className="team-status-chip">
+            <span className="chip-label">Explorer</span>
+            <span className="chip-name">{teamName}</span>
           </div>
         </div>
       </header>
 
       {/* Main Container */}
       <div className="stage2-container">
-        
+
         {/* Game Clock & Speed Evaluation Widget */}
         <section className="game-status-bar">
           <div className="status-clock-panel">
@@ -333,7 +386,7 @@ export default function Round2Page() {
 
         {/* Content Columns: Left (Target Reference) & Right (Form & Upload) */}
         <div className="stage2-grid">
-          
+
           {/* Left Column: Target Reference Image */}
           <div className="left-column">
             <div className="category-tags">
@@ -349,8 +402,8 @@ export default function Round2Page() {
                 Observe this target image carefully. Generate your recreated prompt and upload your resulting image below.
               </p>
 
-              <ProtectedImage 
-                src="/images/round2-reference.jpg" 
+              <ProtectedImage
+                src="/images/round2-reference.jpg"
                 alt="Target Reference Image"
                 watermarkText="ROUND 2 CYPHORA EVALUATION [SPARTANS]"
               />
@@ -359,7 +412,7 @@ export default function Round2Page() {
 
           {/* Right Column: Prompt & Upload */}
           <div className="right-column">
-            
+
             {/* Recreation Prompt Box */}
             <div className="card-box">
               <div className="card-header-row">
@@ -372,8 +425,8 @@ export default function Round2Page() {
               <div className="form-group">
                 <label className="field-label">ENTER YOUR PROMPT <span className="req">*</span></label>
                 <span className="field-sublabel">Describe the image composition, subject, style, lighting & details</span>
-                
-                <textarea 
+
+                <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   rows={5}
@@ -402,9 +455,9 @@ export default function Round2Page() {
                 </div>
 
                 <div className="dropzone-box">
-                  <input 
-                    type="file" 
-                    id="stage2Upload" 
+                  <input
+                    type="file"
+                    id="stage2Upload"
                     accept="image/*"
                     onChange={handleImageChange}
                     className="hidden-file-input"
@@ -412,12 +465,12 @@ export default function Round2Page() {
                   <label htmlFor="stage2Upload" className="dropzone-content">
                     <div className="upload-icon-circle">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="17 8 12 3 7 8"/>
-                        <line x1="12" y1="3" x2="12" y2="15"/>
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
                       </svg>
                     </div>
-                    
+
                     {resultImage ? (
                       <div className="file-info">
                         <span className="file-name">{resultImage.name}</span>
