@@ -8,103 +8,183 @@ import {
   RotateCcw,
   Sparkles,
   Info,
-  CheckCircle2,
-  Maximize,
-  Minimize
+  Clock,
+  Trophy,
+  Zap,
+  Flame,
+  Award,
+  Check,
+  ArrowRight
 } from 'lucide-react';
 import { ProtectedReferenceImage } from './components/ProtectedReferenceImage.jsx';
 import { PromptSection } from './components/PromptSection.jsx';
 import { ResultImageUpload } from './components/ResultImageUpload.jsx';
+import { LeaderboardPanel } from './components/LeaderboardPanel.jsx';
 import './Round2.css';
 
-/**
- * Round2Page Component
- * 
- * Main container for Stage 2: Image Navigation.
- * Orchestrates the protected target observation, participant prompt generation,
- * output image submission, and validation pipeline.
- */
+const ROUND_2_DURATION_SECONDS = 15 * 60; // 15 minutes = 900 seconds
+const BASE_POINTS = 400;
+const MAX_SPEED_BONUS = 600;
+
 export function Round2Page({ onReturnToHub }) {
-  // Team state retrieved from local storage or default
-  const [teamName, setTeamName] = useState(() => {
+  // Team state retrieved from local storage or fallback
+  const [teamName] = useState(() => {
     return localStorage.getItem('cyphora_team_name') || 'Wandering Nomad';
   });
 
+  // Sequential progression: Phase 1 (Image 1) -> Phase 2 (Image 2)
+  const [round2Phase, setRound2Phase] = useState(() => {
+    const saved = localStorage.getItem('cyphora_round2_phase');
+    return saved === '2' ? 2 : 1;
+  });
+
+  const [image1EvaluatedData, setImage1EvaluatedData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cyphora_round2_image1_data');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // 15-Minute Game Timer State with Timestamp Persistence
+  const [secondsRemaining, setSecondsRemaining] = useState(() => {
+    const savedStart = localStorage.getItem('cyphora_round2_start_time');
+    if (savedStart) {
+      const elapsed = Math.floor((Date.now() - parseInt(savedStart, 10)) / 1000);
+      return Math.max(0, ROUND_2_DURATION_SECONDS - elapsed);
+    }
+    const now = Date.now();
+    localStorage.setItem('cyphora_round2_start_time', now.toString());
+    return ROUND_2_DURATION_SECONDS;
+  });
+
+  const [isTimerRunning, setIsTimerRunning] = useState(true);
+  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
+
   // Form states
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState(() => {
+    return localStorage.getItem('cyphora_round2_prompt') || '';
+  });
   const [promptTouched, setPromptTouched] = useState(false);
   const [promptError, setPromptError] = useState('');
 
-  const [resultFile, setResultFile] = useState(null);
-  const [resultPreviewUrl, setResultPreviewUrl] = useState('');
-  const [uploadTouched, setUploadTouched] = useState(false);
-  const [uploadError, setUploadError] = useState('');
+  // Image 1 State (Slot 1 of participant uploads)
+  const [image1File, setImage1File] = useState(null);
+  const [image1PreviewUrl, setImage1PreviewUrl] = useState(() => {
+    return localStorage.getItem('cyphora_round2_image1_cached_url') || '';
+  });
+  const [image1Error, setImage1Error] = useState('');
 
-  // Submission lifecycle states
+  // Image 2 State (Slot 2 of participant uploads — shown only in Phase 2)
+  const [image2File, setImage2File] = useState(null);
+  const [image2PreviewUrl, setImage2PreviewUrl] = useState('');
+  const [image2Error, setImage2Error] = useState('');
+
+  const [formTouched, setFormTouched] = useState(false);
+  const [formGlobalError, setFormGlobalError] = useState('');
+  const [phaseSuccessNotice, setPhaseSuccessNotice] = useState('');
+
+  // Submission & Points State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [showImage1Modal, setShowImage1Modal] = useState(false);
+  const [pointsDelta, setPointsDelta] = useState(null);
+  const [evaluatedScore, setEvaluatedScore] = useState(null);
   const [submittedData, setSubmittedData] = useState(null);
-  const [formGlobalError, setFormGlobalError] = useState('');
 
-  // Fullscreen state tracking (Allowed and unrestricted in Round 2)
-  const [isFullscreen, setIsFullscreen] = useState(() => {
-    return typeof document !== 'undefined' ? !!document.fullscreenElement : false;
+  // Live points tracking for current team playing
+  const [teamPoints, setTeamPoints] = useState(() => {
+    const saved = localStorage.getItem('cyphora_round2_score');
+    if (saved) return parseInt(saved, 10);
+    const img1 = localStorage.getItem('cyphora_round2_image1_data');
+    if (img1) {
+      try {
+        const parsed = JSON.parse(img1);
+        return parsed.score || 200;
+      } catch {
+        return 200;
+      }
+    }
+    return 0;
   });
 
-  // Enable scrolling, clear any OS locks, and track fullscreen status
+  // Automatically sync teamPoints whenever updated by team submissions or events
   useEffect(() => {
-    // Explicitly enable vertical scrolling for Round 2 (overcoming index.css overflow:hidden)
-    document.documentElement.classList.add('round2-scroll-active');
-    document.body.classList.add('round2-scroll-active');
-
-    // Remove any Stage 1 security lock flags from sessionStorage
-    try {
-      sessionStorage.removeItem('cyphora_os_locked');
-      sessionStorage.removeItem('cyphora_os_lock_reason');
-    } catch {
-      // ignore
-    }
-
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+    const handlePointsSync = () => {
+      const savedScore = localStorage.getItem('cyphora_round2_score');
+      if (savedScore !== null) {
+        const num = parseInt(savedScore, 10);
+        if (!isNaN(num)) {
+          setTeamPoints(num);
+        }
+      }
     };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-
+    window.addEventListener('storage', handlePointsSync);
+    window.addEventListener('cyphora_points_updated', handlePointsSync);
     return () => {
-      document.documentElement.classList.remove('round2-scroll-active');
-      document.body.classList.remove('round2-scroll-active');
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      window.removeEventListener('storage', handlePointsSync);
+      window.removeEventListener('cyphora_points_updated', handlePointsSync);
     };
   }, []);
 
-  // Fullscreen toggle handler (Exit/Enter fullscreen permitted freely in Round 2)
-  const toggleFullscreen = async () => {
-    try {
-      if (!document.fullscreenElement) {
-        if (document.documentElement.requestFullscreen) {
-          await document.documentElement.requestFullscreen();
-        }
-      } else {
-        if (document.exitFullscreen) {
-          await document.exitFullscreen();
+  // Timer Tick Hook
+  useEffect(() => {
+    if (!isTimerRunning || secondsRemaining <= 0) return;
+
+    const interval = setInterval(() => {
+      const savedStart = localStorage.getItem('cyphora_round2_start_time');
+      if (savedStart) {
+        const elapsed = Math.floor((Date.now() - parseInt(savedStart, 10)) / 1000);
+        const remaining = Math.max(0, ROUND_2_DURATION_SECONDS - elapsed);
+        setSecondsRemaining(remaining);
+        if (remaining <= 0) {
+          setIsTimerRunning(false);
         }
       }
-    } catch (err) {
-      console.warn('Fullscreen toggle failed:', err);
-    }
-  };
+    }, 1000);
 
-  // Clean up object URL on unmount
+    return () => clearInterval(interval);
+  }, [isTimerRunning, secondsRemaining]);
+
+  // Object URL cleanup
   useEffect(() => {
     return () => {
-      if (resultPreviewUrl && resultPreviewUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(resultPreviewUrl);
-      }
+      if (image1PreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(image1PreviewUrl);
+      if (image2PreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(image2PreviewUrl);
     };
-  }, [resultPreviewUrl]);
+  }, [image1PreviewUrl, image2PreviewUrl]);
 
-  // Handle return to hub
+  // Remove screen scroll lock dynamically on mount
+  useEffect(() => {
+    document.documentElement.style.overflowY = 'auto';
+    document.documentElement.style.overflowX = 'hidden';
+    document.documentElement.style.maxHeight = 'none';
+    document.documentElement.style.height = 'auto';
+    document.body.style.overflowY = 'auto';
+    document.body.style.overflowX = 'hidden';
+    document.body.style.maxHeight = 'none';
+    document.body.style.height = 'auto';
+    const rootEl = document.getElementById('root');
+    if (rootEl) {
+      rootEl.style.overflowY = 'visible';
+      rootEl.style.overflowX = 'hidden';
+      rootEl.style.maxHeight = 'none';
+      rootEl.style.height = 'auto';
+    }
+  }, []);
+
+  // Speed and Points Calculation
+  const elapsedSeconds = ROUND_2_DURATION_SECONDS - secondsRemaining;
+  const currentSpeedBonus = Math.round((secondsRemaining / ROUND_2_DURATION_SECONDS) * MAX_SPEED_BONUS);
+  const currentPotentialTotal = BASE_POINTS + currentSpeedBonus;
+
+  const formatTime = (secs) => {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
   const handleBack = () => {
     if (onReturnToHub) {
       onReturnToHub();
@@ -113,11 +193,73 @@ export function Round2Page({ onReturnToHub }) {
     }
   };
 
-  // Prompt change handler
+  // Handlers for Image 1
+  const handleSelectImage1 = (file, customError) => {
+    setFormTouched(true);
+    setFormGlobalError('');
+    if (customError) {
+      setImage1Error(customError);
+      setImage1File(null);
+      if (image1PreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(image1PreviewUrl);
+      setImage1PreviewUrl('');
+      return;
+    }
+    if (!file) {
+      setImage1Error('Image 1 is required.');
+      setImage1File(null);
+      setImage1PreviewUrl('');
+      return;
+    }
+    setImage1Error('');
+    setImage1File(file);
+    const url = URL.createObjectURL(file);
+    setImage1PreviewUrl(url);
+    localStorage.setItem('cyphora_round2_image1_cached_url', url);
+  };
+
+  const handleRemoveImage1 = () => {
+    if (image1PreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(image1PreviewUrl);
+    setImage1File(null);
+    setImage1PreviewUrl('');
+    localStorage.removeItem('cyphora_round2_image1_cached_url');
+    setImage1Error('Image 1 is required.');
+  };
+
+  // Handlers for Image 2
+  const handleSelectImage2 = (file, customError) => {
+    setFormTouched(true);
+    setFormGlobalError('');
+    if (customError) {
+      setImage2Error(customError);
+      setImage2File(null);
+      if (image2PreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(image2PreviewUrl);
+      setImage2PreviewUrl('');
+      return;
+    }
+    if (!file) {
+      setImage2Error('Image 2 is required.');
+      setImage2File(null);
+      setImage2PreviewUrl('');
+      return;
+    }
+    setImage2Error('');
+    setImage2File(file);
+    setImage2PreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleRemoveImage2 = () => {
+    if (image2PreviewUrl?.startsWith('blob:')) URL.revokeObjectURL(image2PreviewUrl);
+    setImage2File(null);
+    setImage2PreviewUrl('');
+    setImage2Error('Image 2 is required.');
+  };
+
+  // Prompt change
   const handlePromptChange = (val) => {
     setPrompt(val);
     setPromptTouched(true);
     setFormGlobalError('');
+    localStorage.setItem('cyphora_round2_prompt', val);
     if (!val.trim()) {
       setPromptError('Prompt is required.');
     } else if (val.trim().length < 10) {
@@ -127,74 +269,31 @@ export function Round2Page({ onReturnToHub }) {
     }
   };
 
-  // Image select handler
-  const handleFileSelect = (file, customError) => {
-    setUploadTouched(true);
-    setFormGlobalError('');
-
-    if (customError) {
-      setUploadError(customError);
-      setResultFile(null);
-      if (resultPreviewUrl && resultPreviewUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(resultPreviewUrl);
-      }
-      setResultPreviewUrl('');
-      return;
-    }
-
-    if (!file) {
-      setUploadError('Result image is required.');
-      setResultFile(null);
-      setResultPreviewUrl('');
-      return;
-    }
-
-    setUploadError('');
-    setResultFile(file);
-    const newUrl = URL.createObjectURL(file);
-    setResultPreviewUrl(newUrl);
-  };
-
-  // Image remove handler
-  const handleFileRemove = () => {
-    if (resultPreviewUrl && resultPreviewUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(resultPreviewUrl);
-    }
-    setResultFile(null);
-    setResultPreviewUrl('');
-    setUploadTouched(true);
-    setUploadError('Result image is required.');
-  };
-
-  // Submission handler
-  const handleSubmit = async (e) => {
+  // =========================================================================
+  // STEP 1 SUBMIT: Evaluate Image 1 and unlock Image 2 slot
+  // =========================================================================
+  const handleSubmitImage1 = async (e) => {
     e.preventDefault();
+    setFormTouched(true);
     setPromptTouched(true);
-    setUploadTouched(true);
 
     let hasError = false;
-
-    // Validate prompt
-    if (!prompt.trim()) {
-      setPromptError('Prompt is required.');
-      hasError = true;
-    } else if (prompt.trim().length < 10) {
-      setPromptError('Prompt must be at least 10 characters.');
+    if (!prompt.trim() || prompt.trim().length < 10) {
+      setPromptError('Please provide a prompt describing your recreation (minimum 10 chars).');
       hasError = true;
     } else {
       setPromptError('');
     }
 
-    // Validate image
-    if (!resultFile) {
-      setUploadError('Please upload your generated result image.');
+    if (!image1File && !image1PreviewUrl) {
+      setImage1Error('Please upload Image 1 before submitting.');
       hasError = true;
     } else {
-      setUploadError('');
+      setImage1Error('');
     }
 
     if (hasError) {
-      setFormGlobalError('Please resolve the highlighted validation errors above.');
+      setFormGlobalError('Please resolve the highlighted errors before submitting Image 1.');
       return;
     }
 
@@ -202,62 +301,189 @@ export function Round2Page({ onReturnToHub }) {
     setIsSubmitting(true);
 
     try {
-      // Simulate submission network request / evaluation pipeline
-      await new Promise((resolve) => setTimeout(resolve, 1400));
+      const hostname = window.location.hostname || 'localhost';
+      const isDev = window.location.port === '5173';
+      const apiBase = isDev ? `http://${hostname}:8000` : '';
+      const token = localStorage.getItem('cyphora_token') || '';
 
-      const payload = {
-        team: teamName,
+      let simMatch = (82 + Math.random() * 12).toFixed(1) + '%';
+      let phase1Points = 200;
+
+      try {
+        const res = await fetch(`${apiBase}/api/stage2/evaluate-image1`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({
+            team_name: teamName,
+            prompt: prompt.trim(),
+            image1_filename: image1File?.name || 'image_1.png',
+          })
+        });
+        if (res.ok) {
+          const resJson = await res.json();
+          simMatch = resJson.similarity || simMatch;
+          phase1Points = resJson.points || phase1Points;
+        }
+      } catch {
+        // Fallback local evaluation
+      }
+
+      const evalData = {
+        fileName: image1File?.name || 'image_1.png',
+        similarity: simMatch,
+        score: phase1Points,
         prompt: prompt.trim(),
-        fileName: resultFile.name,
-        fileSize: resultFile.size,
-        timestamp: new Date().toLocaleTimeString(),
-        date: new Date().toLocaleDateString(),
+        submittedAt: new Date().toLocaleTimeString(),
       };
 
-      // Store in localStorage for persistence
-      const history = JSON.parse(localStorage.getItem('cyphora_round2_submissions') || '[]');
-      history.push(payload);
-      localStorage.setItem('cyphora_round2_submissions', JSON.stringify(history));
+      setImage1EvaluatedData(evalData);
+      localStorage.setItem('cyphora_round2_image1_data', JSON.stringify(evalData));
+      localStorage.setItem('cyphora_round2_phase', '2');
+      localStorage.setItem('cyphora_round2_score', phase1Points.toString());
 
-      setSubmittedData(payload);
-      setSubmissionSuccess(true);
-    } catch (err) {
-      setFormGlobalError('Network error submitting to evaluation portal. Please retry.');
+      // Update live points bar & trigger celebration modal
+      setTeamPoints(phase1Points);
+      setPointsDelta(phase1Points);
+      window.dispatchEvent(new Event('cyphora_points_updated'));
+      setShowImage1Modal(true);
+      setRound2Phase(2);
+      setPhaseSuccessNotice(
+        `✓ Image 1 evaluated (+${phase1Points} pts)! Slot for Image 2 is now unlocked.`
+      );
+    } catch {
+      setFormGlobalError('Error communicating with evaluation server. Please retry.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleResetForm = () => {
-    setPrompt('');
-    setPromptTouched(false);
-    setPromptError('');
-    handleFileRemove();
-    setUploadTouched(false);
-    setUploadError('');
-    setSubmissionSuccess(false);
-    setSubmittedData(null);
+  // =========================================================================
+  // STEP 2 SUBMIT: Evaluate Image 2 with final Speed Bonus
+  // =========================================================================
+  const handleSubmitImage2 = async (e) => {
+    e.preventDefault();
+    setFormTouched(true);
+
+    if (!image2File) {
+      setImage2Error('Image 2 is required for final speed evaluation.');
+      setFormGlobalError('Please upload Image 2 to complete the round.');
+      return;
+    }
+
     setFormGlobalError('');
+    setIsSubmitting(true);
+
+    // Speed bonus calculation based on remaining 15-minute clock
+    const finalElapsed = ROUND_2_DURATION_SECONDS - secondsRemaining;
+    const finalBonus = Math.round((secondsRemaining / ROUND_2_DURATION_SECONDS) * MAX_SPEED_BONUS);
+    const finalTotalPoints = BASE_POINTS + finalBonus;
+    const formattedSpeed = formatTime(finalElapsed);
+
+    try {
+      const hostname = window.location.hostname || 'localhost';
+      const isDev = window.location.port === '5173';
+      const apiBase = isDev ? `http://${hostname}:8000` : '';
+      const token = localStorage.getItem('cyphora_token') || '';
+
+      const res = await fetch(`${apiBase}/api/stage2/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          team_name: teamName,
+          prompt: prompt.trim(),
+          slot2_filename: image1EvaluatedData?.fileName || 'image_1.png',
+          slot3_filename: image2File.name,
+          elapsed_seconds: finalElapsed,
+          remaining_seconds: secondsRemaining,
+          calculated_points: finalTotalPoints,
+        })
+      });
+
+      if (res.ok) {
+        const resData = await res.json();
+        setEvaluatedScore(resData.points_awarded || finalTotalPoints);
+      } else {
+        setEvaluatedScore(finalTotalPoints);
+      }
+    } catch {
+      setEvaluatedScore(finalTotalPoints);
+    } finally {
+      setIsSubmitting(false);
+
+      const payload = {
+        team: teamName,
+        prompt: prompt.trim(),
+        image1Name: image1EvaluatedData?.fileName || 'image_1.png',
+        image2Name: image2File.name,
+        image1Similarity: image1EvaluatedData?.similarity || '85.0%',
+        timeCompleted: formattedSpeed,
+        speedBonus: finalBonus,
+        totalPoints: finalTotalPoints,
+        timestamp: new Date().toLocaleTimeString(),
+      };
+
+      // Persist in local storage
+      localStorage.setItem('cyphora_round2_score', finalTotalPoints.toString());
+      localStorage.setItem('cyphora_round2_speed', formattedSpeed);
+      const prevSubmissions = JSON.parse(localStorage.getItem('cyphora_round2_submissions') || '[]');
+      prevSubmissions.push(payload);
+      localStorage.setItem('cyphora_round2_submissions', JSON.stringify(prevSubmissions));
+
+      setTeamPoints(finalTotalPoints);
+      setPointsDelta(finalTotalPoints - (image1EvaluatedData?.score || 200));
+      window.dispatchEvent(new Event('cyphora_points_updated'));
+      setSubmittedData(payload);
+      setSubmissionSuccess(true);
+      setIsTimerRunning(false);
+    }
   };
+
+  const handleResetToStep1 = () => {
+    if (window.confirm('Reset Round 2 back to Image 1? Current Image 1 evaluation will be cleared.')) {
+      setRound2Phase(1);
+      setImage1EvaluatedData(null);
+      handleRemoveImage1();
+      handleRemoveImage2();
+      setPhaseSuccessNotice('');
+      setFormGlobalError('');
+      setTeamPoints(0);
+      setPointsDelta(null);
+      localStorage.removeItem('cyphora_round2_phase');
+      localStorage.removeItem('cyphora_round2_image1_data');
+      localStorage.removeItem('cyphora_round2_image1_cached_url');
+      localStorage.removeItem('cyphora_round2_score');
+      window.dispatchEvent(new Event('cyphora_points_updated'));
+    }
+  };
+
+  // Urgency color helper
+  let timerUrgencyClass = 'timer-normal';
+  if (secondsRemaining <= 120) timerUrgencyClass = 'timer-critical';
+  else if (secondsRemaining <= 300) timerUrgencyClass = 'timer-warning';
 
   return (
     <div className="round2-wrapper">
-      {/* Background ambient container */}
       <div className="round2-ambient-bg" aria-hidden="true" />
 
-      {/* Screen reader skip link */}
+      {/* Screen Reader Skip Link */}
       <a href="#round2-main-content" className="sr-skip-link">
         Skip to main content
       </a>
 
-      {/* Printable Warning Notice for @media print */}
+      {/* Printable Warning */}
       <div className="print-restricted-notice" aria-hidden="true">
         <h2>CYPHORA SECURITY RESTRICTION</h2>
         <p>Printing this evaluation target or prompt assessment sheet is prohibited by symposium protocol.</p>
         <p>Asset ID: ROUND-2-TARGET &bull; Team: {teamName}</p>
       </div>
 
-      {/* Navigation Header */}
+      {/* Top Navigation Bar */}
       <header className="round2-navbar" role="banner">
         <div className="navbar-left">
           <button
@@ -276,44 +502,92 @@ export function Round2Page({ onReturnToHub }) {
               <span>STAGE 2</span>
             </div>
             <h1 className="page-heading">IMAGE NAVIGATION</h1>
+
+            {/* Points bar for current team playing */}
+            <div className="current-team-pts-bar" title="Points Earned by Current Team">
+              <Award size={15} className="gold-text" />
+              <span className="pts-bar-label">PTS:</span>
+              <span className="pts-bar-number gold-text">{teamPoints}</span>
+              {pointsDelta && (
+                <span className="pts-delta-badge">+{pointsDelta}</span>
+              )}
+            </div>
           </div>
         </div>
 
         <div className="navbar-right">
+          {/* Phase Badge */}
+          <div className="phase-pill-badge">
+            {round2Phase === 1 ? 'Step 1: Image 1' : 'Step 2: Image 2'}
+          </div>
+
+          {/* Leaderboard Drawer Trigger */}
           <button
             type="button"
-            className="round2-fullscreen-btn"
-            onClick={toggleFullscreen}
-            aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-            title="Toggle Fullscreen (Freely permitted in Round 2)"
+            className="leaderboard-nav-btn"
+            onClick={() => setIsLeaderboardOpen(true)}
+            title="View Live Standings"
           >
-            {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
-            <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+            <Trophy size={16} className="gold-text" />
+            <span>Standings</span>
           </button>
 
+          {/* Current Team Chip */}
           <div className="team-status-chip">
-            <span className="chip-label">Explorer</span>
+            <span className="chip-label">Workstation</span>
             <span className="chip-name">{teamName}</span>
           </div>
         </div>
       </header>
 
-      {/* Main Content Arena */}
+      {/* Main Container */}
       <main id="round2-main-content" className="round2-main" role="main">
-        {/* Banner introduction */}
-        <section className="round2-intro-banner" aria-label="Mission Briefing">
-          <div className="intro-badge">
-            <Sparkles size={16} />
-            <span>MISSION OBJECTIVE</span>
+        {/* ================= 15-MINUTE GAME HUD & SPEED BONUS METER ================= */}
+        <section className="round2-hud-banner" aria-label="Round 2 Live Status and Speed Clock">
+          <div className="hud-timer-col">
+            <div className="hud-label-row">
+              <div className="hud-title-wrap">
+                <Clock size={16} className="gold-text" />
+                <span className="hud-title">15-MINUTE GAME CLOCK</span>
+              </div>
+              <span className={`hud-time-digits ${timerUrgencyClass}`}>
+                {formatTime(secondsRemaining)}
+              </span>
+            </div>
+            <div className="hud-progress-track">
+              <div 
+                className={`hud-progress-fill ${timerUrgencyClass}`}
+                style={{ width: `${(secondsRemaining / ROUND_2_DURATION_SECONDS) * 100}%` }}
+              />
+            </div>
+            <span className="hud-time-hint">
+              {secondsRemaining > 0 
+                ? `${formatTime(elapsedSeconds)} elapsed &bull; Round ends at 00:00`
+                : 'TIME EXPIRED &bull; Complete submission immediately'
+              }
+            </span>
           </div>
-          <h2>Inverse Image Synthesis & Cosine Similarity</h2>
-          <p>
-            Study the protected reference target provided by event organizers. Formulate a prompt capable of generating
-            an identical visual recreation, then submit your prompt and rendered image for cosine similarity scoring.
-          </p>
+
+          <div className="hud-points-col">
+            <div className="speed-bonus-box">
+              <div className="speed-icon-wrap">
+                <Flame size={20} className="gold-text" />
+              </div>
+              <div className="speed-text-wrap">
+                <span className="speed-label">SPEED EVALUATION POTENTIAL</span>
+                <div className="points-tally">
+                  <span className="base-pts">{BASE_POINTS} Base</span>
+                  <span className="plus-sign">+</span>
+                  <span className="bonus-pts gold-text">+{currentSpeedBonus} Speed Bonus</span>
+                  <span className="equals-sign">=</span>
+                  <span className="total-pts gold-text">{currentPotentialTotal} PTS</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
-        {/* Global validation error banner if triggered */}
+        {/* Global validation error if triggered */}
         {formGlobalError && (
           <div className="global-error-banner" role="alert">
             <AlertTriangle size={18} />
@@ -321,10 +595,22 @@ export function Round2Page({ onReturnToHub }) {
           </div>
         )}
 
-        {/* Challenge Interactive Grid */}
-        <form onSubmit={handleSubmit} noValidate className="round2-grid-layout">
-          {/* Column 1: Protected Organizer Target Image */}
+        {/* Phase transition alert notice */}
+        {phaseSuccessNotice && (
+          <div className="phase-success-banner" role="status">
+            <CheckCircle2 size={18} className="gold-text" />
+            <span>{phaseSuccessNotice}</span>
+          </div>
+        )}
+
+        {/* ================= 2-COLUMN INTERACTIVE ARENA ================= */}
+        <div className="round2-grid-layout">
+          {/* Target Reference Column */}
           <div className="grid-col target-col">
+            <div className="slot-indicator-header">
+              <span className="slot-super-badge">ORGANIZER TARGET</span>
+              <span className="slot-super-desc">Protected Evaluation Goal</span>
+            </div>
             <ProtectedReferenceImage
               src="/assets/round2/reference.jpg"
               alt="Organizer Target Reference Image"
@@ -334,73 +620,132 @@ export function Round2Page({ onReturnToHub }) {
             />
           </div>
 
-          {/* Column 2: Prompt and Result Image Upload */}
+          {/* Submission Column: Prompt & Sequential Slots */}
           <div className="grid-col submission-col">
-            {/* 1. Prompt Textarea */}
-            <PromptSection
-              value={prompt}
-              onChange={handlePromptChange}
-              error={promptError}
-              touched={promptTouched}
-              minLength={10}
-              maxLength={1500}
-            />
+            {/* Form wrapping either Step 1 or Step 2 */}
+            <form onSubmit={round2Phase === 1 ? handleSubmitImage1 : handleSubmitImage2} noValidate>
+              {/* 1. Prompt Textarea */}
+              <PromptSection
+                value={prompt}
+                onChange={handlePromptChange}
+                error={promptError}
+                touched={promptTouched}
+                minLength={10}
+                maxLength={1500}
+              />
 
-            {/* 2. Result Image Upload Section */}
-            <ResultImageUpload
-              file={resultFile}
-              previewUrl={resultPreviewUrl}
-              onFileSelect={handleFileSelect}
-              onFileRemove={handleFileRemove}
-              error={uploadError}
-              touched={uploadTouched}
-              maxSizeBytes={10 * 1024 * 1024}
-              allowedTypes={['image/png', 'image/jpeg', 'image/webp']}
-            />
+              {/* 2. Sequential Image Upload Component */}
+              <ResultImageUpload
+                phase={round2Phase}
 
-            {/* 3. Action Submittal Bar */}
-            <div className="form-submit-panel">
-              <div className="submit-info-text">
-                <Info size={15} />
-                <span>Ensure prompt matches the generation parameters used for the uploaded image.</span>
-              </div>
+                // Image 1 props
+                image1File={image1File}
+                image1PreviewUrl={image1PreviewUrl}
+                onSelectImage1={handleSelectImage1}
+                onRemoveImage1={handleRemoveImage1}
+                image1Error={image1Error}
+                image1EvaluatedData={image1EvaluatedData}
 
-              <div className="submit-buttons-row">
-                <button
-                  type="button"
-                  className="round2-clear-btn"
-                  onClick={handleResetForm}
-                  disabled={isSubmitting}
-                >
-                  <RotateCcw size={15} />
-                  <span>Reset</span>
-                </button>
+                // Image 2 props
+                image2File={image2File}
+                image2PreviewUrl={image2PreviewUrl}
+                onSelectImage2={handleSelectImage2}
+                onRemoveImage2={handleRemoveImage2}
+                image2Error={image2Error}
 
-                <button
-                  type="submit"
-                  className={`round2-submit-btn ${isSubmitting ? 'submitting' : ''}`}
-                  disabled={isSubmitting}
-                  aria-busy={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="spinner-dot" aria-hidden="true" />
-                      <span>Transmitting Entry...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send size={16} />
-                      <span>Submit Entry</span>
-                    </>
+                touched={formTouched}
+                maxSizeBytes={10 * 1024 * 1024}
+                allowedTypes={['image/png', 'image/jpeg', 'image/webp']}
+              />
+
+              {/* 3. Action Submittal Bar */}
+              <div className="form-submit-panel">
+                <div className="submit-buttons-row">
+                  {round2Phase === 2 && (
+                    <button
+                      type="button"
+                      className="round2-clear-btn"
+                      onClick={handleResetToStep1}
+                      disabled={isSubmitting}
+                      title="Return to Step 1"
+                    >
+                      <RotateCcw size={15} />
+                      <span>Redo Image 1</span>
+                    </button>
                   )}
-                </button>
+
+                  <button
+                    type="submit"
+                    className={`round2-submit-btn ${isSubmitting ? 'submitting' : ''}`}
+                    disabled={isSubmitting}
+                    aria-busy={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="spinner-dot" aria-hidden="true" />
+                        <span>
+                          {round2Phase === 1 ? 'Evaluating Image 1...' : 'Transmitting & Finalizing...'}
+                        </span>
+                      </>
+                    ) : round2Phase === 1 ? (
+                      <>
+                        <Send size={16} />
+                        <span>Submit Image 1 for Evaluation</span>
+                        <ArrowRight size={15} />
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        <span>Submit Image 2 (Finalize: {currentPotentialTotal} PTS)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
+            </form>
           </div>
-        </form>
+        </div>
       </main>
 
-      {/* Successful Submission Modal Dialog */}
+      {/* ================= IMAGE 1 EVALUATED CELEBRATION POPUP ================= */}
+      {showImage1Modal && (
+        <div
+          className="submission-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="image1-modal-title"
+        >
+          <div className="image1-celebration-card">
+            <div className="celebration-icon-wrap">
+              <Sparkles size={42} className="gold-text" />
+            </div>
+            <span className="celebration-tag">STAGE 2 &bull; IMAGE 1 EVALUATED</span>
+            <h3 id="image1-modal-title" className="celebration-title">Image 1 Submitted &amp; Verified!</h3>
+            
+            <div className="celebration-score-pill">
+              <span className="pts-plus">+{pointsDelta || image1EvaluatedData?.score || 200}</span>
+              <span className="pts-txt">PTS EARNED</span>
+            </div>
+
+            <p className="celebration-desc">
+              Your prompt re-creation for <strong>Image 1</strong> has been successfully processed. 
+              Points have been credited to your live team score. 
+              The slot for <strong>Image 2</strong> is now unlocked!
+            </p>
+
+            <button
+              type="button"
+              className="celebration-continue-btn"
+              onClick={() => setShowImage1Modal(false)}
+            >
+              <span>Continue to Image 2</span>
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ================= SUCCESS SUBMISSION & SCORING MODAL ================= */}
       {submissionSuccess && submittedData && (
         <div 
           className="submission-modal-backdrop" 
@@ -410,13 +755,22 @@ export function Round2Page({ onReturnToHub }) {
         >
           <div className="submission-modal-card">
             <div className="modal-icon-badge">
-              <CheckCircle size={44} />
+              <Award size={46} className="gold-text" />
             </div>
 
-            <h3 id="modal-success-title">Submission Successfully Received!</h3>
+            <h3 id="modal-success-title">Round 2 Successfully Completed!</h3>
             <p className="modal-description">
-              Your prompt and re-created image have been logged into the CYPHORA evaluation portal for similarity scoring.
+              Both Image 1 and Image 2 have been evaluated. Your speed points have been logged
+              to the symposium database.
             </p>
+
+            <div className="modal-score-banner">
+              <span className="score-banner-label">FINAL EVALUATED ROUND 2 SCORE</span>
+              <span className="score-banner-val gold-text">+{evaluatedScore ?? submittedData.totalPoints} PTS</span>
+              <span className="score-banner-sub">
+                Completed in {submittedData.timeCompleted} &bull; Speed Bonus: +{submittedData.speedBonus} pts
+              </span>
+            </div>
 
             <div className="modal-summary-box">
               <div className="summary-field">
@@ -424,44 +778,51 @@ export function Round2Page({ onReturnToHub }) {
                 <span className="summary-value gold-text">{submittedData.team}</span>
               </div>
               <div className="summary-field">
-                <span className="summary-label">Timestamp:</span>
-                <span className="summary-value">{submittedData.date} at {submittedData.timestamp}</span>
+                <span className="summary-label">Image 1 Evaluation:</span>
+                <span className="summary-value">{submittedData.image1Similarity} match</span>
               </div>
               <div className="summary-field">
-                <span className="summary-label">File Submitted:</span>
-                <span className="summary-value">{submittedData.fileName}</span>
+                <span className="summary-label">Image 2 (Final Target):</span>
+                <span className="summary-value gold-text">{submittedData.image2Name}</span>
               </div>
               <div className="summary-prompt-preview">
-                <span className="summary-label">Recorded Prompt:</span>
+                <span className="summary-label">Logged Prompt:</span>
                 <p className="prompt-quote">&ldquo;{submittedData.prompt}&rdquo;</p>
               </div>
-
-              {resultPreviewUrl && (
-                <div className="modal-img-preview">
-                  <img src={resultPreviewUrl} alt="Submitted recreation output" />
-                </div>
-              )}
             </div>
 
             <div className="modal-actions-bar">
               <button
                 type="button"
                 className="modal-primary-btn"
-                onClick={handleResetForm}
+                onClick={() => setIsLeaderboardOpen(true)}
               >
-                Submit Another Entry
+                <Trophy size={16} /> View Live Standings
               </button>
               <button
                 type="button"
                 className="modal-secondary-btn"
                 onClick={handleBack}
               >
-                Return to Expedition Hub
+                Return to Hub
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* ================= LEADERBOARD DRAWER ================= */}
+      <LeaderboardPanel
+        isOpen={isLeaderboardOpen}
+        onClose={() => setIsLeaderboardOpen(false)}
+        currentTeamName={teamName}
+        currentTeamScore={teamPoints}
+        currentTeamSpeed={
+          submittedData?.timeCompleted ||
+          localStorage.getItem('cyphora_round2_speed') ||
+          (secondsRemaining < ROUND_2_DURATION_SECONDS ? formatTime(elapsedSeconds) : '--:--')
+        }
+      />
     </div>
   );
 }

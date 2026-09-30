@@ -8,13 +8,11 @@
 
 html, body {
   width: 100%;
-  height: 100%;
-  max-width: 100vw;
-  max-height: 100vh;
+  min-height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden !important;
-  overscroll-behavior: none;
+  overflow-y: auto;
+  overflow-x: hidden;
   background-color: #000;
   font-family: 'Montserrat', sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -23,11 +21,9 @@ html, body {
 
 #root {
   width: 100%;
-  height: 100%;
-  max-width: 100vw;
-  max-height: 100vh;
-  overflow: hidden !important;
-  overscroll-behavior: none;
+  min-height: 100%;
+  overflow-y: visible;
+  overflow-x: hidden;
 }
 
 /* PIN / Sensitive Code Masking without triggering browser password manager / breach dialogs */
