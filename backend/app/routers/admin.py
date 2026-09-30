@@ -257,6 +257,20 @@ async def delete_team(
     await ws_manager.broadcast_leaderboard(db)
     return {"status": "success", "message": f"Team '{team_name}' removed."}
 
+@router.post("/reset-leaderboard")
+async def reset_leaderboard(
+    authorized: bool = Depends(verify_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Purges all mock and test team data, resetting to 0 real participants."""
+    from sqlalchemy import delete
+    await db.execute(delete(TaskSubmission))
+    await db.execute(delete(Team))
+    await db.commit()
+
+    await ws_manager.broadcast_leaderboard(db)
+    return {"status": "success", "message": "Leaderboard reset. All mock data cleared."}
+
 @router.get("/export/csv")
 async def export_leaderboard_csv(
     authorized: bool = Depends(verify_admin),
@@ -339,19 +353,52 @@ async def export_leaderboard_json(
     ]
     return {"export_timestamp": datetime.utcnow().isoformat(), "teams": data}
 
+@router.get("/timer")
+async def get_admin_event_timer(
+    authorized: bool = Depends(verify_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    import json
+    res = await db.execute(select(EventConfig).filter(EventConfig.key == "event_timer"))
+    cfg = res.scalar_one_or_none()
+    if cfg and cfg.value:
+        return json.loads(cfg.value)
+    return {"action": "reset", "duration_minutes": 60, "remaining_seconds": 3600}
+
 @router.post("/timer")
 async def configure_event_timer(
-    duration_minutes: int,
-    action: str = "start", # "start" | "pause" | "reset"
+    duration_minutes: int = 60,
+    action: str = "start", # "start" | "pause" | "resume" | "reset"
+    remaining_seconds: Optional[int] = None,
     authorized: bool = Depends(verify_admin),
     db: AsyncSession = Depends(get_db)
 ):
     """Sets or synchronizes the global event countdown timer across all workstations."""
     import json
+    from datetime import datetime, timedelta
+
+    now = datetime.utcnow()
+    ends_at = None
+
+    if action == "start":
+        ends_at = now + timedelta(minutes=duration_minutes)
+        rem_sec = duration_minutes * 60
+    elif action == "resume":
+        sec = remaining_seconds if remaining_seconds is not None else (duration_minutes * 60)
+        ends_at = now + timedelta(seconds=sec)
+        rem_sec = sec
+    elif action == "pause":
+        rem_sec = remaining_seconds if remaining_seconds is not None else (duration_minutes * 60)
+    else:  # reset
+        rem_sec = duration_minutes * 60
+
     timer_payload = {
         "action": action,
         "duration_minutes": duration_minutes,
-        "updated_at": datetime.utcnow().isoformat()
+        "started_at": now.isoformat(),
+        "ends_at": ends_at.isoformat() if ends_at else None,
+        "remaining_seconds": rem_sec,
+        "updated_at": now.isoformat()
     }
     raw = json.dumps(timer_payload)
 

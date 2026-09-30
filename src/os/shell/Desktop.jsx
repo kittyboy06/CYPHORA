@@ -51,9 +51,15 @@ export function Desktop() {
         ? [{ rank: 1, name: teamData.name, score: teamData.score ?? 0, status: 'active' }]
         : []);
 
-  const isCurrentTeam = (name) => {
+  const isCurrentTeam = (name, id) => {
+    if (id && teamData?.id && id === teamData.id) return true;
+    const savedId = parseInt(localStorage.getItem('cyphora_team_id'), 10);
+    if (id && savedId && id === savedId) return true;
     if (!name || !teamData?.name) return false;
-    return teamData.name.trim().toLowerCase() === name.trim().toLowerCase();
+    const currentName = teamData.name.trim().toLowerCase();
+    const savedName = (localStorage.getItem('cyphora_team_name') || '').trim().toLowerCase();
+    const targetName = name.trim().toLowerCase();
+    return targetName === currentName || targetName === savedName;
   };
 
   const activeTask = round1State?.tasks?.find(t => t.status === 'ACTIVE');
@@ -269,7 +275,7 @@ export function Desktop() {
             {displayTeams.length > 0 ? (
               <div className="desktop-leaderboard-list">
                 {displayTeams.map((team, idx) => {
-                  const isSelf = isCurrentTeam(team.name);
+                  const isSelf = isCurrentTeam(team.name, team.id);
                   const rank = team.rank || idx + 1;
                   return (
                     <div

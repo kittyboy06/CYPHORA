@@ -72,23 +72,32 @@ app.include_router(admin.router)
 async def websocket_endpoint(websocket: WebSocket, team: Optional[str] = None):
     await ws_manager.connect(websocket, team)
     try:
-        # If team name was provided on connection, activate in DB and broadcast
-        if team:
-            async with AsyncSessionLocal() as session:
-                from sqlalchemy.future import select
-                from .models import Team
-                res = await session.execute(select(Team).filter(Team.name == team))
+        async with AsyncSessionLocal() as session:
+            from sqlalchemy.future import select
+            from sqlalchemy import desc, func
+            from .models import Team, EventConfig
+
+            # Fetch timer state
+            current_timer = None
+            try:
+                t_cfg = await session.execute(select(EventConfig).filter(EventConfig.key == "event_timer"))
+                t_row = t_cfg.scalar_one_or_none()
+                if t_row and t_row.value:
+                    current_timer = json.loads(t_row.value)
+            except Exception:
+                pass
+
+            # If team name was provided on connection, activate in DB
+            if team:
+                clean_team = team.strip()
+                res = await session.execute(select(Team).filter(func.lower(Team.name) == clean_team.lower()))
                 t = res.scalar_one_or_none()
                 if t:
                     t.status = "active"
                     await session.commit()
                 await ws_manager.broadcast_leaderboard(session)
-        else:
-            # Send initial leaderboard immediately upon connection
-            async with AsyncSessionLocal() as session:
-                from sqlalchemy.future import select
-                from sqlalchemy import desc
-                from .models import Team
+            else:
+                # Send initial leaderboard & timer immediately upon connection
                 stmt = select(Team).order_by(desc(Team.score), Team.updated_at)
                 result = await session.execute(stmt)
                 teams_list = result.scalars().all()
@@ -111,14 +120,15 @@ async def websocket_endpoint(websocket: WebSocket, team: Optional[str] = None):
                 ]
                 await ws_manager.send_personal({
                     "event": "INITIAL_STATE",
-                    "data": leaderboard_data
+                    "data": leaderboard_data,
+                    "timer": current_timer
                 }, websocket)
 
         while True:
             # Keep connection open and receive any client messages/pings
             data = await websocket.receive_text()
             if data == "ping":
-                await websocket.send_text("pong")
+                await websocket.send_text(json.dumps({"action": "pong"}))
                 continue
 
             try:
@@ -126,12 +136,23 @@ async def websocket_endpoint(websocket: WebSocket, team: Optional[str] = None):
                 action = msg.get("action")
                 if action == "identify":
                     identified_team = msg.get("team")
-                    if identified_team:
-                        ws_manager.register_team(websocket, identified_team)
+                    identified_id = msg.get("team_id")
+                    if identified_team or identified_id:
+                        ws_manager.register_team(websocket, identified_team or f"Team-{identified_id}")
                         async with AsyncSessionLocal() as session:
                             from sqlalchemy.future import select
+                            from sqlalchemy import func
                             from .models import Team
-                            res = await session.execute(select(Team).filter(Team.name == identified_team))
+                            query = select(Team)
+                            if identified_id:
+                                try:
+                                    query = query.filter(Team.id == int(identified_id))
+                                except ValueError:
+                                    query = query.filter(func.lower(Team.name) == identified_team.strip().lower())
+                            elif identified_team:
+                                query = query.filter(func.lower(Team.name) == identified_team.strip().lower())
+
+                            res = await session.execute(query)
                             t = res.scalar_one_or_none()
                             if t:
                                 t.status = "active"
@@ -165,10 +186,10 @@ round1_dir = BASE_DIR / "round1"
 if round1_dir.exists():
     app.mount("/round1", StaticFiles(directory=round1_dir.as_posix(), html=True), name="round1")
 
-# Mount round3 static directory (Vite build)
-round3_dir = BASE_DIR / "round3" / "dist"
-if round3_dir.exists():
-    app.mount("/round3", StaticFiles(directory=round3_dir.as_posix(), html=True), name="round3")
+# Mount round2 static directory
+round2_dir = BASE_DIR / "round2"
+if round2_dir.exists():
+    app.mount("/round2", StaticFiles(directory=round2_dir.as_posix(), html=True), name="round2")
 
 from fastapi.responses import FileResponse, HTMLResponse
 

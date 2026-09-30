@@ -59,6 +59,7 @@ class LeaderboardItem(BaseModel):
 class LeaderboardResponse(BaseModel):
     teams: List[LeaderboardItem]
     total_explorers: int
+    timer: Optional[dict] = None
 
 # Task Submissions (Stage 1 OS Navigation)
 class TaskSubmitRequest(BaseModel):
