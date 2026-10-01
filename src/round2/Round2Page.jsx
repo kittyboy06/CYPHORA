@@ -295,6 +295,11 @@ export function Round2Page({ onReturnToHub }) {
 
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
+  
+  // Final Round Unlock Code State
+  const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
+  const [unlockCode, setUnlockCode] = useState('');
+  const [unlockError, setUnlockError] = useState('');
 
   // Form states
   const [prompt, setPrompt] = useState(() => {
@@ -462,23 +467,29 @@ export function Round2Page({ onReturnToHub }) {
   };
 
   const handleBack = () => {
-    // Clear all Round 2 session state so a new team starts fresh
-    const keysToRemove = [
-      'cyphora_round2_started',
-      'cyphora_round2_phase',
-      'cyphora_round2_score',
-      'cyphora_round2_start_time',
-      'cyphora_round2_prompt',
-      'cyphora_round2_image1_cached_url',
-      'cyphora_round2_image1_data',
-      'cyphora_round2_speed'
-    ];
-    keysToRemove.forEach(key => localStorage.removeItem(key));
+    setIsCodeModalOpen(true);
+  };
 
-    if (onReturnToHub) {
-      onReturnToHub();
+  const handleVerifyUnlockCode = () => {
+    const allowedCodes = ['4815', '1623', '4242', '0000']; 
+    if (allowedCodes.includes(unlockCode.trim())) {
+      // Clear all Round 2 session state so a new team starts fresh
+      const keysToRemove = [
+        'cyphora_round2_started',
+        'cyphora_round2_phase',
+        'cyphora_round2_score',
+        'cyphora_round2_start_time',
+        'cyphora_round2_prompt',
+        'cyphora_round2_image1_cached_url',
+        'cyphora_round2_image1_data',
+        'cyphora_round2_speed'
+      ];
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      
+      // Redirect to round 3
+      window.location.href = '/round3/index.html';
     } else {
-      window.location.href = '/';
+      setUnlockError('Invalid authorization code.');
     }
   };
 
@@ -859,28 +870,6 @@ export function Round2Page({ onReturnToHub }) {
         </div>
 
         <div className="navbar-right">
-          {/* Re-read Story Briefing */}
-          <button
-            type="button"
-            className="prologue-replay-btn"
-            onClick={() => setHasStarted(false)}
-            title="Review Narrative Briefing"
-            style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              color: '#d1c7b7',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '0.8rem'
-            }}
-          >
-            <BookOpen size={14} />
-            <span>Briefing</span>
-          </button>
 
           {/* Fullscreen Button */}
           <button
@@ -950,12 +939,7 @@ export function Round2Page({ onReturnToHub }) {
                 style={{ width: `${(secondsRemaining / ROUND_2_DURATION_SECONDS) * 100}%` }}
               />
             </div>
-            <span className="hud-time-hint">
-              {secondsRemaining > 0 
-                ? `${formatTime(elapsedSeconds)} elapsed &bull; Round ends at 00:00`
-                : 'TIME EXPIRED &bull; Complete submission immediately'
-              }
-            </span>
+
           </div>
 
           <div className="hud-points-col">
@@ -1247,7 +1231,81 @@ export function Round2Page({ onReturnToHub }) {
                 className="modal-secondary-btn"
                 onClick={handleBack}
               >
-                Return to Hub
+                Unlock the Final Round
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= FINAL ROUND UNLOCK MODAL ================= */}
+      {isCodeModalOpen && (
+        <div 
+          className="submission-modal-backdrop" 
+          role="dialog" 
+          aria-modal="true" 
+        >
+          <div className="submission-modal-card" style={{ maxWidth: '400px', alignItems: 'center' }}>
+            <div className="modal-icon-badge" style={{ marginBottom: '1rem' }}>
+              <CheckCircle size={36} className="gold-text" />
+            </div>
+            
+            <h3 style={{ color: '#c9a653', marginTop: '0', marginBottom: '0.5rem', fontSize: '1.25rem', letterSpacing: '2px', textTransform: 'uppercase' }}>Authorize Access</h3>
+            <p style={{ color: '#d1c7b7', fontSize: '0.9rem', marginBottom: '1.5rem', textAlign: 'center', lineHeight: '1.4' }}>
+              Enter your 4-digit expedition code to unlock Round 3.
+            </p>
+            
+            <input 
+              type="text" 
+              maxLength="4"
+              value={unlockCode}
+              onChange={(e) => {
+                setUnlockCode(e.target.value);
+                setUnlockError('');
+              }}
+              placeholder="XXXX"
+              style={{
+                width: '140px',
+                textAlign: 'center',
+                letterSpacing: '8px',
+                fontSize: '1.5rem',
+                padding: '12px 10px',
+                background: 'rgba(0, 0, 0, 0.5)',
+                border: '1px solid rgba(201, 166, 83, 0.4)',
+                color: '#fff',
+                borderRadius: '6px',
+                outline: 'none',
+                marginBottom: '1rem'
+              }}
+            />
+
+            {unlockError && (
+              <div style={{ color: '#ff6b6b', fontSize: '0.8rem', marginBottom: '1rem' }}>
+                <AlertTriangle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }} />
+                {unlockError}
+              </div>
+            )}
+
+            <div className="modal-actions-bar" style={{ marginTop: '1rem', width: '100%' }}>
+              <button
+                type="button"
+                className="modal-secondary-btn"
+                onClick={() => {
+                  setIsCodeModalOpen(false);
+                  setUnlockCode('');
+                  setUnlockError('');
+                }}
+                style={{ flex: 1, padding: '10px 0' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="modal-primary-btn"
+                onClick={handleVerifyUnlockCode}
+                style={{ flex: 1, padding: '10px 0' }}
+              >
+                Verify & Unlock
               </button>
             </div>
           </div>
