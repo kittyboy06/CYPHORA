@@ -260,12 +260,12 @@ Status: WORKSTATION OPERATIONAL
     parentId: 'documents',
     path: '/Documents/access.log',
     mimeType: 'text/plain',
-    size: 85,
-    content: `[04:12] BLUE
-[04:07] RED
-[04:19] GREEN
-[04:03] YELLOW
-[04:15] WHITE
+    size: 95,
+    content: `[04:12] #0000FF
+[04:07] #FF0000
+[04:19] #00FF00
+[04:03] #FFFF00
+[04:15] #FFFFFF
 `,
     updatedAt: new Date().toISOString()
   },

@@ -5,8 +5,8 @@
  * Rules:
  * 1. Task objectives mention bare filenames (e.g., message.txt) without filesystem directories.
  * 2. Task objectives mention generic tool categories (converter, inspector, optical scanner, comparison tool) without brand names.
- * 3. Hint 1 provides the exact virtual filesystem location(s) for the task's files.
- * 4. Hint 2 provides the complete, step-by-step procedural solution.
+ * 3. Hint 1 provides the file location.
+ * 4. Hint 2 provides the procedural guidance according to the specification table.
  * 5. Distinct reasoning patterns and answers across all 12 tasks to eliminate repetitiveness.
  */
 
@@ -35,8 +35,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['converter', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'The file message.txt is located at /Desktop/message.txt.',
-      '1. Open message.txt in Text Editor to view the numerical values: 72 73 68 69.\n2. Open the Universal Converter from the dock.\n3. Set Source to Decimal (or ASCII) and Target to Text.\n4. Enter "72 73 68 69" and convert to reveal "HIDE".\n5. Submit HIDE.'
+      'message.txt is located on the Desktop.',
+      'Open the file and identify the number sequence. Use a Universal Converter and convert the values from Decimal/ASCII → Text.'
     ]
   },
   {
@@ -63,8 +63,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['metadata-inspector', 'converter', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'The file evidence.jpg is located in /Pictures/evidence.jpg.',
-      '1. Open the Metadata Inspector from the dock.\n2. Select evidence.jpg from the file list.\n3. Find the "Author" property listed in the technical properties table to see "ARLO".\n4. Submit ARLO.'
+      'evidence.jpg is located in the Pictures folder.',
+      'Open the image with a Metadata Inspector and examine the available information fields. Look specifically for the field related to the creator/author.'
     ]
   },
   {
@@ -91,8 +91,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['qr-scanner', 'converter', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'The file poster.png is located at /Pictures/poster.png.',
-      '1. Open the QR / Barcode Scanner from the dock.\n2. Select poster.png from the image dropdown.\n3. Read the decoded payload displayed in the scan result: "SECTOR-7".\n4. Submit SECTOR-7.'
+      'poster.png is located in the Pictures folder.',
+      'Open the image using a QR/Barcode Scanner and scan the optical matrix to retrieve its encoded message.'
     ]
   },
   {
@@ -101,7 +101,7 @@ export const TASK_DEFINITIONS = [
     order: 4,
     title: 'TASK 04 — THE EARLIEST RECORD',
     story: 'Workstation access records are scrambled out of order. An initial trigger event initiated the recorded sequence.',
-    question: '1. Locate access.log.\n2. Inspect the chronological timestamps at the beginning of each line using a document inspector or text reader.\n3. Identify which entry occurred earliest and enter its associated color code below.',
+    question: '1. Locate access.log.\n2. Inspect the chronological timestamps at the beginning of each line using a document inspector or text reader.\n3. Identify the earliest entry and use the Universal Converter to decode its color code into a readable color name.\n4. Enter the decoded color name below.',
     difficulty: 'easy',
     requiredInput: {
       type: 'file',
@@ -111,16 +111,16 @@ export const TASK_DEFINITIONS = [
     },
     answer: {
       expected: 'YELLOW',
-      accepted: ['YELLOW'],
+      accepted: ['YELLOW', 'Yellow', 'yellow', '#FFFF00', 'FFFF00'],
       type: 'text',
       caseSensitive: false,
       trimWhitespace: true
     },
-    allowedApps: ['text-editor', 'file-manager'],
+    allowedApps: ['text-editor', 'converter', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'The file access.log is located at /Documents/access.log.',
-      '1. Open access.log in the Text Editor.\n2. Compare the bracketed timestamps at the start of each line ([04:12], [04:07], [04:19], [04:03], [04:15]).\n3. The earliest time is [04:03], which is paired with YELLOW.\n4. Submit YELLOW.'
+      'access.log is located in the Documents folder.',
+      'Open the log and compare all the timestamps to identify the earliest entry. Use the Universal Converter (Color Code → Text) to translate the color code into readable text.'
     ]
   },
   {
@@ -148,8 +148,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['file-comparator', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'Both files (message_old.txt and message_new.txt) are located in /Documents/.',
-      '1. Open the File Comparison Tool from the dock.\n2. Select message_old.txt as File A and message_new.txt as File B.\n3. Note the highlighted modified line 4 (KEY_VAL changed from 8492 to 9941).\n4. Submit 9941.'
+      'message_old.txt and message_new.txt are located in the Documents folder.',
+      'Open both files in a File Comparison Tool and compare them line by line. Locate the value that differs between the two versions.'
     ]
   },
   {
@@ -178,8 +178,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['text-editor', 'converter', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'The fragment files (fragment_01.txt, fragment_02.txt, fragment_03.txt) are located in /Documents/.',
-      '1. Open each fragment file in the Text Editor to inspect its timestamp:\n   - fragment_01.txt (09:10): Q1lQ\n   - fragment_02.txt (09:25): SE9S\n   - fragment_03.txt (09:40): QQ==\n2. Assemble them in chronological order: Q1lPUE9SQQ==\n3. Open Universal Converter, set Source to Base64 and Target to Text.\n4. Convert "Q1lPUE9SQQ==" to reveal "CYPHORA".\n5. Submit CYPHORA.'
+      'The three fragment files are located in the Documents folder.',
+      'Check the timestamps of all three fragments and arrange them from earliest to latest. Combine the fragments and decode the resulting string using Base64.'
     ]
   },
   {
@@ -206,8 +206,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['metadata-inspector', 'converter', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'The file archive_photo.png is located at /Pictures/archive_photo.png.',
-      '1. Open the Metadata Inspector from the dock.\n2. Select archive_photo.png from the file list.\n3. Look at the Description property: "82 69 83 67 85 69".\n4. Open Universal Converter, set Source to Decimal (or ASCII) and Target to Text.\n5. Convert "82 69 83 67 85 69" to reveal "RESCUE".\n6. Submit RESCUE.'
+      'archive_photo.png is located in the Pictures folder.',
+      'Open the image with a Metadata Inspector and examine its description/details. Convert the numerical character codes using Decimal/ASCII → Text.'
     ]
   },
   {
@@ -234,8 +234,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['file-manager', 'text-editor', 'terminal'],
     completionMode: 'answer_submission',
     hints: [
-      'The file clue.txt is concealed inside /Archive/.hidden/clue.txt.',
-      '1. Open the File Manager from the dock and navigate into the Archive directory.\n2. Click the "Show Hidden" button in the toolbar (or open Terminal and run "ls -a /Archive").\n3. Open the newly revealed .hidden directory and open clue.txt in Text Editor.\n4. Read the passcode value "7314".\n5. Submit 7314.'
+      'Look inside the Archive folder.',
+      'Open the Archive folder in File Manager, right-click and select "Show Hidden Files" to reveal concealed directories, then locate clue.txt.'
     ]
   },
   {
@@ -264,8 +264,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['qr-scanner', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'The files are located at /Pictures/map.png, /Documents/clues/index.txt, and /Documents/logs/activity.log.',
-      '1. Open QR / Barcode Scanner from the dock and select map.png to decode "CLUE-42".\n2. Open /Documents/clues/index.txt in Text Editor to see that CLUE-42 points to "activity.log".\n3. Open /Documents/logs/activity.log in Text Editor and find the entry "08:37 USER-A DOWNLOAD FILE=17".\n4. Submit 17.'
+      'The starting image is in Pictures; related files are in Documents.',
+      'Scan the image to obtain the first clue. Use that clue to locate the relevant entry in the index file, then follow its reference to the activity log and inspect the specified record.'
     ]
   },
   {
@@ -293,8 +293,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['file-comparator', 'converter', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'Both configuration files (alpha.txt and beta.txt) are located in /Documents/.',
-      '1. Open the File Comparison Tool from the dock.\n2. Compare alpha.txt (File A) with beta.txt (File B).\n3. Find the modified line 3 in beta.txt: NOTE=56 45 43 54 4F 52.\n4. Open Universal Converter, set Source to Hexadecimal and Target to Text.\n5. Convert "56 45 43 54 4F 52" to reveal "VECTOR".\n6. Submit VECTOR.'
+      'alpha.txt and beta.txt are located in the Documents folder.',
+      'Compare both configuration files and locate the modified line. Identify the hexadecimal sequence and convert it from Hexadecimal → Text.'
     ]
   },
   {
@@ -323,8 +323,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['text-editor', 'metadata-inspector', 'converter', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'The trail starts at /Documents/incident_note.txt, leads to /Archive/archive-17.txt, and finishes at /Pictures/device-9.jpg.',
-      '1. Open /Documents/incident_note.txt in Text Editor to see "REFERENCE: ARCHIVE-17".\n2. Open /Archive/archive-17.txt in Text Editor to see "NEXT: DEVICE-9".\n3. Open Metadata Inspector from the dock and select /Pictures/device-9.jpg.\n4. Read the Description property: "53 48 49 46 54".\n5. Open Universal Converter, set Source to Hexadecimal and Target to Text.\n6. Convert "53 48 49 46 54" to reveal "SHIFT".\n7. Submit SHIFT.'
+      'Start with incident_note.txt in the Documents folder.',
+      'Follow the reference path given in the note. Continue through the archive and device image, then inspect the image metadata and decode the character sequence using the appropriate conversion method.'
     ]
   },
   {
@@ -354,8 +354,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['file-manager', 'text-editor', 'metadata-inspector', 'converter', 'terminal'],
     completionMode: 'answer_submission',
     hints: [
-      'The evidence is located across /Documents/system.log, /Pictures/device.png, /Documents/Archive/VX-27.txt, and /Documents/Transfers/TR-904.txt.',
-      '1. Open /Documents/system.log in Text Editor to observe the timeline.\n2. Open Metadata Inspector from the dock and inspect /Pictures/device.png to find device ID "VX-27".\n3. Open /Documents/Archive/VX-27.txt in Text Editor to find "TRANSFER ID: TR-904".\n4. Open /Documents/Transfers/TR-904.txt in Text Editor to find payload "53 59 4D 50 4F".\n5. Open Universal Converter, set Source to Hexadecimal and Target to Text.\n6. Convert "53 59 4D 50 4F" to reveal "SYMPO".\n7. Submit SYMPO.'
+      'The evidence is spread across Documents, Pictures, Archive, and Transfers folders.',
+      'Start with the system record and follow each file/reference identifier to the next piece of evidence. Reach the final transfer file and decode its hexadecimal payload into text.'
     ]
   }
 ];
