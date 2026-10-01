@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
 import { SET_PRESENTATIONS } from '../../round1/taskContent.js';
-import { ROUND_1_SETS } from '../../round1/round1Engine.js';
+import { ROUND_1_SETS, getSubsystemStatuses } from '../../round1/round1Engine.js';
 
 export function Desktop() {
   const {
@@ -61,6 +61,7 @@ export function Desktop() {
   const activeTask = round1State?.tasks?.find(t => t.status === 'ACTIVE');
   const currentSetId = activeTask?.setId || (activeTask ? ROUND_1_SETS.find(s => s.tasks.includes(activeTask.id))?.id : null) || round1State?.activeSet || 'set1';
   const setPresentation = SET_PRESENTATIONS[currentSetId];
+  const subsystems = getSubsystemStatuses(round1State);
 
   const loadDesktopItems = () => {
     try {
@@ -232,7 +233,7 @@ export function Desktop() {
         ))}
       </div>
 
-      {/* Top-Right Desktop HUD Stack: Journey HUD + Synced Database Leaderboard */}
+      {/* Top-Right Desktop HUD Stack: Monolith Telemetry HUD + Synced Database Leaderboard */}
       <aside
         className="desktop-top-right-hud"
         aria-label="Expedition Progress and Leaderboard"
@@ -243,13 +244,50 @@ export function Desktop() {
         }}
       >
         <div className="desktop-journey-hud">
-          <span>JOURNEY</span>
-          <strong>{Math.round(round1State?.journeyProgress || 0)}%</strong>
-          {setPresentation?.label ? (
-            <small>{setPresentation.label} — {setPresentation.title}</small>
-          ) : (
-            <small>STAGE 1 — DISCOVERY</small>
-          )}
+          <div className="journey-top-row">
+            <span className="journey-target-title">TARGET: THE MONOLITH</span>
+            <strong className="journey-pct">{Math.round(round1State?.journeyProgress || 0)}%</strong>
+          </div>
+
+          {/* Live Monolith Optical Feed / Telemetry */}
+          <div className="monolith-telemetry-viewport" style={{ '--light-intensity': subsystems.lightIntensity }}>
+            <div className="monolith-viewport-sky">
+              <div className="monolith-spire-silhouette" />
+              <div className="monolith-beacon-glow" />
+              {subsystems.radio === 'ONLINE' && <div className="monolith-signal-waves" />}
+              {subsystems.navigation === 'ONLINE' && (
+                <div className="monolith-target-reticle">
+                  <div className="reticle-ring" />
+                  <div className="reticle-crosshair" />
+                </div>
+              )}
+            </div>
+            <div className="monolith-viewport-scanline" />
+            <div className="monolith-viewport-caption">
+              <span className="telemetry-tag">OPTICAL TELEMETRY</span>
+              <span className="telemetry-status">{subsystems.routeStatusText}</span>
+            </div>
+          </div>
+
+          <div className="journey-subsystems-mini">
+            <span className={`sub-pill ${subsystems.power === 'ONLINE' ? 'on' : 'crit'}`} title="Power Grid: Online after Set 1">
+              ⚡ PWR {subsystems.power}
+            </span>
+            <span className={`sub-pill ${subsystems.radio === 'ONLINE' ? 'on' : 'off'}`} title="Radio Transceiver: Online after Set 2">
+              📻 RAD {subsystems.radio}
+            </span>
+            <span className={`sub-pill ${subsystems.navigation === 'ONLINE' ? 'on' : 'off'}`} title="Navigation Radar: Online after Set 3">
+              🧭 NAV {subsystems.navigation}
+            </span>
+            <span className={`sub-pill ${subsystems.archive === 'UNLOCKED' ? 'on' : 'lock'}`} title="Expedition Archive: Unlocked after Set 4">
+              🗄️ ARC {subsystems.archive}
+            </span>
+          </div>
+
+          <div className="journey-route-badge">
+            <small>ROUTE: <strong>{subsystems.routeToLight}</strong></small>
+            <div className="journey-sub-note">{subsystems.stageDescription}</div>
+          </div>
         </div>
 
         <div className="desktop-leaderboard-widget">
