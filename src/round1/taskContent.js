@@ -373,8 +373,8 @@ export const TASK_PRESENTATIONS = TASK_DEFINITIONS.reduce((acc, task) => {
 }, {});
 
 export const SET_PRESENTATIONS = {
-  set1: { label: 'STAGE 1', title: 'DISCOVERY', message: 'Discover single-step evidence across binary files, metadata, QR codes, log timestamps, and document diffs.' },
-  set2: { label: 'STAGE 2', title: 'INVESTIGATION', message: 'Follow intermediate multi-step investigation chains and metadata references.' },
-  set3: { label: 'STAGE 2', title: 'INVESTIGATION', message: 'Uncover cross-file pointers and subtle document changes.' },
-  set4: { label: 'STAGE 3', title: 'RECONSTRUCTION', message: 'Reconstruct complex multi-app incident chains to unlock clearance.' }
+  set1: { label: 'SUBSYSTEM 1', title: 'POWER RESTORATION', message: 'Recover foundational files and binary records to restore primary power distribution.' },
+  set2: { label: 'SUBSYSTEM 2', title: 'RADIO TRANSCEIVER', message: 'Decode communications and frequency logs to reconnect long-range radio signals.' },
+  set3: { label: 'SUBSYSTEM 3', title: 'NAVIGATION TRIANGULATION', message: 'Triangulate coordinates, optical codes, and sector logs to calculate the route to the Monolith.' },
+  set4: { label: 'SUBSYSTEM 4', title: 'EXPEDITION ARCHIVE', message: 'Reconstruct chained incident records to unlock final clearance and open the path to the Light.' }
 };
