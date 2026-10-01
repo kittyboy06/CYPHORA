@@ -28,8 +28,13 @@ export default class GameScene extends Phaser.Scene {
   preload() {
     this.load.image('bg_forest', '/assets/bg_new.png');
     this.load.image('char_idle', '/assets/story/character_standing_v3.png');
-    this.load.image('char_run_1', '/assets/story/running_action_1_v2.png');
-    this.load.image('char_run_2', '/assets/story/running_action_2_v2.png');
+    this.load.image('char_run_1', '/assets/story/hero_run_1.png');
+    this.load.image('char_run_2', '/assets/story/hero_run_2.png');
+    this.load.image('char_run_3', '/assets/story/hero_run_3.png');
+    this.load.image('char_run_4', '/assets/story/hero_run_4.png');
+    this.load.image('char_run_5', '/assets/story/hero_run_5.png');
+    this.load.image('char_run_7', '/assets/story/hero_run_7.png');
+    this.load.image('char_run_8', '/assets/story/hero_run_8.png');
     this.load.image('char_jump_1', '/assets/story/jumping_getting_ready_v2.png');
     this.load.image('char_jump_2', '/assets/story/jumping_getting_ready_2_v2.png');
     this.load.image('char_fall_1', '/assets/story/landing_on_air_v2.png');
@@ -66,9 +71,14 @@ export default class GameScene extends Phaser.Scene {
         key: 'run',
         frames: [
           { key: 'char_run_1' },
-          { key: 'char_run_2' }
+          { key: 'char_run_2' },
+          { key: 'char_run_3' },
+          { key: 'char_run_4' },
+          { key: 'char_run_5' },
+          { key: 'char_run_7' },
+          { key: 'char_run_8' }
         ],
-        frameRate: 6,
+        frameRate: 12,
         repeat: -1
       });
     }
@@ -98,7 +108,7 @@ export default class GameScene extends Phaser.Scene {
     
     const h = this.scale.height;
     // Lower groundY to give more room for larger character/tiles
-    this.groundY = h * 0.70;
+    this.groundY = h * 0.72;
     this.startX = 150;
 
     this.drawBackground();
@@ -168,6 +178,10 @@ export default class GameScene extends Phaser.Scene {
     // Scale the texture up so it covers the height of the screen properly
     const scale = h / 724; 
     bg.setTileScale(scale, scale);
+
+    // Dim the background so bridges and character stand out
+    const dimOverlay = this.add.rectangle(w / 2, h / 2, w, h, 0x000000);
+    dimOverlay.setAlpha(0.3);
   }
 
   createPlatforms() {
@@ -178,109 +192,115 @@ export default class GameScene extends Phaser.Scene {
     graphics.generateTexture('fire_particle', 16, 16);
     graphics.destroy();
 
+    // Helper: is this tile type walkable (needs a bridge rendered)?
+    const isWalkable = (t: TileType) =>
+      t !== TileType.TRAP;
+
+    // ─── PASS 1: Render contiguous bridge segments for ALL walkable tiles ───
     let i = 0;
     while (i < this.levelData.length) {
       const tile = this.levelData.tiles[i];
-      const x = this.startX + i * TILE_W;
-      const y = this.groundY;
+      if (!isWalkable(tile)) { i++; continue; }
 
-      // Check for contiguous ground blocks to use the unified bridge assets
-      if (tile === TileType.GROUND) {
-        let runLength = 0;
-        while (i + runLength < this.levelData.length && this.levelData.tiles[i + runLength] === TileType.GROUND) {
-          runLength++;
+      // Measure contiguous walkable run
+      let runLength = 0;
+      while (i + runLength < this.levelData.length && isWalkable(this.levelData.tiles[i + runLength])) {
+        runLength++;
+      }
+
+      // Render bridge chunks using the greedy compositor
+      let tilesRemaining = runLength;
+      let currentX = this.startX + i * TILE_W;
+      while (tilesRemaining > 0) {
+        let chunk = Math.min(tilesRemaining, 6);
+        if (tilesRemaining > 6 && (tilesRemaining - chunk) === 1) {
+          chunk -= 1;
         }
-        
-        let tilesRemaining = runLength;
-        let currentX = x;
-        while (tilesRemaining > 0) {
-          let chunk = Math.min(tilesRemaining, 6);
-          // Prevent leaving exactly 1 tile if we have options
-          if (tilesRemaining > 6 && (tilesRemaining - chunk) === 1) {
-             chunk -= 1; // leaves 2 instead of 1
-          }
-          
-          if (chunk === 1) {
-             // We only have a 1-block gap to fill, but we only have bridge_2 minimum.
-             const img = this.add.image(currentX + TILE_W / 2, y, 'bridge_2').setOrigin(0.5, 0);
-             img.displayWidth = TILE_W;
-             img.scaleY = img.scaleX;
-             tilesRemaining -= 1;
-             currentX += TILE_W;
-          } else {
-             const blockCenterX = currentX + (chunk * TILE_W) / 2;
-             const img = this.add.image(blockCenterX, y, `bridge_${chunk}`).setOrigin(0.5, 0);
-             img.displayWidth = chunk * TILE_W;
-             img.scaleY = img.scaleX;
-             tilesRemaining -= chunk;
-             currentX += chunk * TILE_W;
-          }
+
+        if (chunk === 1) {
+          const img = this.add.image(currentX + TILE_W / 2, this.groundY, 'bridge_2').setOrigin(0.5, 0);
+          img.displayWidth = TILE_W;
+          img.scaleY = img.scaleX;
+          tilesRemaining -= 1;
+          currentX += TILE_W;
+        } else {
+          const blockCenterX = currentX + (chunk * TILE_W) / 2;
+          const img = this.add.image(blockCenterX, this.groundY, `bridge_${chunk}`).setOrigin(0.5, 0);
+          img.displayWidth = chunk * TILE_W;
+          img.scaleY = img.scaleX;
+          tilesRemaining -= chunk;
+          currentX += chunk * TILE_W;
         }
-        i += runLength - 1; // -1 because i++ is at the end of the main loop
-      } else if (tile === TileType.GOAL) {
-        const block = this.add.image(x + TILE_W / 2, y, 'tile_ground').setOrigin(0.5, 0).setTint(0xdfb125);
-        block.displayWidth = TILE_W; block.scaleY = block.scaleX;
-        const glow = this.add.circle(x + TILE_W / 2, y + TILE_H / 2, TILE_W * 0.6, 0xdfb125);
-        glow.setAlpha(0.15);
-      } else if (tile === TileType.TRAP) {
-        // Render nothing for TRAP since we don't have spikes anymore. It's a bottomless pit!
-        // Maybe some dark fog or just leave it empty.
+      }
+
+      i += runLength;
+    }
+
+    // ─── PASS 2: Add overlays, markers, and effects for special tiles ───
+    for (let j = 0; j < this.levelData.length; j++) {
+      const tile = this.levelData.tiles[j];
+      const x = this.startX + j * TILE_W;
+      const y = this.groundY;
+      const cx = x + TILE_W / 2;
+
+      if (tile === TileType.GOAL) {
+        // Golden glow on the goal tile
+        const glow = this.add.circle(cx, y + 10, TILE_W * 0.4, 0xdfb125);
+        glow.setAlpha(0.25);
+        // Flag / diamond marker
+        const diamond = this.add.polygon(cx, y - 15, [0, -14, 14, 0, 0, 14, -14, 0], 0xffd700);
+        diamond.setStrokeStyle(2, 0xffaa00);
       } else if (tile === TileType.COLOR_RED) {
-        const block = this.add.image(x + TILE_W / 2, y, 'tile_ground').setOrigin(0.5, 0).setTint(0xff4444);
-        block.displayWidth = TILE_W; block.scaleY = block.scaleX;
-        // Blood/Fire visual
-        this.add.circle(x + TILE_W / 2, y + TILE_H / 2, 10, 0xff0000).setAlpha(0.5);
+        // Red glow strip on the bridge surface
+        const strip = this.add.rectangle(cx, y + 8, TILE_W - 8, 12, 0xff2222);
+        strip.setAlpha(0.55);
+        // Small flame icon
+        this.add.circle(cx, y - 8, 7, 0xff4400).setAlpha(0.7);
       } else if (tile === TileType.COLOR_BLUE) {
-        const block = this.add.image(x + TILE_W / 2, y, 'tile_ground').setOrigin(0.5, 0).setTint(0x4444ff);
-        block.displayWidth = TILE_W; block.scaleY = block.scaleX;
-        // Sky/Water visual
-        this.add.circle(x + TILE_W / 2, y + TILE_H / 2, 10, 0x0000ff).setAlpha(0.5);
+        // Blue glow strip
+        const strip = this.add.rectangle(cx, y + 8, TILE_W - 8, 12, 0x2266ff);
+        strip.setAlpha(0.55);
+        // Water droplet icon
+        this.add.circle(cx, y - 8, 7, 0x2288ff).setAlpha(0.7);
       } else if (tile === TileType.COLOR_GOLD) {
-        const block = this.add.image(x + TILE_W / 2, y, 'tile_ground').setOrigin(0.5, 0).setTint(0xffcc00);
-        block.displayWidth = TILE_W; block.scaleY = block.scaleX;
-        // Sun visual
-        this.add.circle(x + TILE_W / 2, y + TILE_H / 2, 10, 0xffaa00).setAlpha(0.5);
+        // Gold glow strip
+        const strip = this.add.rectangle(cx, y + 8, TILE_W - 8, 12, 0xffcc00);
+        strip.setAlpha(0.55);
+        // Sun icon
+        this.add.circle(cx, y - 8, 7, 0xffaa00).setAlpha(0.7);
       } else if (tile === TileType.FIRE || tile === TileType.TOTEM_FIRE) {
-        const block = this.add.image(x + TILE_W / 2, y, 'tile_ground').setOrigin(0.5, 0).setTint(0x333333); // Burnt ground
-        block.displayWidth = TILE_W; block.scaleY = block.scaleX;
-        
-        // Realistic Fire Emitter
-        this.add.particles(x + TILE_W / 2, y, 'fire_particle', {
-            color: [ 0xffff00, 0xff4500, 0x220000 ],
-            colorEase: 'quad.out',
-            lifespan: 600,
-            angle: { min: 250, max: 290 },
-            speed: { min: 80, max: 140 },
-            scale: { start: 2.5, end: 0 },
-            blendMode: 'ADD',
-            frequency: 40
+        // Realistic fire emitter on the bridge
+        this.add.particles(cx, y, 'fire_particle', {
+          color: [0xffff00, 0xff4500, 0x220000],
+          colorEase: 'quad.out',
+          lifespan: 600,
+          angle: { min: 250, max: 290 },
+          speed: { min: 80, max: 140 },
+          scale: { start: 2.5, end: 0 },
+          blendMode: 'ADD',
+          frequency: 40
         });
 
         if (tile === TileType.TOTEM_FIRE) {
-          const diamond = this.add.polygon(x + TILE_W / 2, y - 40, [0, -12, 12, 0, 0, 12, -12, 0], 0xffd700);
+          const diamond = this.add.polygon(cx, y - 40, [0, -12, 12, 0, 0, 12, -12, 0], 0xffd700);
           diamond.setStrokeStyle(2, 0xffaa00);
-          this.add.circle(x + TILE_W / 2, y - 40, 18, 0xffd700).setAlpha(0.15);
+          this.add.circle(cx, y - 40, 18, 0xffd700).setAlpha(0.15);
         }
       } else if (tile === TileType.GOBLIN || tile === TileType.TOTEM_GOBLIN) {
-        const block = this.add.image(x + TILE_W / 2, y, 'tile_ground').setOrigin(0.5, 0);
-        block.displayWidth = TILE_W; block.scaleY = block.scaleX;
         // Goblin body
-        this.add.rectangle(x + TILE_W / 2, y - 10, 20, 20, 0x228b22);
-        this.add.circle(x + TILE_W / 2 - 4, y - 14, 2, 0xff0000);
-        this.add.circle(x + TILE_W / 2 + 4, y - 14, 2, 0xff0000);
+        this.add.rectangle(cx, y - 10, 20, 20, 0x228b22);
+        this.add.circle(cx - 4, y - 14, 2, 0xff0000);
+        this.add.circle(cx + 4, y - 14, 2, 0xff0000);
         if (tile === TileType.TOTEM_GOBLIN) {
-          const diamond = this.add.polygon(x + TILE_W / 2, y - 40, [0, -12, 12, 0, 0, 12, -12, 0], 0xffd700);
+          const diamond = this.add.polygon(cx, y - 40, [0, -12, 12, 0, 0, 12, -12, 0], 0xffd700);
           diamond.setStrokeStyle(2, 0xffaa00);
-          this.add.circle(x + TILE_W / 2, y - 40, 18, 0xffd700).setAlpha(0.15);
+          this.add.circle(cx, y - 40, 18, 0xffd700).setAlpha(0.15);
         }
       } else if (tile === TileType.TOTEM_FINAL) {
-        const block = this.add.image(x + TILE_W / 2, y, 'tile_ground').setOrigin(0.5, 0).setTint(0xaaaaaa);
-        block.displayWidth = TILE_W; block.scaleY = block.scaleX;
-        const diamond = this.add.polygon(x + TILE_W / 2, y - 25, [0, -20, 20, 0, 0, 20, -20, 0], 0xffd700);
+        const diamond = this.add.polygon(cx, y - 25, [0, -20, 20, 0, 0, 20, -20, 0], 0xffd700);
         diamond.setStrokeStyle(2, 0xffaa00);
-        this.add.circle(x + TILE_W / 2, y - 25, 30, 0xffd700).setAlpha(0.1);
+        this.add.circle(cx, y - 25, 30, 0xffd700).setAlpha(0.1);
       }
-      i++;
     }
   }
 
