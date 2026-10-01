@@ -750,6 +750,33 @@ textarea:focus {
   color: #c9a653;
 }
 
+/* ==========================================
+   TARGET REFERENCE HEADER
+   ========================================== */
+
+.slot-indicator-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.slot-super-badge {
+  font-family: 'Cinzel', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e0d8c3;
+  letter-spacing: 1px;
+}
+
+.slot-super-desc {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.9rem;
+  color: #888;
+  padding-left: 0.8rem;
+  border-left: 1px solid rgba(201, 166, 83, 0.4);
+}
+
 .hud-time-digits {
   color: #ff6b6b;
   font-family: monospace;

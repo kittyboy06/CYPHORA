@@ -383,7 +383,7 @@ body {
 @media (min-width: 992px) {
   .round2-grid-layout {
     grid-template-columns: 1.05fr 1fr;
-    align-items: start;
+    align-items: flex-start;
   }
 }
 
@@ -397,18 +397,22 @@ body {
 .submission-col {
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
+  align-self: start;
 }
 
 .submission-col form {
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
+  justify-content: flex-start;
+  gap: 1.25rem;
   width: 100%;
 }
 
 .phase-2-container {
   display: flex;
   flex-direction: column;
+  justify-content: flex-start;
   gap: 1.35rem;
 }
 
