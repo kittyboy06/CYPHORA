@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { level1 } from '../levels/level1';
 import { Command, TileType, LevelDefinition } from '../types/game';
 
-const TILE_W = 180;
+const TILE_W = 140;
 const TILE_H = 117;
 
 export default class GameScene extends Phaser.Scene {
@@ -27,24 +27,25 @@ export default class GameScene extends Phaser.Scene {
 
   preload() {
     this.load.image('bg_forest', '/assets/bg_new.png');
-    this.load.image('char_idle', '/assets/story/running_action_1.png');
-    this.load.image('char_run_1', '/assets/story/running_action_1.png');
-    this.load.image('char_run_2', '/assets/story/running_action_2.png');
-    this.load.image('char_jump_1', '/assets/story/jumping_getting_ready.png');
-    this.load.image('char_jump_2', '/assets/story/jumping_getting_ready_2.png');
-    this.load.image('char_fall_1', '/assets/story/landing_on_air.png');
-    this.load.image('char_fall_2', '/assets/story/landing_impact.png');
-    this.load.image('char_fall_3', '/assets/story/recovery_from_landing_impact.png');
+    this.load.image('char_idle', '/assets/story/character_standing_v3.png');
+    this.load.image('char_run_1', '/assets/story/running_action_1_v2.png');
+    this.load.image('char_run_2', '/assets/story/running_action_2_v2.png');
+    this.load.image('char_jump_1', '/assets/story/jumping_getting_ready_v2.png');
+    this.load.image('char_jump_2', '/assets/story/jumping_getting_ready_2_v2.png');
+    this.load.image('char_fall_1', '/assets/story/landing_on_air_v2.png');
+    this.load.image('char_fall_2', '/assets/story/landing_impact_v2.png');
+    this.load.image('char_fall_3', '/assets/story/recovery_from_landing_impact_v2.png');
     
     // New unified bridge chunks
-    this.load.image('bridge_2', '/assets/2_block_bridge.png');
-    this.load.image('bridge_3', '/assets/3_block_bridge.png');
-    this.load.image('bridge_4', '/assets/4_block_bridge.png');
-    this.load.image('bridge_5', '/assets/5_block_bridge.png');
+    this.load.image('bridge_2', '/assets/2_block_bridge_v2.png');
+    this.load.image('bridge_3', '/assets/3_block_bridge_v2.png');
+    this.load.image('bridge_4', '/assets/4_block_bridge_v2.png');
+    this.load.image('bridge_5', '/assets/5_block_bridge_v2.png');
+    this.load.image('bridge_6', '/assets/6_block_bridge_v2.png');
 
-    this.load.image('tile_ground', '/assets/2_block_bridge.png'); // Fallback/single
-    this.load.image('tile_spikes', '/assets/2_block_bridge.png'); // Fallback
-    this.load.image('beast', '/assets/beast.png');
+    this.load.image('tile_ground', '/assets/2_block_bridge_v2.png'); // Fallback/single
+    this.load.image('tile_spikes', '/assets/2_block_bridge_v2.png'); // Fallback
+    this.load.image('beast', '/assets/beast_v2.png');
   }
 
   loadLevel(levelDef: LevelDefinition) {
@@ -118,7 +119,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Use the beast image (flipped if it naturally faces right, assuming we want it facing left towards the player)
     const body = this.add.image(0, -70, 'beast').setOrigin(0.5, 1);
-    body.setDisplaySize(240, 200); // Scale appropriately
+    body.setDisplaySize(180, 150); // Scale appropriately
     body.setFlipX(true); // Assuming the original art faces right
 
     // Glowing shield
@@ -193,54 +194,55 @@ export default class GameScene extends Phaser.Scene {
         let tilesRemaining = runLength;
         let currentX = x;
         while (tilesRemaining > 0) {
-          let chunk = Math.min(tilesRemaining, 5);
+          let chunk = Math.min(tilesRemaining, 6);
           // Prevent leaving exactly 1 tile if we have options
-          if (tilesRemaining > 5 && (tilesRemaining - chunk) === 1) {
-             chunk = 4; // leaves 2 instead of 1
+          if (tilesRemaining > 6 && (tilesRemaining - chunk) === 1) {
+             chunk -= 1; // leaves 2 instead of 1
           }
           
           if (chunk === 1) {
              // We only have a 1-block gap to fill, but we only have bridge_2 minimum.
-             // We'll just squish a bridge_2 into 1 block.
-             this.add.image(currentX + TILE_W / 2, y + 2, 'bridge_2')
-                 .setDisplaySize(TILE_W, TILE_W * 0.56).setOrigin(0.5, 0);
+             const img = this.add.image(currentX + TILE_W / 2, y, 'bridge_2').setOrigin(0.5, 0);
+             img.displayWidth = TILE_W;
+             img.scaleY = img.scaleX;
              tilesRemaining -= 1;
              currentX += TILE_W;
           } else {
              const blockCenterX = currentX + (chunk * TILE_W) / 2;
-             this.add.image(blockCenterX, y + 2, `bridge_${chunk}`)
-                 .setDisplaySize(chunk * TILE_W, (chunk * TILE_W) * 0.56).setOrigin(0.5, 0);
+             const img = this.add.image(blockCenterX, y, `bridge_${chunk}`).setOrigin(0.5, 0);
+             img.displayWidth = chunk * TILE_W;
+             img.scaleY = img.scaleX;
              tilesRemaining -= chunk;
              currentX += chunk * TILE_W;
           }
         }
         i += runLength - 1; // -1 because i++ is at the end of the main loop
       } else if (tile === TileType.GOAL) {
-        const block = this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, (TILE_W + 2) * 0.56).setOrigin(0.5, 0).setTint(0xdfb125);
+        const block = this.add.image(x + TILE_W / 2, y, 'tile_ground').setOrigin(0.5, 0).setTint(0xdfb125);
+        block.displayWidth = TILE_W; block.scaleY = block.scaleX;
         const glow = this.add.circle(x + TILE_W / 2, y + TILE_H / 2, TILE_W * 0.6, 0xdfb125);
         glow.setAlpha(0.15);
       } else if (tile === TileType.TRAP) {
         // Render nothing for TRAP since we don't have spikes anymore. It's a bottomless pit!
         // Maybe some dark fog or just leave it empty.
       } else if (tile === TileType.COLOR_RED) {
-        this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, (TILE_W + 2) * 0.56).setOrigin(0.5, 0).setTint(0xff4444);
+        const block = this.add.image(x + TILE_W / 2, y, 'tile_ground').setOrigin(0.5, 0).setTint(0xff4444);
+        block.displayWidth = TILE_W; block.scaleY = block.scaleX;
         // Blood/Fire visual
         this.add.circle(x + TILE_W / 2, y + TILE_H / 2, 10, 0xff0000).setAlpha(0.5);
       } else if (tile === TileType.COLOR_BLUE) {
-        this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, (TILE_W + 2) * 0.56).setOrigin(0.5, 0).setTint(0x4444ff);
+        const block = this.add.image(x + TILE_W / 2, y, 'tile_ground').setOrigin(0.5, 0).setTint(0x4444ff);
+        block.displayWidth = TILE_W; block.scaleY = block.scaleX;
         // Sky/Water visual
         this.add.circle(x + TILE_W / 2, y + TILE_H / 2, 10, 0x0000ff).setAlpha(0.5);
       } else if (tile === TileType.COLOR_GOLD) {
-        this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, (TILE_W + 2) * 0.56).setOrigin(0.5, 0).setTint(0xffcc00);
+        const block = this.add.image(x + TILE_W / 2, y, 'tile_ground').setOrigin(0.5, 0).setTint(0xffcc00);
+        block.displayWidth = TILE_W; block.scaleY = block.scaleX;
         // Sun visual
         this.add.circle(x + TILE_W / 2, y + TILE_H / 2, 10, 0xffaa00).setAlpha(0.5);
       } else if (tile === TileType.FIRE || tile === TileType.TOTEM_FIRE) {
-        this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, (TILE_W + 2) * 0.56).setOrigin(0.5, 0).setTint(0x333333); // Burnt ground
+        const block = this.add.image(x + TILE_W / 2, y, 'tile_ground').setOrigin(0.5, 0).setTint(0x333333); // Burnt ground
+        block.displayWidth = TILE_W; block.scaleY = block.scaleX;
         
         // Realistic Fire Emitter
         this.add.particles(x + TILE_W / 2, y, 'fire_particle', {
@@ -260,8 +262,8 @@ export default class GameScene extends Phaser.Scene {
           this.add.circle(x + TILE_W / 2, y - 40, 18, 0xffd700).setAlpha(0.15);
         }
       } else if (tile === TileType.GOBLIN || tile === TileType.TOTEM_GOBLIN) {
-        this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, (TILE_W + 2) * 0.56).setOrigin(0.5, 0);
+        const block = this.add.image(x + TILE_W / 2, y, 'tile_ground').setOrigin(0.5, 0);
+        block.displayWidth = TILE_W; block.scaleY = block.scaleX;
         // Goblin body
         this.add.rectangle(x + TILE_W / 2, y - 10, 20, 20, 0x228b22);
         this.add.circle(x + TILE_W / 2 - 4, y - 14, 2, 0xff0000);
@@ -272,8 +274,8 @@ export default class GameScene extends Phaser.Scene {
           this.add.circle(x + TILE_W / 2, y - 40, 18, 0xffd700).setAlpha(0.15);
         }
       } else if (tile === TileType.TOTEM_FINAL) {
-        this.add.image(x + TILE_W / 2, y + 2, 'tile_ground')
-            .setDisplaySize(TILE_W + 2, (TILE_W + 2) * 0.56).setOrigin(0.5, 0).setTint(0xaaaaaa);
+        const block = this.add.image(x + TILE_W / 2, y, 'tile_ground').setOrigin(0.5, 0).setTint(0xaaaaaa);
+        block.displayWidth = TILE_W; block.scaleY = block.scaleX;
         const diamond = this.add.polygon(x + TILE_W / 2, y - 25, [0, -20, 20, 0, 0, 20, -20, 0], 0xffd700);
         diamond.setStrokeStyle(2, 0xffaa00);
         this.add.circle(x + TILE_W / 2, y - 25, 30, 0xffd700).setAlpha(0.1);
@@ -285,13 +287,13 @@ export default class GameScene extends Phaser.Scene {
   spawnPlayer() {
     this.pIndex = this.levelData.playerStartX;
     this.player = this.add.sprite(0, 0, 'char_idle').setOrigin(0.5, 1);
-    this.player.setDisplaySize(200, 190); // Scale the new sprite appropriately
+    this.player.setScale(1.0); // Use fixed scale so different animations keep physical proportions
     this.updatePlayerVisuals(false);
   }
 
   updatePlayerVisuals(animate = true, jump = false): Promise<void> {
     const targetX = this.startX + this.pIndex * TILE_W + TILE_W / 2;
-    const targetY = this.groundY + 10; // slightly down so feet touch ground tile
+    const targetY = this.groundY + 5; // offset slightly so feet rest on the visual stone
 
     
     return new Promise<void>((resolve) => {
@@ -301,14 +303,14 @@ export default class GameScene extends Phaser.Scene {
           this.tweens.add({
             targets: this.player,
             x: targetX,
-            duration: 500,
+            duration: 1000,
             ease: 'Linear'
           });
           this.tweens.add({
             targets: this.player,
-            y: targetY - 240, // Increased jump height for larger character
+            y: targetY - 180, // Jump height relative to new smaller scale
             yoyo: true,
-            duration: 250,
+            duration: 500,
             ease: 'Sine.easeOut',
             onComplete: () => {
               this.player.y = targetY;
@@ -322,7 +324,7 @@ this.player.setTexture('char_idle');
           this.tweens.add({
             targets: this.player,
             x: targetX,
-            duration: 350,
+            duration: 1000,
             ease: 'Linear',
             onComplete: () => {
               this.player.stop();
@@ -336,8 +338,8 @@ this.player.setTexture('char_idle');
         this.cameras.main.pan(
           Math.max(targetX, this.scale.width / 2),
           this.scale.height / 2,
-          350,
-          'Power2'
+          1000,
+          'Linear'
         );
       } else {
         this.player.setPosition(targetX, targetY);
@@ -578,7 +580,7 @@ this.player.setTexture('char_idle');
       this.tweens.add({
         targets: this.player,
         x: attackX,
-        duration: 150,
+        duration: 300,
         yoyo: true,
         ease: 'Power2',
         onComplete: () => resolve()
@@ -614,7 +616,7 @@ this.player.setTexture('char_idle');
             this.tweens.add({
               targets: this.beastVisual,
               x: bx - 40,
-              duration: 150,
+              duration: 300,
               yoyo: true,
               onComplete: () => resolve()
             });
@@ -632,8 +634,8 @@ this.player.setTexture('char_idle');
   }
 
   private async handleDefend(): Promise<string> {
-    const shield = this.add.circle(this.player.x, this.player.y - 20, 35, 0x55aaff, 0.5);
-    shield.setStrokeStyle(2, 0xaaddff);
+    const shield = this.add.circle(this.player.x, this.player.y - 70, 70, 0x55aaff, 0.5);
+    shield.setStrokeStyle(4, 0xaaddff);
     
     await new Promise(r => setTimeout(r, 300));
     shield.destroy();
@@ -648,9 +650,9 @@ this.player.setTexture('char_idle');
     this.player.play('fall');
     this.tweens.add({
       targets: this.player,
-      y: this.player.y + 150,
+      y: this.player.y + 400,
       alpha: 0,
-      duration: 400,
+      duration: 600,
       ease: 'Power2'
     });
     await new Promise(r => setTimeout(r, 500));
@@ -661,9 +663,9 @@ this.player.setTexture('char_idle');
     return new Promise((resolve) => {
       this.tweens.add({
         targets: this.player,
-        y: this.player.y - 240, // Increased for larger character scale
+        y: this.player.y - 180, // Jump height relative to new smaller scale
         yoyo: true,
-        duration: 200,
+        duration: 500,
         ease: 'Sine.easeOut',
         onComplete: () => {
           this.player.stop();
@@ -746,7 +748,7 @@ this.player.setTexture('char_idle');
     } else if (cmd.type === 'ACTIVATE_TILE') {
       if (currentTile === TileType.COLOR_GOLD) {
         // Correct! Activate animation
-        const glow = this.add.circle(this.player.x, this.player.y - 50, 60, 0xffd700, 0.6);
+        const glow = this.add.circle(this.player.x, this.player.y - 70, 70, 0xffd700, 0.6);
         this.tweens.add({
           targets: glow, alpha: 0, scale: 2, duration: 400,
           onComplete: () => glow.destroy()
