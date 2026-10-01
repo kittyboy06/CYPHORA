@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Compass,
   ArrowLeft,
@@ -30,6 +30,181 @@ import './Round2Page.css';
 const ROUND_2_DURATION_SECONDS = 15 * 60; // 15 minutes = 900 seconds
 const BASE_POINTS = 400;
 const MAX_SPEED_BONUS = 600;
+
+// --- Grand Dust Burst Effect (ancient door reveal, one-shot ~3s) ---
+const DustParticles = ({ count = 400 }) => {
+  const canvasRef = useRef(null);
+  const animRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const startTime = performance.now();
+    const DURATION = 3000; // 3 seconds for a grander feel
+
+    // Three layers of dust for depth
+    const particles = Array.from({ length: count }, (_, i) => {
+      // Layer 1 (0-30%): Heavy dust clumps — big, slow, bright
+      // Layer 2 (30-70%): Medium motes — standard size, moderate speed
+      // Layer 3 (70-100%): Tiny sparkle dust — small, fast, flickery
+      const layer = i < count * 0.3 ? 'heavy' : i < count * 0.7 ? 'medium' : 'sparkle';
+
+      const baseSize = layer === 'heavy' ? Math.random() * 4 + 2
+                     : layer === 'medium' ? Math.random() * 2.5 + 0.8
+                     : Math.random() * 1.2 + 0.3;
+
+      const baseSpeed = layer === 'heavy' ? Math.random() * 0.8 + 0.2
+                      : layer === 'medium' ? Math.random() * 1.5 + 0.5
+                      : Math.random() * 2.5 + 1;
+
+      const baseOpacity = layer === 'heavy' ? Math.random() * 0.3 + 0.5
+                        : layer === 'medium' ? Math.random() * 0.4 + 0.3
+                        : Math.random() * 0.5 + 0.2;
+
+      return {
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 2,
+        vy: baseSpeed + Math.random() * 0.5,
+        size: baseSize,
+        opacity: baseOpacity,
+        hue: 30 + Math.random() * 20,            // warm amber-gold range
+        sat: layer === 'sparkle' ? 50 + Math.random() * 30 : 25 + Math.random() * 35,
+        light: layer === 'sparkle' ? 70 + Math.random() * 20 : 50 + Math.random() * 30,
+        drag: 0.98 + Math.random() * 0.015,
+        gravity: layer === 'heavy' ? Math.random() * 0.06 + 0.02
+               : Math.random() * 0.03 + 0.005,
+        wobbleFreq: Math.random() * 0.01 + 0.002,
+        wobbleAmp: layer === 'heavy' ? Math.random() * 1.5 + 0.5
+                 : Math.random() * 0.8 + 0.3,
+        wobblePhase: Math.random() * Math.PI * 2,
+        layer,
+        trail: layer !== 'sparkle' ? Math.random() * 0.3 + 0.1 : 0, // motion blur for big/medium
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.05,
+      };
+    });
+
+    const animate = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / DURATION, 1);
+
+      // Initial bright flash for first 200ms, then sustained, then fade
+      let globalAlpha;
+      if (progress < 0.07) {
+        // Flash-in: ramp up fast
+        globalAlpha = progress / 0.07;
+      } else if (progress < 0.35) {
+        globalAlpha = 1;
+      } else {
+        globalAlpha = 1 - ((progress - 0.35) / 0.65);
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (globalAlpha <= 0) {
+        canvas.style.display = 'none';
+        return;
+      }
+
+      // Atmospheric haze during first half — golden fog wash
+      if (progress < 0.5) {
+        const hazeAlpha = (progress < 0.1 ? progress / 0.1 : 1 - ((progress - 0.1) / 0.4)) * 0.06;
+        ctx.save();
+        ctx.globalAlpha = hazeAlpha * globalAlpha;
+        const gradient = ctx.createRadialGradient(
+          canvas.width / 2, canvas.height / 2, 0,
+          canvas.width / 2, canvas.height / 2, canvas.width * 0.6
+        );
+        gradient.addColorStop(0, 'hsla(40, 60%, 50%, 1)');
+        gradient.addColorStop(1, 'hsla(40, 60%, 50%, 0)');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+
+      particles.forEach(p => {
+        // Physics
+        p.vx *= p.drag;
+        p.vy *= p.drag;
+        p.vy += p.gravity;
+        p.rotation += p.rotSpeed;
+        const wobble = Math.sin(now * p.wobbleFreq + p.wobblePhase) * p.wobbleAmp;
+        p.x += p.vx + wobble;
+        p.y += p.vy;
+
+        const alpha = p.opacity * globalAlpha;
+        if (alpha <= 0.005) return;
+
+        ctx.save();
+
+        // Motion trail for heavy/medium particles
+        if (p.trail > 0 && alpha > 0.05) {
+          ctx.globalAlpha = alpha * p.trail * 0.4;
+          ctx.beginPath();
+          ctx.moveTo(p.x - p.vx * 3, p.y - p.vy * 3);
+          ctx.lineTo(p.x, p.y);
+          ctx.strokeStyle = `hsla(${p.hue}, ${p.sat}%, ${p.light}%, 1)`;
+          ctx.lineWidth = p.size * 0.6;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        }
+
+        // Outer glow
+        ctx.globalAlpha = alpha * 0.25;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * (p.layer === 'heavy' ? 5 : 3.5), 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue}, ${p.sat}%, ${p.light}%, 1)`;
+        ctx.fill();
+
+        // Core particle
+        ctx.globalAlpha = alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${p.hue}, ${p.sat}%, ${Math.min(p.light + 15, 95)}%, 1)`;
+        ctx.fill();
+
+        // Hot center for sparkle particles
+        if (p.layer === 'sparkle' && alpha > 0.15) {
+          ctx.globalAlpha = alpha * 0.8;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
+          ctx.fillStyle = 'hsla(45, 100%, 90%, 1)';
+          ctx.fill();
+        }
+
+        ctx.restore();
+      });
+
+      animRef.current = requestAnimationFrame(animate);
+    };
+
+    animRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
+  }, [count]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex: 10000,
+      }}
+    />
+  );
+};
 
 // --- Prologue Component ---
 const Prologue = ({ explorerId = "SFGHIOP", onStart, onReturnToHub }) => {
@@ -840,16 +1015,6 @@ export function Round2Page({ onReturnToHub }) {
       {/* Top Navigation Bar */}
       <header className="round2-navbar" role="banner">
         <div className="navbar-left">
-          <button
-            type="button"
-            className="round2-back-btn"
-            onClick={handleBack}
-            aria-label="Return to Expedition Hub"
-          >
-            <ArrowLeft size={16} />
-            <span>Expedition Hub</span>
-          </button>
-          
           <div className="navbar-title-wrap">
             <div className="stage-tag">
               <Compass size={14} />
@@ -900,14 +1065,25 @@ export function Round2Page({ onReturnToHub }) {
             {round2Phase === 1 ? 'Step 1: Image 1' : 'Step 2: Image 2'}
           </div>
 
-          {/* Leaderboard Drawer Trigger */}
           <button
             type="button"
             className="leaderboard-nav-btn"
             onClick={() => setIsLeaderboardOpen(true)}
             title="View Live Standings"
+            style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#d1c7b7',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.8rem'
+            }}
           >
-            <Trophy size={16} className="gold-text" />
+            <Trophy size={14} className="gold-text" />
             <span>Standings</span>
           </button>
 
@@ -1086,6 +1262,7 @@ export function Round2Page({ onReturnToHub }) {
           aria-modal="true"
           aria-labelledby="image1-modal-title"
         >
+          <DustParticles count={60} />
           <div className="image1-celebration-card">
             <div className="celebration-icon-wrap">
               <Sparkles size={42} className="gold-text" />
@@ -1123,6 +1300,7 @@ export function Round2Page({ onReturnToHub }) {
           role="dialog"
           aria-modal="true"
         >
+          <DustParticles count={60} />
           <div className="image1-celebration-card">
             <div className="celebration-icon-wrap">
               <Sparkles size={42} className="gold-text" />
