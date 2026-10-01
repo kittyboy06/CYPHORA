@@ -462,6 +462,19 @@ export function Round2Page({ onReturnToHub }) {
   };
 
   const handleBack = () => {
+    // Clear all Round 2 session state so a new team starts fresh
+    const keysToRemove = [
+      'cyphora_round2_started',
+      'cyphora_round2_phase',
+      'cyphora_round2_score',
+      'cyphora_round2_start_time',
+      'cyphora_round2_prompt',
+      'cyphora_round2_image1_cached_url',
+      'cyphora_round2_image1_data',
+      'cyphora_round2_speed'
+    ];
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+
     if (onReturnToHub) {
       onReturnToHub();
     } else {
@@ -981,26 +994,66 @@ export function Round2Page({ onReturnToHub }) {
         )}
 
         {/* ================= 2-COLUMN INTERACTIVE ARENA ================= */}
-        <div className="round2-grid-layout">
-          {/* Target Reference Column */}
-          <div className="grid-col target-col">
-            <div className="slot-indicator-header">
-              <span className="slot-super-badge">ORGANIZER TARGET</span>
-              <span className="slot-super-desc">Protected Evaluation Goal</span>
-            </div>
-            <ProtectedReferenceImage
-              images={['/assets/round2/targets/target1.jpg', '/assets/round2/targets/target2.jpg']}
-              alt="Organizer Target Reference Image"
-              teamName={teamName}
-              initialTimerSeconds={15}
-              enableTimer={false}
-            />
-          </div>
+        <form onSubmit={round2Phase === 1 ? handleSubmitImage1 : handleSubmitImage2} noValidate style={{ width: '100%' }}>
+          <div className="round2-grid-layout">
+            {/* Target Reference Column */}
+            <div className="grid-col target-col">
 
-          {/* Submission Column: Prompt & Sequential Slots */}
-          <div className="grid-col submission-col">
-            {/* Form wrapping either Step 1 or Step 2 */}
-            <form onSubmit={round2Phase === 1 ? handleSubmitImage1 : handleSubmitImage2} noValidate>
+              <ProtectedReferenceImage
+                images={['/assets/round2/targets/target1.jpg', '/assets/round2/targets/target2.jpg']}
+                alt="Organizer Target Reference Image"
+                teamName={teamName}
+                initialTimerSeconds={15}
+                enableTimer={false}
+              />
+
+              {/* Action Submittal Bar — sits under the target image */}
+              <div className="form-submit-panel">
+                <div className="submit-buttons-row">
+                  {round2Phase === 2 && (
+                    <button
+                      type="button"
+                      className="round2-clear-btn"
+                      onClick={handleResetToStep1}
+                      disabled={isSubmitting}
+                      title="Return to Step 1"
+                    >
+                      <RotateCcw size={15} />
+                      <span>Redo Image 1</span>
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    className={`round2-submit-btn ${isSubmitting ? 'submitting' : ''}`}
+                    disabled={isSubmitting}
+                    aria-busy={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="spinner-dot" aria-hidden="true" />
+                        <span>
+                          {round2Phase === 1 ? 'Evaluating Image 1...' : 'Transmitting & Finalizing...'}
+                        </span>
+                      </>
+                    ) : round2Phase === 1 ? (
+                      <>
+                        <Send size={16} />
+                        <span>Submit Image 1 for Evaluation</span>
+                        <ArrowRight size={15} />
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        <span>Submit Image 2 (Finalize: {currentPotentialTotal} PTS)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Submission Column: Prompt & Sequential Slots */}
+            <div className="grid-col submission-col">
               {/* 1. Prompt Textarea */}
               <PromptSection
                 value={prompt}
@@ -1035,54 +1088,10 @@ export function Round2Page({ onReturnToHub }) {
                 maxSizeBytes={10 * 1024 * 1024}
                 allowedTypes={['image/png', 'image/jpeg', 'image/webp']}
               />
-
-              {/* 3. Action Submittal Bar */}
-              <div className="form-submit-panel">
-                <div className="submit-buttons-row">
-                  {round2Phase === 2 && (
-                    <button
-                      type="button"
-                      className="round2-clear-btn"
-                      onClick={handleResetToStep1}
-                      disabled={isSubmitting}
-                      title="Return to Step 1"
-                    >
-                      <RotateCcw size={15} />
-                      <span>Redo Image 1</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="submit"
-                    className={`round2-submit-btn ${isSubmitting ? 'submitting' : ''}`}
-                    disabled={isSubmitting}
-                    aria-busy={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="spinner-dot" aria-hidden="true" />
-                        <span>
-                          {round2Phase === 1 ? 'Evaluating Image 1...' : 'Transmitting & Finalizing...'}
-                        </span>
-                      </>
-                    ) : round2Phase === 1 ? (
-                      <>
-                        <Send size={16} />
-                        <span>Submit Image 1 for Evaluation</span>
-                        <ArrowRight size={15} />
-                      </>
-                    ) : (
-                      <>
-                        <Send size={16} />
-                        <span>Submit Image 2 (Finalize: {currentPotentialTotal} PTS)</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </form>
+            </div>
           </div>
-        </div>
+        </form>
+
       </main>
 
       {/* ================= IMAGE 1 EVALUATED CELEBRATION POPUP ================= */}
@@ -1207,8 +1216,17 @@ export function Round2Page({ onReturnToHub }) {
                 </span>
               </div>
               <div className="summary-prompt-preview">
-                <span className="summary-label">Logged Prompt:</span>
-                <p className="prompt-quote">&ldquo;{submittedData.prompt}&rdquo;</p>
+                <span className="summary-label">Logged Prompts:</span>
+                {image1EvaluatedData?.prompt && (
+                  <div style={{ marginBottom: '8px' }}>
+                    <span className="summary-value" style={{ fontSize: '13px', color: '#c9a653' }}>Image 1 Prompt:</span>
+                    <p className="prompt-quote">&ldquo;{image1EvaluatedData.prompt}&rdquo;</p>
+                  </div>
+                )}
+                <div>
+                  <span className="summary-value" style={{ fontSize: '13px', color: '#c9a653' }}>Image 2 Prompt:</span>
+                  <p className="prompt-quote">&ldquo;{submittedData.prompt}&rdquo;</p>
+                </div>
               </div>
             </div>
 
