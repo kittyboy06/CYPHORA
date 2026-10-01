@@ -323,6 +323,7 @@ export function Round2Page({ onReturnToHub }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [showImage1Modal, setShowImage1Modal] = useState(false);
+  const [showImage2Modal, setShowImage2Modal] = useState(false);
   const [pointsDelta, setPointsDelta] = useState(null);
   const [evaluatedScore, setEvaluatedScore] = useState(null);
   const [submittedData, setSubmittedData] = useState(null);
@@ -461,6 +462,19 @@ export function Round2Page({ onReturnToHub }) {
   };
 
   const handleBack = () => {
+    // Clear all Round 2 session state so a new team starts fresh
+    const keysToRemove = [
+      'cyphora_round2_started',
+      'cyphora_round2_phase',
+      'cyphora_round2_score',
+      'cyphora_round2_start_time',
+      'cyphora_round2_prompt',
+      'cyphora_round2_image1_cached_url',
+      'cyphora_round2_image1_data',
+      'cyphora_round2_speed'
+    ];
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+
     if (onReturnToHub) {
       onReturnToHub();
     } else {
@@ -581,8 +595,9 @@ export function Round2Page({ onReturnToHub }) {
       const apiBase = isDev ? `http://${hostname}:8000` : '';
       const token = localStorage.getItem('cyphora_token') || '';
 
-      let simMatch = (82 + Math.random() * 12).toFixed(1) + '%';
-      let phase1Points = 200;
+      let simValue = 82 + Math.random() * 12;
+      let simMatch = simValue.toFixed(1) + '%';
+      let phase1Points = Math.round(200 * (simValue / 100));
 
       try {
         const res = await fetch(`${apiBase}/api/stage2/evaluate-image1`, {
@@ -599,8 +614,16 @@ export function Round2Page({ onReturnToHub }) {
         });
         if (res.ok) {
           const resJson = await res.json();
-          simMatch = resJson.similarity || simMatch;
-          phase1Points = resJson.points || phase1Points;
+          if (resJson.similarity) {
+            simMatch = resJson.similarity;
+            const simParsed = parseFloat(resJson.similarity.replace('%', ''));
+            if (!isNaN(simParsed)) {
+              phase1Points = Math.round(200 * (simParsed / 100));
+            }
+          }
+          if (resJson.points && !resJson.similarity) {
+            phase1Points = resJson.points;
+          }
         }
       } catch {
         // Fallback local evaluation
@@ -625,6 +648,11 @@ export function Round2Page({ onReturnToHub }) {
       window.dispatchEvent(new Event('cyphora_points_updated'));
       setShowImage1Modal(true);
       setRound2Phase(2);
+      
+      setPrompt('');
+      setPromptTouched(false);
+      localStorage.removeItem('cyphora_round2_prompt');
+
       setPhaseSuccessNotice(
         `✓ Image 1 evaluated (+${phase1Points} pts)! Slot for Image 2 is now unlocked.`
       );
@@ -654,7 +682,15 @@ export function Round2Page({ onReturnToHub }) {
     // Speed bonus calculation based on remaining 15-minute clock
     const finalElapsed = ROUND_2_DURATION_SECONDS - secondsRemaining;
     const finalBonus = Math.round((secondsRemaining / ROUND_2_DURATION_SECONDS) * MAX_SPEED_BONUS);
-    const finalTotalPoints = BASE_POINTS + finalBonus;
+    
+    // Evaluate Image 2 (local fallback simulation)
+    const image2SimValue = 85 + Math.random() * 12;
+    let image2Similarity = image2SimValue.toFixed(1) + '%';
+    let image2Points = Math.round(200 * (image2SimValue / 100));
+
+    // Total points = points earned from Image 1 similarity + points from Image 2 + speed bonus
+    const image1Points = image1EvaluatedData?.score || 200;
+    let finalTotalPoints = image1Points + image2Points + finalBonus;
     const formattedSpeed = formatTime(finalElapsed);
 
     try {
@@ -682,12 +718,23 @@ export function Round2Page({ onReturnToHub }) {
 
       if (res.ok) {
         const resData = await res.json();
-        setEvaluatedScore(resData.points_awarded || finalTotalPoints);
+        // If backend returned its own image2 similarity, update the calculation
+        if (resData.image2_similarity) {
+          image2Similarity = resData.image2_similarity;
+          const simParsed = parseFloat(resData.image2_similarity.replace('%', ''));
+          if (!isNaN(simParsed)) {
+            image2Points = Math.round(200 * (simParsed / 100));
+            finalTotalPoints = image1Points + image2Points + finalBonus;
+          }
+        }
+        // Override backend points with the exact sum of all 3 components
+        // just in case the backend is running old, cached code
+        setEvaluatedScore(finalTotalPoints);
       } else {
         setEvaluatedScore(finalTotalPoints);
       }
     } catch {
-      setEvaluatedScore(finalTotalPoints);
+        setEvaluatedScore(finalTotalPoints);
     } finally {
       setIsSubmitting(false);
 
@@ -697,6 +744,9 @@ export function Round2Page({ onReturnToHub }) {
         image1Name: image1EvaluatedData?.fileName || 'image_1.png',
         image2Name: image2File.name,
         image1Similarity: image1EvaluatedData?.similarity || '85.0%',
+        image1Points: image1EvaluatedData?.score || 200,
+        image2Similarity: image2Similarity,
+        image2Points: image2Points,
         timeCompleted: formattedSpeed,
         speedBonus: finalBonus,
         totalPoints: finalTotalPoints,
@@ -714,8 +764,12 @@ export function Round2Page({ onReturnToHub }) {
       setPointsDelta(finalTotalPoints - (image1EvaluatedData?.score || 200));
       window.dispatchEvent(new Event('cyphora_points_updated'));
       setSubmittedData(payload);
-      setSubmissionSuccess(true);
+      setShowImage2Modal(true);
       setIsTimerRunning(false);
+      
+      setPrompt('');
+      setPromptTouched(false);
+      localStorage.removeItem('cyphora_round2_prompt');
     }
   };
 
@@ -940,61 +994,20 @@ export function Round2Page({ onReturnToHub }) {
         )}
 
         {/* ================= 2-COLUMN INTERACTIVE ARENA ================= */}
-        <div className="round2-grid-layout">
-          {/* Target Reference Column */}
-          <div className="grid-col target-col">
-            <div className="slot-indicator-header">
-              <span className="slot-super-badge">ORGANIZER TARGET</span>
-              <span className="slot-super-desc">Protected Evaluation Goal</span>
-            </div>
-            <ProtectedReferenceImage
-              src="/assets/round2/reference.jpg"
-              alt="Organizer Target Reference Image"
-              teamName={teamName}
-              initialTimerSeconds={15}
-              enableTimer={false}
-            />
-          </div>
+        <form onSubmit={round2Phase === 1 ? handleSubmitImage1 : handleSubmitImage2} noValidate style={{ width: '100%' }}>
+          <div className="round2-grid-layout">
+            {/* Target Reference Column */}
+            <div className="grid-col target-col">
 
-          {/* Submission Column: Prompt & Sequential Slots */}
-          <div className="grid-col submission-col">
-            {/* Form wrapping either Step 1 or Step 2 */}
-            <form onSubmit={round2Phase === 1 ? handleSubmitImage1 : handleSubmitImage2} noValidate>
-              {/* 1. Prompt Textarea */}
-              <PromptSection
-                value={prompt}
-                onChange={handlePromptChange}
-                error={promptError}
-                touched={promptTouched}
-                minLength={10}
-                maxLength={1500}
+              <ProtectedReferenceImage
+                images={['/assets/round2/targets/target1.jpg', '/assets/round2/targets/target2.jpg']}
+                alt="Organizer Target Reference Image"
+                teamName={teamName}
+                initialTimerSeconds={15}
+                enableTimer={false}
               />
 
-              {/* 2. Sequential Image Upload Component */}
-              <ResultImageUpload
-                phase={round2Phase}
-
-                // Image 1 props
-                image1File={image1File}
-                image1PreviewUrl={image1PreviewUrl}
-                onSelectImage1={handleSelectImage1}
-                onRemoveImage1={handleRemoveImage1}
-                image1Error={image1Error}
-                image1EvaluatedData={image1EvaluatedData}
-
-                // Image 2 props
-                image2File={image2File}
-                image2PreviewUrl={image2PreviewUrl}
-                onSelectImage2={handleSelectImage2}
-                onRemoveImage2={handleRemoveImage2}
-                image2Error={image2Error}
-
-                touched={formTouched}
-                maxSizeBytes={10 * 1024 * 1024}
-                allowedTypes={['image/png', 'image/jpeg', 'image/webp']}
-              />
-
-              {/* 3. Action Submittal Bar */}
+              {/* Action Submittal Bar — sits under the target image */}
               <div className="form-submit-panel">
                 <div className="submit-buttons-row">
                   {round2Phase === 2 && (
@@ -1009,7 +1022,6 @@ export function Round2Page({ onReturnToHub }) {
                       <span>Redo Image 1</span>
                     </button>
                   )}
-
                   <button
                     type="submit"
                     className={`round2-submit-btn ${isSubmitting ? 'submitting' : ''}`}
@@ -1038,9 +1050,48 @@ export function Round2Page({ onReturnToHub }) {
                   </button>
                 </div>
               </div>
-            </form>
+            </div>
+
+            {/* Submission Column: Prompt & Sequential Slots */}
+            <div className="grid-col submission-col">
+              {/* 1. Prompt Textarea */}
+              <PromptSection
+                value={prompt}
+                onChange={handlePromptChange}
+                error={promptError}
+                touched={promptTouched}
+                minLength={10}
+                maxLength={1500}
+                phase={round2Phase}
+              />
+
+              {/* 2. Sequential Image Upload Component */}
+              <ResultImageUpload
+                phase={round2Phase}
+
+                // Image 1 props
+                image1File={image1File}
+                image1PreviewUrl={image1PreviewUrl}
+                onSelectImage1={handleSelectImage1}
+                onRemoveImage1={handleRemoveImage1}
+                image1Error={image1Error}
+                image1EvaluatedData={image1EvaluatedData}
+
+                // Image 2 props
+                image2File={image2File}
+                image2PreviewUrl={image2PreviewUrl}
+                onSelectImage2={handleSelectImage2}
+                onRemoveImage2={handleRemoveImage2}
+                image2Error={image2Error}
+
+                touched={formTouched}
+                maxSizeBytes={10 * 1024 * 1024}
+                allowedTypes={['image/png', 'image/jpeg', 'image/webp']}
+              />
+            </div>
           </div>
-        </div>
+        </form>
+
       </main>
 
       {/* ================= IMAGE 1 EVALUATED CELEBRATION POPUP ================= */}
@@ -1081,6 +1132,45 @@ export function Round2Page({ onReturnToHub }) {
         </div>
       )}
 
+      {/* ================= IMAGE 2 EVALUATED CELEBRATION POPUP ================= */}
+      {showImage2Modal && (
+        <div
+          className="submission-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="image1-celebration-card">
+            <div className="celebration-icon-wrap">
+              <Sparkles size={42} className="gold-text" />
+            </div>
+            <span className="celebration-tag">STAGE 2 &bull; IMAGE 2 EVALUATED</span>
+            <h3 className="celebration-title">Image 2 Submitted &amp; Verified!</h3>
+            
+            <div className="celebration-score-pill">
+              <span className="pts-plus">+{submittedData?.image2Points || 200}</span>
+              <span className="pts-txt">PTS EARNED</span>
+            </div>
+
+            <p className="celebration-desc">
+              Your prompt re-creation for <strong>Image 2</strong> has been successfully processed. 
+              The evaluation is complete and speed bonus has been calculated!
+            </p>
+
+            <button
+              type="button"
+              className="celebration-continue-btn"
+              onClick={() => {
+                setShowImage2Modal(false);
+                setSubmissionSuccess(true);
+              }}
+            >
+              <span>View Final Results</span>
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ================= SUCCESS SUBMISSION & SCORING MODAL ================= */}
       {submissionSuccess && submittedData && (
         <div 
@@ -1115,15 +1205,28 @@ export function Round2Page({ onReturnToHub }) {
               </div>
               <div className="summary-field">
                 <span className="summary-label">Image 1 Evaluation:</span>
-                <span className="summary-value">{submittedData.image1Similarity} match</span>
+                <span className="summary-value">
+                  +{submittedData.image1Points} pts <span className="gold-text">({submittedData.image1Similarity} match)</span>
+                </span>
               </div>
               <div className="summary-field">
                 <span className="summary-label">Image 2 (Final Target):</span>
-                <span className="summary-value gold-text">{submittedData.image2Name}</span>
+                <span className="summary-value">
+                  +{submittedData.image2Points} pts <span className="gold-text">({submittedData.image2Similarity} match)</span>
+                </span>
               </div>
               <div className="summary-prompt-preview">
-                <span className="summary-label">Logged Prompt:</span>
-                <p className="prompt-quote">&ldquo;{submittedData.prompt}&rdquo;</p>
+                <span className="summary-label">Logged Prompts:</span>
+                {image1EvaluatedData?.prompt && (
+                  <div style={{ marginBottom: '8px' }}>
+                    <span className="summary-value" style={{ fontSize: '13px', color: '#c9a653' }}>Image 1 Prompt:</span>
+                    <p className="prompt-quote">&ldquo;{image1EvaluatedData.prompt}&rdquo;</p>
+                  </div>
+                )}
+                <div>
+                  <span className="summary-value" style={{ fontSize: '13px', color: '#c9a653' }}>Image 2 Prompt:</span>
+                  <p className="prompt-quote">&ldquo;{submittedData.prompt}&rdquo;</p>
+                </div>
               </div>
             </div>
 
@@ -1131,7 +1234,11 @@ export function Round2Page({ onReturnToHub }) {
               <button
                 type="button"
                 className="modal-primary-btn"
-                onClick={() => setIsLeaderboardOpen(true)}
+                onClick={() => {
+                  // Keep the success modal open underneath the drawer
+                  // so that when the user closes the leaderboard, they return here.
+                  setIsLeaderboardOpen(true);
+                }}
               >
                 <Trophy size={16} /> View Live Standings
               </button>

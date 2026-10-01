@@ -38,8 +38,8 @@ STAGE1_TASKS = {
         "title": "Task 04 — Ordering / Reasoning",
         "points": 75,
         "stage": 2,
-        "description": "Trace and order log records to identify the security classification",
-        "accepted": ["YELLOW"]
+        "description": "Trace log timestamps and decode the earliest record's color code to readable text",
+        "accepted": ["YELLOW", "#FFFF00", "FFFF00"]
     },
     "r1_t05": {
         "title": "Task 05 — File Comparison",

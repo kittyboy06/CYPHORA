@@ -1,14 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { GitCompare, ArrowRight, Copy, Check } from 'lucide-react';
+import { GitCompare, ArrowRight, Copy, Check, Folder } from 'lucide-react';
 import { useOS } from '../../state/OSContext.jsx';
+import { VirtualFilePicker } from '../../components/VirtualFilePicker.jsx';
 import './FileComparatorApp.css';
-
-const DEFAULT_DIFF_FILES = [
-  { label: 'message_old.txt (Task 05 Original)', path: '/Documents/message_old.txt' },
-  { label: 'message_new.txt (Task 05 Revised)', path: '/Documents/message_new.txt' },
-  { label: 'alpha.txt (Task 10 Record A)', path: '/Documents/alpha.txt' },
-  { label: 'beta.txt (Task 10 Record B)', path: '/Documents/beta.txt' }
-];
 
 export function FileComparatorApp() {
   const { vfs, eventBus } = useOS();
@@ -16,6 +10,8 @@ export function FileComparatorApp() {
   const [fileBPath, setFileBPath] = useState('');
   const [diffResult, setDiffResult] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerTarget, setPickerTarget] = useState('A'); // 'A' or 'B'
 
   const compareFiles = () => {
     if (!fileAPath || !fileBPath) {
@@ -75,6 +71,15 @@ export function FileComparatorApp() {
     compareFiles();
   }, [fileAPath, fileBPath]);
 
+  const handleVirtualFileSelected = (virtualNode) => {
+    if (!virtualNode) return;
+    if (pickerTarget === 'A') {
+      setFileAPath(virtualNode.path);
+    } else {
+      setFileBPath(virtualNode.path);
+    }
+  };
+
   const handleCopy = () => {
     if (!diffResult?.diffValue) return;
     navigator.clipboard.writeText(diffResult.diffValue);
@@ -93,32 +98,54 @@ export function FileComparatorApp() {
       </div>
 
       <div className="comparator-selectors">
-        <div className="selector-group">
-          <label>FILE A (ORIGINAL):</label>
-          <select value={fileAPath} onChange={(e) => setFileAPath(e.target.value)} className="file-select">
-            <option value="">-- Select File A --</option>
-            {DEFAULT_DIFF_FILES.map(f => (
-              <option key={f.path} value={f.path}>{f.label}</option>
-            ))}
-          </select>
+        {/* File A Box */}
+        <div className="comparator-file-card">
+          <div className="card-header">
+            <span className="file-slot-label">FILE A (ORIGINAL)</span>
+            <button
+              className="browse-vfs-btn"
+              onClick={() => {
+                setPickerTarget('A');
+                setShowPicker(true);
+              }}
+            >
+              <Folder size={14} color="#58a6ff" />
+              <span>Browse File A</span>
+            </button>
+          </div>
+          <div className={`file-path-tag ${fileAPath ? 'has-file' : 'no-file'}`}>
+            {fileAPath || 'No file selected — Click Browse File A'}
+          </div>
         </div>
 
-        <ArrowRight size={20} className="select-arrow" />
+        <ArrowRight size={22} className="select-arrow" />
 
-        <div className="selector-group">
-          <label>FILE B (REVISED):</label>
-          <select value={fileBPath} onChange={(e) => setFileBPath(e.target.value)} className="file-select">
-            <option value="">-- Select File B --</option>
-            {DEFAULT_DIFF_FILES.map(f => (
-              <option key={f.path} value={f.path}>{f.label}</option>
-            ))}
-          </select>
+        {/* File B Box */}
+        <div className="comparator-file-card">
+          <div className="card-header">
+            <span className="file-slot-label">FILE B (REVISED)</span>
+            <button
+              className="browse-vfs-btn"
+              onClick={() => {
+                setPickerTarget('B');
+                setShowPicker(true);
+              }}
+            >
+              <Folder size={14} color="#58a6ff" />
+              <span>Browse File B</span>
+            </button>
+          </div>
+          <div className={`file-path-tag ${fileBPath ? 'has-file' : 'no-file'}`}>
+            {fileBPath || 'No file selected — Click Browse File B'}
+          </div>
         </div>
       </div>
 
       {(!fileAPath || !fileBPath) && (
-        <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#8b949e', fontStyle: 'italic', background: '#0d1117', border: '1px solid #21262d', borderRadius: '6px', marginTop: '1rem' }}>
-          Select File A and File B from the dropdowns above to compare document differences.
+        <div className="comparator-empty-state">
+          <GitCompare size={30} style={{ opacity: 0.5, marginBottom: '0.5rem' }} />
+          <p>Select both files to compare</p>
+          <span>Click <strong>"Browse File A"</strong> and <strong>"Browse File B"</strong> above to choose documents from the Virtual OS.</span>
         </div>
       )}
 
@@ -151,12 +178,21 @@ export function FileComparatorApp() {
             <strong>{diffResult.diffValue}</strong>
           </div>
 
-          <button className="copy-btn" onClick={handleCopy} style={{ background: '#21262d', color: '#c9d1d9', border: '1px solid #30363d', padding: '0.45rem 0.8rem', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, fontSize: '0.85rem' }}>
+          <button className="copy-btn" onClick={handleCopy}>
             {copied ? <Check size={14} color="#7ee787" /> : <Copy size={14} />}
             <span>{copied ? 'Copied!' : 'Copy Changed Value'}</span>
           </button>
         </div>
       )}
+
+      {/* Virtual File Picker */}
+      <VirtualFilePicker
+        isOpen={showPicker}
+        onClose={() => setShowPicker(false)}
+        onSelectFile={handleVirtualFileSelected}
+        title={`Select File ${pickerTarget} to Compare from Virtual OS`}
+      />
     </div>
   );
 }
+

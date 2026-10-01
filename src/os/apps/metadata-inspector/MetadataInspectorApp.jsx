@@ -4,14 +4,6 @@ import { useOS } from '../../state/OSContext.jsx';
 import { VirtualFilePicker } from '../../components/VirtualFilePicker.jsx';
 import './MetadataInspectorApp.css';
 
-const DEFAULT_METADATA_FILES = [
-  { label: 'evidence.jpg (Pictures - Task 02)', path: '/Pictures/evidence.jpg' },
-  { label: 'archive_photo.png (Pictures - Task 07)', path: '/Pictures/archive_photo.png' },
-  { label: 'device-9.jpg (Pictures - Task 11)', path: '/Pictures/device-9.jpg' },
-  { label: 'device.png (Pictures - Task 12)', path: '/Pictures/device.png' },
-  { label: 'poster.png (Pictures)', path: '/Pictures/poster.png' }
-];
-
 export function MetadataInspectorApp() {
   const { vfs, eventBus } = useOS();
   const [selectedPath, setSelectedPath] = useState('');
@@ -20,6 +12,7 @@ export function MetadataInspectorApp() {
   const [showPicker, setShowPicker] = useState(false);
 
   const handleInspectVFS = (pathToInspect = selectedPath) => {
+    if (!pathToInspect) return;
     const node = vfs.getNode(pathToInspect);
     if (!node) {
       setMetadata({ error: `File '${pathToInspect}' not found in Virtual Filesystem.` });
@@ -61,16 +54,6 @@ export function MetadataInspectorApp() {
     handleInspectVFS(virtualNode.path);
   };
 
-  const handleSelectFile = (e) => {
-    const p = e.target.value;
-    setSelectedPath(p);
-    if (p) {
-      handleInspectVFS(p);
-    } else {
-      setMetadata(null);
-    }
-  };
-
   const handleCopyVal = (key, val) => {
     if (!val) return;
     navigator.clipboard.writeText(val);
@@ -88,35 +71,41 @@ export function MetadataInspectorApp() {
         <p className="sub">Extract hidden file attributes, EXIF tags, author credentials, and structural comments</p>
       </div>
 
-      <div className="inspector-controls" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <div className="control-group" style={{ flex: 1 }}>
-          <label>SELECT FILE FROM VFS:</label>
-          <select value={selectedPath} onChange={handleSelectFile} className="inspector-select">
-            <option value="">-- Select File from Virtual OS --</option>
-            {DEFAULT_METADATA_FILES.map(f => (
-              <option key={f.path} value={f.path}>{f.label}</option>
-            ))}
-          </select>
+      <div className="inspector-controls">
+        <div className="file-selection-bar">
+          <div className="selected-file-display">
+            <span className="file-label">TARGET EVIDENCE:</span>
+            <span className={`file-path-tag ${selectedPath ? 'has-file' : 'no-file'}`}>
+              {selectedPath || 'No file selected — Click Browse to choose from Virtual OS'}
+            </span>
+          </div>
+
+          <div className="selection-actions">
+            <button
+              className="browse-vfs-btn"
+              onClick={() => setShowPicker(true)}
+            >
+              <Folder size={15} color="#58a6ff" />
+              <span>Browse Virtual OS</span>
+            </button>
+
+            <button
+              className="inspect-btn"
+              onClick={() => handleInspectVFS(selectedPath)}
+              disabled={!selectedPath}
+            >
+              <FileSearch size={15} />
+              <span>Inspect Metadata</span>
+            </button>
+          </div>
         </div>
-
-        <button
-          className="inspect-btn"
-          onClick={() => setShowPicker(true)}
-          style={{ background: '#21262d', color: '#c9d1d9', border: '1px solid #30363d' }}
-        >
-          <Folder size={15} color="#58a6ff" />
-          <span>Browse Virtual OS</span>
-        </button>
-
-        <button className="inspect-btn" onClick={() => handleInspectVFS(selectedPath)} disabled={!selectedPath}>
-          <FileSearch size={15} />
-          <span>Inspect Metadata</span>
-        </button>
       </div>
 
       {!selectedPath && !metadata && (
-        <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#8b949e', fontStyle: 'italic', background: '#0d1117', border: '1px solid #21262d', borderRadius: '6px', marginTop: '1rem' }}>
-          No file selected. Choose a file from the dropdown above or click 'Browse Virtual OS' to inspect a file.
+        <div className="empty-state-notice">
+          <Info size={28} style={{ opacity: 0.6, marginBottom: '0.5rem' }} />
+          <p>No file selected.</p>
+          <span>Click <strong>"Browse Virtual OS"</strong> above to select and inspect an image or evidence file from your workstation folders.</span>
         </div>
       )}
 
