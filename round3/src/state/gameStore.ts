@@ -23,8 +23,8 @@ export const useGameStore = create<GameState>((set) => ({
   score: 0,
   health: 3,
   level: 1,
-  timeLimit: 180,
-  timeRemaining: 180,
+  timeLimit: 1800,
+  timeRemaining: 1800,
   status: 'idle',
   totalCommands: 0,
   executedCommands: 0,
@@ -37,3 +37,5 @@ export const useGameStore = create<GameState>((set) => ({
   tickTime: () => set((state) => ({ timeRemaining: Math.max(0, state.timeRemaining - 1) })),
   setLevel: (level) => set({ level, status: 'idle' }),
 }));
+
+
