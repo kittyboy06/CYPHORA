@@ -1,18 +1,26 @@
 import React, { useEffect } from 'react';
 import { OSProvider, useOS } from './state/OSContext.jsx';
-import { SystemHUD } from './shell/SystemHUD.jsx';
 import { Desktop } from './shell/Desktop.jsx';
 import { WindowManager } from './windows/WindowManager.jsx';
 import { Taskbar } from './shell/Taskbar.jsx';
 import { StartMenu } from './shell/StartMenu.jsx';
 import { BlueScreenGate } from './shell/BlueScreenGate.jsx';
 import { BootScreen } from './boot/BootScreen.jsx';
-import { TaskBoard } from '../components/TaskBoard.jsx';
 import { CompletionCelebration } from '../components/CompletionCelebration.jsx';
 import './OSContainer.css';
 
 function OSContent({ stage, setStage, teamData, round1State }) {
   const { windows = [], openApp = () => {}, showExitBanner = false, exitReason = '', unlockGate = () => {} } = useOS();
+
+  // Auto-launch Tasks app as native OS window upon entering OS desktop
+  useEffect(() => {
+    if (stage === 'os-desktop') {
+      const hasTasks = windows.some(w => w.appId === 'tasks');
+      if (!hasTasks) {
+        openApp('tasks');
+      }
+    }
+  }, [stage]);
 
   return (
     <div className="os-desktop-root">
@@ -23,8 +31,6 @@ function OSContent({ stage, setStage, teamData, round1State }) {
         />
       ) : (
         <>
-          <SystemHUD />
-          {round1State?.round1StartedAt && <TaskBoard round1State={round1State} />}
           {round1State?.finalMemoryVisible && <CompletionCelebration />}
           <main className="os-workspace-area">
             <Desktop />

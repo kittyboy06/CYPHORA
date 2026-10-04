@@ -1,13 +1,6 @@
 /**
  * CYPHORA Round 1 Task Content & Presentation Definitions
- * Exactly 12 structured tasks following the Round 1 Task Description Redesign specification (pro2.md).
- * 
- * Rules:
- * 1. Task objectives mention bare filenames (e.g., message.txt) without filesystem directories.
- * 2. Task objectives mention generic tool categories (converter, inspector, optical scanner, comparison tool) without brand names.
- * 3. Hint 1 provides the file location.
- * 4. Hint 2 provides the procedural guidance according to the specification table.
- * 5. Distinct reasoning patterns and answers across all 12 tasks to eliminate repetitiveness.
+ * Canonical Source of Truth as defined in Prompts/pro3.md
  */
 
 export const TASK_DEFINITIONS = [
@@ -17,7 +10,7 @@ export const TASK_DEFINITIONS = [
     order: 1,
     title: 'TASK 01 — ENCODED MESSAGE',
     story: 'A short message recovered from an unknown source has been left on the workstation. Its original meaning is unreadable in its current numerical form.',
-    question: '1. Locate message.txt.\n2. Use a data converter to translate the numerical character values into readable text.\n3. Enter the decoded word below.',
+    question: 'Decode the numerical values in message.txt.',
     difficulty: 'easy',
     requiredInput: {
       type: 'file',
@@ -35,8 +28,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['converter', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'message.txt is located on the Desktop.',
-      'Open the file and identify the number sequence. Use a Universal Converter and convert the values from Decimal/ASCII → Text.'
+      'message.txt is on the Desktop.',
+      'Open the file, identify the number sequence, and use Universal Converter Decimal/ASCII → Text.'
     ]
   },
   {
@@ -45,7 +38,7 @@ export const TASK_DEFINITIONS = [
     order: 2,
     title: 'TASK 02 — FILE INFORMATION',
     story: 'An expedition image was recovered during the investigation, but its visual picture does not identify its creator. The underlying file records hold the author entry.',
-    question: '1. Locate evidence.jpg.\n2. Use a file inspector to inspect the file properties and technical attributes rather than the visual pixels.\n3. Enter the registered author name below.',
+    question: 'Inspect evidence.jpg metadata and find the registered author.',
     difficulty: 'easy',
     requiredInput: {
       type: 'file',
@@ -55,7 +48,7 @@ export const TASK_DEFINITIONS = [
     },
     answer: {
       expected: 'ARLO',
-      accepted: ['ARLO', 'DR. ARLO VANCE', 'DR ARLO VANCE', 'ARLO VANCE'],
+      accepted: ['ARLO'],
       type: 'text',
       caseSensitive: false,
       trimWhitespace: true
@@ -63,8 +56,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['metadata-inspector', 'converter', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'evidence.jpg is located in the Pictures folder.',
-      'Open the image with a Metadata Inspector and examine the available information fields. Look specifically for the field related to the creator/author.'
+      'The file is in Pictures.',
+      'Open the image with Metadata Inspector, examine the metadata fields, and look for the creator/author information.'
     ]
   },
   {
@@ -73,7 +66,7 @@ export const TASK_DEFINITIONS = [
     order: 3,
     title: 'TASK 03 — IMAGE MESSAGE',
     story: 'A recovered poster contains an embedded optical matrix marking that cannot be interpreted through standard visual viewing.',
-    question: '1. Locate poster.png.\n2. Use an optical scanning inspector to scan the machine-readable matrix graphic.\n3. Enter the revealed sector code below.',
+    question: 'Scan the optical matrix in poster.png.',
     difficulty: 'easy',
     requiredInput: {
       type: 'image',
@@ -83,7 +76,7 @@ export const TASK_DEFINITIONS = [
     },
     answer: {
       expected: 'SECTOR-7',
-      accepted: ['SECTOR-7', 'SECTOR 7', 'SECTOR7'],
+      accepted: ['SECTOR-7'],
       type: 'text',
       caseSensitive: false,
       trimWhitespace: true
@@ -91,8 +84,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['qr-scanner', 'converter', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'poster.png is located in the Pictures folder.',
-      'Open the image using a QR/Barcode Scanner and scan the optical matrix to retrieve its encoded message.'
+      'The image is in Pictures.',
+      'Use QR/Barcode Scanner and scan the matrix to retrieve the encoded message.'
     ]
   },
   {
@@ -101,7 +94,7 @@ export const TASK_DEFINITIONS = [
     order: 4,
     title: 'TASK 04 — THE EARLIEST RECORD',
     story: 'Workstation access records are scrambled out of order. An initial trigger event initiated the recorded sequence.',
-    question: '1. Locate access.log.\n2. Inspect the chronological timestamps at the beginning of each line using a document inspector or text reader.\n3. Identify the earliest entry and use the Universal Converter to decode its color code into a readable color name.\n4. Enter the decoded color name below.',
+    question: 'Find the earliest timestamp in access.log and determine the associated color.',
     difficulty: 'easy',
     requiredInput: {
       type: 'file',
@@ -111,7 +104,7 @@ export const TASK_DEFINITIONS = [
     },
     answer: {
       expected: 'YELLOW',
-      accepted: ['YELLOW', 'Yellow', 'yellow', '#FFFF00', 'FFFF00'],
+      accepted: ['YELLOW'],
       type: 'text',
       caseSensitive: false,
       trimWhitespace: true
@@ -119,8 +112,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['text-editor', 'converter', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'access.log is located in the Documents folder.',
-      'Open the log and compare all the timestamps to identify the earliest entry. Use the Universal Converter (Color Code → Text) to translate the color code into readable text.'
+      'access.log is in Documents.',
+      'Compare the timestamps and identify the earliest record and its associated information.'
     ]
   },
   {
@@ -129,7 +122,7 @@ export const TASK_DEFINITIONS = [
     order: 5,
     title: 'TASK 05 — THE CHANGED RECORD',
     story: 'Two versions of a critical transmission log exist on the workstation. Most lines are identical, but one operational parameter was modified.',
-    question: '1. Locate message_old.txt and message_new.txt.\n2. Use a file comparison inspector to analyze both documents side-by-side.\n3. Enter the updated operational value from the revised record below.',
+    question: 'Compare the old and new transmission logs and find the changed value.',
     difficulty: 'easy',
     requiredInput: {
       type: 'files',
@@ -148,8 +141,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['file-comparator', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'message_old.txt and message_new.txt are located in the Documents folder.',
-      'Open both files in a File Comparison Tool and compare them line by line. Locate the value that differs between the two versions.'
+      'Both files are in Documents.',
+      'Use File Comparison Tool, compare the files line by line, and locate the differing value.'
     ]
   },
   {
@@ -158,7 +151,7 @@ export const TASK_DEFINITIONS = [
     order: 6,
     title: 'TASK 06 — THE FRAGMENTED PASSWORD',
     story: 'Three fragments of a security passcode were recovered separately. Each fragment is incomplete on its own, and their order is scrambled.',
-    question: '1. Locate fragment_01.txt, fragment_02.txt, and fragment_03.txt.\n2. Inspect each fragment to determine its recorded timestamp and sort them chronologically.\n3. Combine the ordered values and use a data converter to decode the complete password below.',
+    question: 'Chronologically arrange three fragments and decode them.',
     difficulty: 'hard',
     requiredInput: {
       type: 'files',
@@ -170,7 +163,7 @@ export const TASK_DEFINITIONS = [
     },
     answer: {
       expected: 'CYPHORA',
-      accepted: ['CYPHORA', 'JUMP'],
+      accepted: ['CYPHORA'],
       type: 'text',
       caseSensitive: false,
       trimWhitespace: true
@@ -178,8 +171,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['text-editor', 'converter', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'The three fragment files are located in the Documents folder.',
-      'Check the timestamps of all three fragments and arrange them from earliest to latest. Combine the fragments and decode the resulting string using Base64.'
+      'The fragments are in Documents.',
+      'Check their timestamps, arrange them from earliest to latest, combine the fragments, and decode the result using Base64.'
     ]
   },
   {
@@ -188,7 +181,7 @@ export const TASK_DEFINITIONS = [
     order: 7,
     title: 'TASK 07 — THE HIDDEN RECORD',
     story: 'An archival survey photograph appears ordinary, but operational data was preserved inside its descriptive technical properties.',
-    question: '1. Locate archive_photo.png.\n2. Use a file inspector to examine its technical file properties and recover the embedded description code.\n3. Use a data converter to translate the character codes into readable text and enter the message below.',
+    question: 'Inspect image metadata and decode the embedded character codes.',
     difficulty: 'medium',
     requiredInput: {
       type: 'file',
@@ -198,7 +191,7 @@ export const TASK_DEFINITIONS = [
     },
     answer: {
       expected: 'RESCUE',
-      accepted: ['RESCUE', 'HELP'],
+      accepted: ['RESCUE'],
       type: 'text',
       caseSensitive: false,
       trimWhitespace: true
@@ -206,8 +199,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['metadata-inspector', 'converter', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'archive_photo.png is located in the Pictures folder.',
-      'Open the image with a Metadata Inspector and examine its description/details. Convert the numerical character codes using Decimal/ASCII → Text.'
+      'archive_photo.png is in Pictures.',
+      'Use Metadata Inspector, examine the description/details, and convert the numerical character codes using Decimal/ASCII → Text.'
     ]
   },
   {
@@ -216,7 +209,7 @@ export const TASK_DEFINITIONS = [
     order: 8,
     title: 'TASK 08 — THE DISGUISED FILE',
     story: 'Crucial investigation evidence has been deliberately concealed in a hidden subdirectory within the workstation archives.',
-    question: '1. Explore the directory structure using a file inspector or manager capable of revealing concealed files.\n2. Locate clue.txt inside the hidden archive.\n3. Submit the numerical passcode contained within.',
+    question: 'Find the file hidden inside the concealed directory.',
     difficulty: 'hard',
     requiredInput: {
       type: 'file',
@@ -226,7 +219,7 @@ export const TASK_DEFINITIONS = [
     },
     answer: {
       expected: '7314',
-      accepted: ['7314', 'RECOVERY'],
+      accepted: ['7314'],
       type: 'text',
       caseSensitive: false,
       trimWhitespace: true
@@ -234,8 +227,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['file-manager', 'text-editor', 'terminal'],
     completionMode: 'answer_submission',
     hints: [
-      'Look inside the Archive folder.',
-      'Open the Archive folder in File Manager, right-click and select "Show Hidden Files" to reveal concealed directories, then locate clue.txt.'
+      'Look in Archive.',
+      'Enable Show Hidden Files in File Manager, inspect the concealed directories, and locate the text file.'
     ]
   },
   {
@@ -244,7 +237,7 @@ export const TASK_DEFINITIONS = [
     order: 9,
     title: 'TASK 09 — THE EVIDENCE TRAIL',
     story: 'An investigative trail spans across multiple records, beginning with an optical marking on a survey map.',
-    question: '1. Locate map.png and use an optical scanning inspector to recover the clue reference key.\n2. Cross-reference that key in index.txt to determine the target log record.\n3. Inspect activity.log to identify which file ID USER-A downloaded, and enter that number below.',
+    question: 'Follow the image clue → index → activity log.',
     difficulty: 'hard',
     requiredInput: {
       type: 'files',
@@ -264,8 +257,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['qr-scanner', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'The starting image is in Pictures; related files are in Documents.',
-      'Scan the image to obtain the first clue. Use that clue to locate the relevant entry in the index file, then follow its reference to the activity log and inspect the specified record.'
+      'The starting image is in Pictures. Related files are in Documents.',
+      'Scan the image to obtain the first clue, use that clue to locate the relevant entry in the index file, follow the reference to the activity log, and inspect the specified record.'
     ]
   },
   {
@@ -274,7 +267,7 @@ export const TASK_DEFINITIONS = [
     order: 10,
     title: 'TASK 10 — THE ALTERED RECORD',
     story: 'Two versions of a secure configuration record contain a subtle hexadecimal difference that conceals an operational word.',
-    question: '1. Locate alpha.txt and beta.txt.\n2. Use a file comparison inspector to isolate the modified configuration entry.\n3. Use a data converter to translate the altered hexadecimal sequence into readable text and enter the resulting word below.',
+    question: 'Compare two configuration files, identify the changed hexadecimal data, and decode it.',
     difficulty: 'hard',
     requiredInput: {
       type: 'files',
@@ -285,7 +278,7 @@ export const TASK_DEFINITIONS = [
     },
     answer: {
       expected: 'VECTOR',
-      accepted: ['VECTOR', 'JUMP'],
+      accepted: ['VECTOR'],
       type: 'text',
       caseSensitive: false,
       trimWhitespace: true
@@ -293,8 +286,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['file-comparator', 'converter', 'text-editor', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'alpha.txt and beta.txt are located in the Documents folder.',
-      'Compare both configuration files and locate the modified line. Identify the hexadecimal sequence and convert it from Hexadecimal → Text.'
+      'alpha.txt and beta.txt are in Documents.',
+      'Compare both files, locate the modified line, identify the hexadecimal sequence, and convert Hexadecimal → Text.'
     ]
   },
   {
@@ -303,7 +296,7 @@ export const TASK_DEFINITIONS = [
     order: 11,
     title: 'TASK 11 — FOLLOW THE TRAIL',
     story: 'A field note points to an archive document, which links to monitored hardware evidence across the workstation.',
-    question: '1. Locate incident_note.txt and follow its pointer to the referenced archive record.\n2. Check the archive file to identify the target device photo.\n3. Use a file inspector on the device image to retrieve its encoded attribute, then use a data converter to translate the value into the clearance word below.',
+    question: 'Follow the chain from the incident note through the archive and device image, inspect the referenced metadata, and decode the recovered character sequence.',
     difficulty: 'very hard',
     requiredInput: {
       type: 'files',
@@ -323,8 +316,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['text-editor', 'metadata-inspector', 'converter', 'file-manager'],
     completionMode: 'answer_submission',
     hints: [
-      'Start with incident_note.txt in the Documents folder.',
-      'Follow the reference path given in the note. Continue through the archive and device image, then inspect the image metadata and decode the character sequence using the appropriate conversion method.'
+      'Start with incident_note.txt in Documents.',
+      'Follow the reference path in the note, continue through the archive and device image, inspect the metadata, and decode the character sequence using the appropriate conversion.'
     ]
   },
   {
@@ -333,7 +326,7 @@ export const TASK_DEFINITIONS = [
     order: 12,
     title: 'TASK 12 — TRACE THE INCIDENT',
     story: 'Four pieces of evidence across logs, device photos, archives, and transfer records form a connected incident chain.',
-    question: '1. Locate system.log to observe the incident sequence.\n2. Use a file inspector on device.png to identify the registered hardware ID.\n3. Open the corresponding archive record to find the transfer ID, inspect the transfer document, and use a data converter to decode the clearance code below.',
+    question: 'Reconstruct the incident by following the references across the system record, device evidence, archive record, and transfer record. Decode the final hexadecimal payload to recover the clearance code.',
     difficulty: 'boss',
     requiredInput: {
       type: 'files',
@@ -354,8 +347,8 @@ export const TASK_DEFINITIONS = [
     allowedApps: ['file-manager', 'text-editor', 'metadata-inspector', 'converter', 'terminal'],
     completionMode: 'answer_submission',
     hints: [
-      'The evidence is spread across Documents, Pictures, Archive, and Transfers folders.',
-      'Start with the system record and follow each file/reference identifier to the next piece of evidence. Reach the final transfer file and decode its hexadecimal payload into text.'
+      'Evidence is spread across Documents, Pictures, Archive, and Transfers.',
+      'Start with the system record and follow each file/reference identifier to the next piece of evidence. Reach the final transfer file and decode the hexadecimal payload into text.'
     ]
   }
 ];
@@ -366,7 +359,6 @@ export const TASK_PRESENTATIONS = TASK_DEFINITIONS.reduce((acc, task) => {
     playerTitle: task.title,
     objective: task.question,
     story: task.story,
-    fieldNote: `Investigate workstation files and tools to solve this challenge.`,
     hints: task.hints
   };
   return acc;

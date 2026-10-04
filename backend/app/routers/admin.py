@@ -26,7 +26,7 @@ from ..schemas import (
 
 router = APIRouter(prefix="/api/admin", tags=["Event Administration"])
 
-ADMIN_PASSWORD = "JCEAIML"
+ADMIN_PASSWORD = os.getenv("CYPHORA_ADMIN_PASSWORD", "JCEAIML")
 
 async def verify_admin(
     authorization: Optional[str] = Header(None),

@@ -70,6 +70,14 @@ export const INITIAL_VFS = {
     path: '/Shared',
     updatedAt: new Date().toISOString()
   },
+  '/Transfers': {
+    id: 'transfers',
+    name: 'Transfers',
+    type: 'dir',
+    parentId: 'root',
+    path: '/Transfers',
+    updatedAt: new Date().toISOString()
+  },
 
   // SUBDIRECTORIES
   '/Documents/clues': {
@@ -216,6 +224,25 @@ Investigate workstation files and tools to solve challenges.
 Applications do not auto-fill or solve tasks for you.
 
 Status: WORKSTATION OPERATIONAL
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Desktop/START.txt': {
+    id: 'file_desktop_start',
+    name: 'START.txt',
+    type: 'file',
+    parentId: 'desktop',
+    path: '/Desktop/START.txt',
+    mimeType: 'text/plain',
+    size: 480,
+    content: `================================================
+CYPHORA INVESTIGATION WORKSTATION MANUAL
+================================================
+1. Launch the Tasks application from your desktop or taskbar to view your current active objective.
+2. Use File Manager to explore workstation directories: /Documents, /Pictures, /Archive, and /Evidence.
+3. Utilize specialized utility applications (Metadata Inspector, Universal Converter, File Comparator, QR Scanner, Image Inspector, Audio Inspector) to analyze evidence files.
+4. Input discovered codes into the Tasks application to verify and proceed.
+5. Good luck, Operative.
 `,
     updatedAt: new Date().toISOString()
   },
@@ -545,6 +572,34 @@ TR-904
     type: 'file',
     parentId: 'dir_docs_transfers',
     path: '/Documents/Transfers/TR-904.txt',
+    mimeType: 'text/plain',
+    size: 35,
+    content: `PAYLOAD:
+53 59 4D 50 4F
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Archive/VX-27.txt': {
+    id: 'file_archive_vx27_txt',
+    name: 'VX-27.txt',
+    type: 'file',
+    parentId: 'archive',
+    path: '/Archive/VX-27.txt',
+    mimeType: 'text/plain',
+    size: 45,
+    content: `DEVICE: VX-27
+
+TRANSFER ID:
+TR-904
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Transfers/TR-904.txt': {
+    id: 'file_transfers_tr904_txt',
+    name: 'TR-904.txt',
+    type: 'file',
+    parentId: 'transfers',
+    path: '/Transfers/TR-904.txt',
     mimeType: 'text/plain',
     size: 35,
     content: `PAYLOAD:

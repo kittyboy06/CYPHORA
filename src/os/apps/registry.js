@@ -9,8 +9,17 @@ import { ImageInspectorApp } from './image-inspector/ImageInspectorApp.jsx';
 import { TextAnalyzerApp } from './text-analyzer/TextAnalyzerApp.jsx';
 import { FileComparatorApp } from './file-comparator/FileComparatorApp.jsx';
 import { AudioInspectorApp } from './audio-inspector/AudioInspectorApp.jsx';
+import { TasksApp } from './tasks/TasksApp.jsx';
 
 export const APP_REGISTRY = {
+  'tasks': {
+    id: 'tasks',
+    title: 'Tasks',
+    icon: 'CheckSquare',
+    category: 'System',
+    defaultBounds: { width: 560, height: 600 },
+    component: TasksApp
+  },
   'terminal': {
     id: 'terminal',
     title: 'Terminal Interpreter',

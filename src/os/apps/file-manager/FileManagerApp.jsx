@@ -16,6 +16,7 @@ import {
   Lock,
   Compass,
   Eye,
+  EyeOff,
   Info,
   X
 } from 'lucide-react';
@@ -241,8 +242,17 @@ export function FileManagerApp() {
           })}
         </div>
 
-        {/* View mode */}
+        {/* View mode & Hidden Files Toggle */}
         <div className="fm-right-tools">
+          <button
+            className={`fm-btn fm-hidden-toggle-btn ${showHidden ? 'active-mode' : ''}`}
+            onClick={handleToggleHidden}
+            title={showHidden ? 'Conceal Hidden Files' : 'Show Hidden Files'}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 8px', fontSize: '0.75rem', fontWeight: 600 }}
+          >
+            {showHidden ? <EyeOff size={15} /> : <Eye size={15} />}
+            <span>{showHidden ? 'Hidden: ON' : 'Show Hidden'}</span>
+          </button>
           <div className="fm-view-toggle">
             <button
               className={`fm-btn ${viewMode === 'grid' ? 'active-mode' : ''}`}

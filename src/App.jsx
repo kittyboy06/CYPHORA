@@ -296,35 +296,6 @@ function App() {
     };
   }, []);
 
-  // Automatically request fullscreen at start of the app (and on first user interaction)
-  useEffect(() => {
-    const triggerAutoFullscreen = () => {
-      if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      }
-    };
-
-    // Attempt immediately when app mounts/starts
-    triggerAutoFullscreen();
-
-    // Browser security may require a user gesture; trigger on the first interaction anywhere
-    const onFirstInteraction = () => {
-      triggerAutoFullscreen();
-    };
-
-    window.addEventListener('click', onFirstInteraction, { capture: true });
-    window.addEventListener('keydown', onFirstInteraction, { capture: true });
-    window.addEventListener('touchstart', onFirstInteraction, { capture: true });
-    window.addEventListener('pointerdown', onFirstInteraction, { capture: true });
-
-    return () => {
-      window.removeEventListener('click', onFirstInteraction, { capture: true });
-      window.removeEventListener('keydown', onFirstInteraction, { capture: true });
-      window.removeEventListener('touchstart', onFirstInteraction, { capture: true });
-      window.removeEventListener('pointerdown', onFirstInteraction, { capture: true });
-    };
-  }, []);
-
   useEffect(() => {
     window.scrollTo(0, 0);
     const container = document.querySelector('.app-container');
@@ -548,13 +519,20 @@ function App() {
     if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
     if (finalPin) localStorage.setItem('cyphora_team_pin', finalPin);
 
+    // Clear previous OS session and lock states to prevent cross-team bleed
+    try {
+      sessionStorage.removeItem('cyphora_os_session');
+      sessionStorage.removeItem('cyphora_os_locked');
+      localStorage.removeItem('cyphora_vfs_data');
+    } catch (e) {}
+
     setRound1State(previousState => {
-      const savedTeamId = normalizeTeamName(previousState.teamId);
+      const savedTeamId = normalizeTeamName(previousState?.teamId);
       const currentTeamName = normalizeTeamName(finalName);
       const sameTeam = !savedTeamId
         || savedTeamId === currentTeamName
         || savedTeamId.startsWith(`${currentTeamName}-`);
-      return sameTeam ? previousState : buildDefaultRound1State();
+      return sameTeam ? previousState : buildDefaultRound1State(finalName);
     });
 
     setTeamData(prev => ({
