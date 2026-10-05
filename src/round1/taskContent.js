@@ -249,12 +249,12 @@ export const TASK_DEFINITIONS = [
     },
     answer: {
       expected: '17',
-      accepted: ['17'],
+      accepted: ['17', 'FILE=17', 'FILE 17'],
       type: 'text',
       caseSensitive: false,
       trimWhitespace: true
     },
-    allowedApps: ['qr-scanner', 'text-editor', 'file-manager'],
+    allowedApps: ['image-inspector', 'qr-scanner', 'text-editor', 'file-manager', 'metadata-inspector'],
     completionMode: 'answer_submission',
     hints: [
       'The starting image is in Pictures. Related files are in Documents.',

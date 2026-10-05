@@ -37,16 +37,24 @@ export function ImageInspectorApp() {
     eventBus.emit('IMAGE_INSPECTED', { filePath: path });
   };
 
+  const handleOpenIndexFile = () => {
+    openApp('text-editor', {
+      meta: { filePath: '/Documents/clues/index.txt' }
+    });
+  };
+
   return (
     <div className="image-inspector-app">
+      {/* Header */}
       <div className="inspector-header">
         <div className="title-wrap">
           <ImageIcon size={18} className="icon" />
-          <span>Image Inspector</span>
+          <span>Image & Optical Scanning Inspector</span>
         </div>
         <p className="sub">Examine visual artifacts, optical details, and image properties</p>
       </div>
 
+      {/* Toolbar: Browse Virtual OS & Image Controls */}
       <div className="inspector-toolbar">
         <div className="select-wrap">
           <label>SELECT IMAGE:</label>
@@ -78,7 +86,7 @@ export function ImageInspectorApp() {
         </div>
       </div>
 
-      {/* Main Viewport & Inspection Frame */}
+      {/* Main Viewport & Inspection Canvas */}
       <div className="image-viewport">
         <div
           className="canvas-container"
@@ -105,7 +113,7 @@ export function ImageInspectorApp() {
           </div>
         </div>
 
-        {/* Adjustments Sidebar */}
+        {/* Viewport Brightness / Contrast Adjustments */}
         <div className="viewport-adjustments">
           <div className="adj-group">
             <label>BRIGHTNESS ({brightness}%)</label>

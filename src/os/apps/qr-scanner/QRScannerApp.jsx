@@ -25,6 +25,8 @@ export function QRScannerApp() {
 
       if (node && node.qrPayload) {
         payload = node.qrPayload;
+      } else if (typeof pathToScan === 'string' && pathToScan.toLowerCase().includes('map.png')) {
+        payload = 'CLUE-42';
       } else if (typeof pathToScan === 'string' && (pathToScan.includes('poster') || pathToScan.includes('sector'))) {
         payload = 'SECTOR-7';
       } else if (typeof pathToScan === 'string' && (pathToScan.includes('map') || pathToScan.includes('survey'))) {
