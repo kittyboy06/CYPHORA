@@ -199,8 +199,10 @@ export function ResultImageUpload({
                   <span className="completed-pill">
                     <Check size={14} /> Image 1 Submitted
                   </span>
-                  <span className="completed-pts-tag gold-text">
-                    +{image1EvaluatedData?.score || 200} PTS Earned
+                  <span className="completed-pts-tag gold-text" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <span>Accuracy: {image1EvaluatedData?.similarity || '0%'}</span>
+                    <span style={{ opacity: 0.5 }}>|</span>
+                    <span>+{image1EvaluatedData?.score || 200} PTS Earned</span>
                   </span>
                 </div>
               </div>

@@ -4,14 +4,6 @@ import { useOS } from '../../state/OSContext.jsx';
 import { VirtualFilePicker } from '../../components/VirtualFilePicker.jsx';
 import './MetadataInspectorApp.css';
 
-const DEFAULT_METADATA_FILES = [
-  { label: 'evidence.jpg (Pictures - Task 02)', path: '/Pictures/evidence.jpg' },
-  { label: 'archive_photo.png (Pictures - Task 07)', path: '/Pictures/archive_photo.png' },
-  { label: 'device-9.jpg (Pictures - Task 11)', path: '/Pictures/device-9.jpg' },
-  { label: 'device.png (Pictures - Task 12)', path: '/Pictures/device.png' },
-  { label: 'poster.png (Pictures)', path: '/Pictures/poster.png' }
-];
-
 export function MetadataInspectorApp() {
   const { vfs, eventBus } = useOS();
   const [selectedPath, setSelectedPath] = useState('');
@@ -20,6 +12,7 @@ export function MetadataInspectorApp() {
   const [showPicker, setShowPicker] = useState(false);
 
   const handleInspectVFS = (pathToInspect = selectedPath) => {
+    if (!pathToInspect) return;
     const node = vfs.getNode(pathToInspect);
     if (!node) {
       setMetadata({ error: `File '${pathToInspect}' not found in Virtual Filesystem.` });
@@ -35,11 +28,11 @@ export function MetadataInspectorApp() {
       path: node.path,
       size: `${node.size || 2145760} bytes`,
       mimeType: node.mimeType || 'image/jpeg',
-      author: node.author || (isEvidence ? 'ARLO' : isPhoto ? 'ARCHIVIST' : 'UNKNOWN'),
+      author: node.author || (isEvidence ? 'ARLO' : isPhoto ? 'ARCHIVIST-01' : 'UNKNOWN'),
       software: node.software || 'Workstation Pro v3',
       createdDate: node.createdDate || '2026-09-24T09:12:00.000Z',
       modifiedDate: node.modifiedDate || '2026-09-24T10:15:00.000Z',
-      description: node.description || (isEvidence ? '48 45 4C 50' : isPhoto ? 'ARCHIVE_04' : isBeacon ? 'Beacon QR payload inside /System/logs/beacon_scan.png' : 'STANDARD_METADATA'),
+      description: node.description || 'STANDARD_METADATA',
       cameraModel: 'Field Recon Camera Mark II',
       hashMD5: '7f9a2b819e410c558d0a319f'
     };
@@ -61,16 +54,6 @@ export function MetadataInspectorApp() {
     handleInspectVFS(virtualNode.path);
   };
 
-  const handleSelectFile = (e) => {
-    const p = e.target.value;
-    setSelectedPath(p);
-    if (p) {
-      handleInspectVFS(p);
-    } else {
-      setMetadata(null);
-    }
-  };
-
   const handleCopyVal = (key, val) => {
     if (!val) return;
     navigator.clipboard.writeText(val);
@@ -88,35 +71,41 @@ export function MetadataInspectorApp() {
         <p className="sub">Extract hidden file attributes, EXIF tags, author credentials, and structural comments</p>
       </div>
 
-      <div className="inspector-controls" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <div className="control-group" style={{ flex: 1 }}>
-          <label>SELECT FILE FROM VFS:</label>
-          <select value={selectedPath} onChange={handleSelectFile} className="inspector-select">
-            <option value="">-- Select File from Virtual OS --</option>
-            {DEFAULT_METADATA_FILES.map(f => (
-              <option key={f.path} value={f.path}>{f.label}</option>
-            ))}
-          </select>
+      <div className="inspector-controls">
+        <div className="file-selection-bar">
+          <div className="selected-file-display">
+            <span className="file-label">TARGET EVIDENCE:</span>
+            <span className={`file-path-tag ${selectedPath ? 'has-file' : 'no-file'}`}>
+              {selectedPath || 'No file selected — Click Browse to choose from Virtual OS'}
+            </span>
+          </div>
+
+          <div className="selection-actions">
+            <button
+              className="browse-vfs-btn"
+              onClick={() => setShowPicker(true)}
+            >
+              <Folder size={15} color="#58a6ff" />
+              <span>Browse Virtual OS</span>
+            </button>
+
+            <button
+              className="inspect-btn"
+              onClick={() => handleInspectVFS(selectedPath)}
+              disabled={!selectedPath}
+            >
+              <FileSearch size={15} />
+              <span>Inspect Metadata</span>
+            </button>
+          </div>
         </div>
-
-        <button
-          className="inspect-btn"
-          onClick={() => setShowPicker(true)}
-          style={{ background: '#21262d', color: '#c9d1d9', border: '1px solid #30363d' }}
-        >
-          <Folder size={15} color="#58a6ff" />
-          <span>Browse Virtual OS</span>
-        </button>
-
-        <button className="inspect-btn" onClick={() => handleInspectVFS(selectedPath)} disabled={!selectedPath}>
-          <FileSearch size={15} />
-          <span>Inspect Metadata</span>
-        </button>
       </div>
 
       {!selectedPath && !metadata && (
-        <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#8b949e', fontStyle: 'italic', background: '#0d1117', border: '1px solid #21262d', borderRadius: '6px', marginTop: '1rem' }}>
-          No file selected. Choose a file from the dropdown above or click 'Browse Virtual OS' to inspect a file.
+        <div className="empty-state-notice">
+          <Info size={28} style={{ opacity: 0.6, marginBottom: '0.5rem' }} />
+          <p>No file selected.</p>
+          <span>Click <strong>"Browse Virtual OS"</strong> above to select and inspect an image or evidence file from your workstation folders.</span>
         </div>
       )}
 
@@ -129,26 +118,16 @@ export function MetadataInspectorApp() {
             <div className="meta-row"><span className="key">File Path</span><span className="val">{metadata.path}</span></div>
             <div className="meta-row"><span className="key">File Size</span><span className="val">{metadata.size}</span></div>
             <div className="meta-row"><span className="key">MIME Type</span><span className="val">{metadata.mimeType}</span></div>
-            <div className="meta-row highlight-row">
+            <div className="meta-row">
               <span className="key">Author / Creator</span>
-              <span className="val highlight" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>{metadata.author}</span>
-                <button className="copy-icon-btn" onClick={() => handleCopyVal('author', metadata.author)} title="Copy value">
-                  {copiedKey === 'author' ? <Check size={13} color="#7ee787" /> : <Copy size={13} />}
-                </button>
-              </span>
+              <span className="val">{metadata.author}</span>
             </div>
             <div className="meta-row"><span className="key">Software Used</span><span className="val">{metadata.software}</span></div>
             <div className="meta-row"><span className="key">Time Created</span><span className="val">{metadata.createdDate}</span></div>
             <div className="meta-row"><span className="key">Time Modified</span><span className="val">{metadata.modifiedDate}</span></div>
-            <div className="meta-row highlight-row">
+            <div className="meta-row">
               <span className="key">Description / Comment</span>
-              <span className="val highlight" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>{metadata.description}</span>
-                <button className="copy-icon-btn" onClick={() => handleCopyVal('desc', metadata.description)} title="Copy value">
-                  {copiedKey === 'desc' ? <Check size={13} color="#7ee787" /> : <Copy size={13} />}
-                </button>
-              </span>
+              <span className="val">{metadata.description}</span>
             </div>
             <div className="meta-row"><span className="key">Camera Model</span><span className="val">{metadata.cameraModel}</span></div>
             <div className="meta-row"><span className="key">MD5 Hash</span><span className="val mono">{metadata.hashMD5}</span></div>

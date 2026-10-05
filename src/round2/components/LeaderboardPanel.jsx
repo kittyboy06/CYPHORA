@@ -209,7 +209,6 @@ export function LeaderboardPanel({
               <tr>
                 <th style={{ width: '50px' }}>Rank</th>
                 <th>Team</th>
-                <th style={{ width: '85px', textAlign: 'center' }}>Speed</th>
                 <th style={{ width: '90px', textAlign: 'right' }}>Score</th>
               </tr>
             </thead>
@@ -235,12 +234,6 @@ export function LeaderboardPanel({
                           {isYou && <span className="you-chip">YOU</span>}
                         </span>
                       </div>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span className="speed-tag">
-                        <Zap size={11} />
-                        {team.speed || '--:--'}
-                      </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <span className="score-cell-pts gold-text">

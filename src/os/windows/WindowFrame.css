@@ -19,6 +19,8 @@
   border-radius: 0;
   border-left: none;
   border-right: none;
+  border-top: none;
+  background: #0d120d;
 }
 
 /* Titlebar */

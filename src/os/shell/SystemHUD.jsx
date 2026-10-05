@@ -1,7 +1,7 @@
 import React from 'react';
 import { Shield, Maximize, Minimize, LogOut, Award, Clock } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
-import { formatCountdown } from '../../round1/round1Engine.js';
+import { formatCountdown, getSubsystemStatuses } from '../../round1/round1Engine.js';
 
 const formatSimulatedClock = (value) => {
   if (!value) return 'CLOCK UNSYNCED';
@@ -10,6 +10,8 @@ const formatSimulatedClock = (value) => {
 
 export function SystemHUD() {
   const { teamData, isFullscreen, requestFullscreen, onReturnToHub, round1State } = useOS();
+  const subsystems = getSubsystemStatuses(round1State);
+
   const handleToggleFullscreen = async () => {
     if (!document.fullscreenElement) {
       requestFullscreen();
@@ -31,7 +33,7 @@ export function SystemHUD() {
         <span className="hud-status-badge">STAGE 1</span>
       </div>
 
-      {/* Middle: Team & Score Telemetry */}
+      {/* Middle: Team, Score & EFM Subsystems */}
       <div className="hud-center">
         <div className="hud-telemetry-item">
           <span className="hud-label">EXPLORER:</span>
@@ -47,6 +49,21 @@ export function SystemHUD() {
         <div className="hud-telemetry-item">
           <span className="hud-label">SCORE:</span>
           <span className="hud-val highlight">{teamData.score || 0} pts</span>
+        </div>
+        <div className="hud-divider">|</div>
+        <div className="hud-subsystems-telemetry" title="EFM Field Subsystems: Restore all 4 to unlock the route to the Light">
+          <span className={`hud-sub-badge ${subsystems.power === 'ONLINE' ? 'online' : 'crit'}`} title="Power Grid: Online after Set 1">
+            ⚡ PWR
+          </span>
+          <span className={`hud-sub-badge ${subsystems.radio === 'ONLINE' ? 'online' : 'off'}`} title="Radio Transceiver: Online after Set 2">
+            📻 RAD
+          </span>
+          <span className={`hud-sub-badge ${subsystems.navigation === 'ONLINE' ? 'online' : 'off'}`} title="Navigation Radar: Online after Set 3">
+            🧭 NAV
+          </span>
+          <span className={`hud-sub-badge ${subsystems.archive === 'UNLOCKED' ? 'online' : 'lock'}`} title="Expedition Archive: Unlocked after Set 4">
+            🗄️ ARC
+          </span>
         </div>
       </div>
 

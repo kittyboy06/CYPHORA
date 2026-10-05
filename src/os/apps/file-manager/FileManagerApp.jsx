@@ -16,6 +16,7 @@ import {
   Lock,
   Compass,
   Eye,
+  EyeOff,
   Info,
   X
 } from 'lucide-react';
@@ -69,13 +70,17 @@ export function FileManagerApp() {
     };
   }, [currentPath, showHidden]);
 
-  const navigateTo = (path) => {
-    if (path === currentPath) return;
+  const navigateTo = (path, forceHidden = null) => {
+    const nextHidden = forceHidden !== null ? forceHidden : (path.includes('.hidden') ? true : showHidden);
+    if (nextHidden !== showHidden) {
+      setShowHidden(nextHidden);
+    }
+    if (path === currentPath && nextHidden === showHidden) return;
     const newHistory = history.slice(0, historyIdx + 1);
     newHistory.push(path);
     setHistory(newHistory);
     setHistoryIdx(newHistory.length - 1);
-    loadDirectory(path, showHidden);
+    loadDirectory(path, nextHidden);
   };
 
   const handleBack = () => {
@@ -101,20 +106,47 @@ export function FileManagerApp() {
     navigateTo(parentPath);
   };
 
+  const [contextMenu, setContextMenu] = useState(null);
+
+  useEffect(() => {
+    const handleGlobalClick = () => setContextMenu(null);
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
+
+  const handleContextMenu = (e, target = null) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const targetObj = target || { path: currentPath, type: 'dir', name: currentPath.split('/').pop() || 'Folder' };
+    if (target && target.path) {
+      setSelectedItem(target);
+    }
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      target: targetObj
+    });
+  };
+
   const handleToggleHidden = () => {
     const nextHidden = !showHidden;
     setShowHidden(nextHidden);
     loadDirectory(currentPath, nextHidden);
     if (nextHidden) {
-      setStatusMessage('✓ Showing hidden directories (e.g. /.hidden/)');
-      setTimeout(() => setStatusMessage(''), 2500);
+      setStatusMessage('✓ Hidden files revealed (e.g. .hidden directories)');
+      setTimeout(() => setStatusMessage(''), 3000);
+    } else {
+      setStatusMessage('✓ Hidden files concealed');
+      setTimeout(() => setStatusMessage(''), 2000);
     }
+    setContextMenu(null);
   };
 
   const handleInspectProperties = (item = selectedItem) => {
     if (!item) return;
     setSelectedItem(item);
     setShowPropertiesModal(true);
+    setContextMenu(null);
 
     eventBus.emit('FILE_PROPERTIES_VIEWED', {
       filePath: item.path,
@@ -163,14 +195,15 @@ export function FileManagerApp() {
     { name: 'Documents', path: '/Documents', icon: <Folder size={16} /> },
     { name: 'Downloads', path: '/Downloads', icon: <Folder size={16} /> },
     { name: 'Pictures', path: '/Pictures', icon: <ImageIcon size={16} /> },
+    { name: 'Archive', path: '/Archive', icon: <Folder size={16} /> },
     { name: 'System', path: '/System', icon: <Lock size={16} /> },
-    { name: 'Hidden Archive', path: '/.hidden', icon: <Folder size={16} className="hidden-link" /> }
+    ...(showHidden ? [{ name: 'Hidden Archive', path: '/Archive/.hidden', icon: <Folder size={16} className="hidden-link" /> }] : [])
   ];
 
   const pathParts = currentPath.split('/').filter(Boolean);
 
   return (
-    <div className="fm-container">
+    <div className="fm-container" onContextMenu={(e) => handleContextMenu(e, null)}>
       {/* Top toolbar */}
       <div className="fm-toolbar">
         <div className="fm-nav-controls">
@@ -209,17 +242,17 @@ export function FileManagerApp() {
           })}
         </div>
 
-        {/* Hidden toggle & View mode */}
+        {/* View mode & Hidden Files Toggle */}
         <div className="fm-right-tools">
           <button
-            className={`fm-btn hidden-toggle-btn ${showHidden ? 'active' : ''}`}
+            className={`fm-btn fm-hidden-toggle-btn ${showHidden ? 'active-mode' : ''}`}
             onClick={handleToggleHidden}
-            title="Toggle Hidden Files & Folders"
+            title={showHidden ? 'Conceal Hidden Files' : 'Show Hidden Files'}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 8px', fontSize: '0.75rem', fontWeight: 600 }}
           >
-            <Eye size={15} />
-            <span>{showHidden ? 'Hide Hidden' : 'Show Hidden'}</span>
+            {showHidden ? <EyeOff size={15} /> : <Eye size={15} />}
+            <span>{showHidden ? 'Hidden: ON' : 'Show Hidden'}</span>
           </button>
-
           <div className="fm-view-toggle">
             <button
               className={`fm-btn ${viewMode === 'grid' ? 'active-mode' : ''}`}
@@ -249,6 +282,7 @@ export function FileManagerApp() {
               key={link.path}
               className={`fm-sidebar-link ${currentPath === link.path ? 'active' : ''}`}
               onClick={() => navigateTo(link.path)}
+              onContextMenu={(e) => handleContextMenu(e, { path: link.path, type: 'dir', name: link.name })}
             >
               {link.icon}
               <span>{link.name}</span>
@@ -257,7 +291,7 @@ export function FileManagerApp() {
         </div>
 
         {/* Files content pane */}
-        <div className="fm-content-pane">
+        <div className="fm-content-pane" onContextMenu={(e) => handleContextMenu(e, null)}>
           {statusMessage ? (
             <div className="fm-info-state">{statusMessage}</div>
           ) : items.length === 0 ? (
@@ -273,6 +307,7 @@ export function FileManagerApp() {
                     className={`fm-grid-item ${isSelected ? 'selected' : ''} ${isHidden ? 'hidden-item' : ''}`}
                     onClick={() => setSelectedItem(item)}
                     onDoubleClick={() => handleItemDoubleClick(item)}
+                    onContextMenu={(e) => handleContextMenu(e, item)}
                   >
                     <div className="fm-icon-wrapper">{getFileIcon(item)}</div>
                     <span className="fm-item-name" title={item.name}>
@@ -299,6 +334,7 @@ export function FileManagerApp() {
                     className={`fm-list-row ${isSelected ? 'selected' : ''} ${isHidden ? 'hidden-item' : ''}`}
                     onClick={() => setSelectedItem(item)}
                     onDoubleClick={() => handleItemDoubleClick(item)}
+                    onContextMenu={(e) => handleContextMenu(e, item)}
                   >
                     <span className="col-name">
                       {item.type === 'dir' ? <Folder size={16} /> : <FileText size={16} />}
@@ -314,6 +350,62 @@ export function FileManagerApp() {
           )}
         </div>
       </div>
+
+      {/* Right-click Context Menu */}
+      {contextMenu && (
+        <div
+          className="fm-context-menu"
+          style={{
+            top: Math.min(contextMenu.y, window.innerHeight - 150),
+            left: Math.min(contextMenu.x, window.innerWidth - 200)
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="context-header">
+            {contextMenu.target?.name || 'Folder Actions'}
+          </div>
+
+          <button
+            className="context-menu-item highlight-action"
+            onClick={handleToggleHidden}
+          >
+            <Eye size={14} color="#dfb125" />
+            <span>{showHidden ? 'Hide Hidden Files' : 'Show Hidden Files'}</span>
+          </button>
+
+          {contextMenu.target?.type === 'dir' ? (
+            <button
+              className="context-menu-item"
+              onClick={() => {
+                navigateTo(contextMenu.target.path);
+                setContextMenu(null);
+              }}
+            >
+              <Folder size={14} color="#79c0ff" />
+              <span>Open Directory</span>
+            </button>
+          ) : (
+            <button
+              className="context-menu-item"
+              onClick={() => {
+                handleItemDoubleClick(contextMenu.target);
+                setContextMenu(null);
+              }}
+            >
+              <FileText size={14} color="#79c0ff" />
+              <span>Open File</span>
+            </button>
+          )}
+
+          <button
+            className="context-menu-item"
+            onClick={() => handleInspectProperties(contextMenu.target)}
+          >
+            <Info size={14} color="#7ee787" />
+            <span>Inspect Properties</span>
+          </button>
+        </div>
+      )}
 
       {/* File Properties Modal */}
       {showPropertiesModal && selectedItem && (

@@ -232,7 +232,7 @@
    ======================================================== */
 .os-workspace-area {
   position: absolute;
-  top: 38px;
+  top: 0;
   bottom: 42px;
   left: 0;
   right: 0;
@@ -262,35 +262,271 @@
   user-select: none;
 }
 
+/* HUD Subsystems Telemetry */
+.hud-subsystems-telemetry {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hud-sub-badge {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.12rem 0.35rem;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.hud-sub-badge.online {
+  color: #5af78e;
+  background: rgba(90, 247, 142, 0.12);
+  border-color: rgba(90, 247, 142, 0.35);
+  text-shadow: 0 0 6px rgba(90, 247, 142, 0.4);
+}
+
+.hud-sub-badge.crit {
+  color: #ff5555;
+  background: rgba(255, 85, 85, 0.12);
+  border-color: rgba(255, 85, 85, 0.35);
+}
+
+.hud-sub-badge.off, .hud-sub-badge.lock {
+  color: #8c8268;
+  background: rgba(20, 25, 20, 0.6);
+  border-color: rgba(140, 130, 104, 0.2);
+}
+
 .desktop-journey-hud {
   position: relative;
-  display: grid;
-  gap: 0.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
   color: #aebfa9;
-  justify-items: end;
-  text-align: right;
+  background: rgba(12, 18, 14, 0.88);
+  border: 1px solid rgba(223, 177, 37, 0.35);
+  border-radius: 6px;
+  padding: 0.75rem 0.95rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
   user-select: none;
   width: 100%;
+  box-sizing: border-box;
 }
 
-.desktop-journey-hud span {
+.journey-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.journey-target-title {
   color: #dfb125;
-  font-size: 0.58rem;
+  font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.16rem;
+  letter-spacing: 0.12rem;
+  font-family: 'Cinzel', serif;
 }
 
-.desktop-journey-hud strong {
-  color: #e8f0e4;
-  font-size: 1.15rem;
-  line-height: 1.1;
+.journey-pct {
+  color: #f3d77f;
+  font-size: 1.4rem;
+  font-weight: 750;
+  font-family: 'Fira Code', monospace;
+  line-height: 1;
 }
 
-.desktop-journey-hud small {
+.journey-subsystems-mini {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+}
+
+.sub-pill {
   font-size: 0.58rem;
+  font-family: 'Fira Code', monospace;
+  font-weight: 700;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+}
+
+.sub-pill.on {
+  color: #5af78e;
+  background: rgba(90, 247, 142, 0.15);
+  border: 1px solid rgba(90, 247, 142, 0.3);
+}
+
+.sub-pill.crit {
+  color: #ff5555;
+  background: rgba(255, 85, 85, 0.12);
+  border: 1px solid rgba(255, 85, 85, 0.25);
+}
+
+.sub-pill.off, .sub-pill.lock {
+  color: #7b7868;
+  background: rgba(10, 15, 12, 0.6);
+  border: 1px solid rgba(123, 120, 104, 0.2);
+}
+
+.journey-route-badge {
+  text-align: right;
+  border-top: 1px solid rgba(223, 177, 37, 0.15);
+  padding-top: 0.3rem;
+}
+
+.journey-route-badge small {
+  font-size: 0.62rem;
   letter-spacing: 0.08rem;
   text-transform: uppercase;
-  color: #aebfa9;
+  color: #c9ba92;
+}
+
+.journey-route-badge small strong {
+  color: #dfb125;
+}
+
+.journey-sub-note {
+  font-size: 0.58rem;
+  color: #9ba695;
+  margin-top: 0.25rem;
+  line-height: 1.35;
+  text-align: left;
+}
+
+/* Monolith Telemetry Viewport inside Journey HUD */
+.monolith-telemetry-viewport {
+  position: relative;
+  width: 100%;
+  height: 64px;
+  background: radial-gradient(circle at 50% 120%, rgba(20, 32, 24, 0.95) 0%, #060a08 100%);
+  border: 1px solid rgba(223, 177, 37, 0.25);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 0.3rem 0 0.45rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.monolith-viewport-sky {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.monolith-spire-silhouette {
+  position: absolute;
+  bottom: 0;
+  width: 12px;
+  height: 46px;
+  background: linear-gradient(180deg, #18281e 0%, #080f0a 100%);
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+  z-index: 2;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+}
+
+.monolith-beacon-glow {
+  position: absolute;
+  bottom: 28px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(243, 215, 127, 0.95) 0%, rgba(223, 177, 37, 0.45) 40%, transparent 70%);
+  opacity: calc(0.3 + var(--light-intensity, 0.15) * 0.7);
+  transform: scale(calc(0.8 + var(--light-intensity, 0.15) * 1.5));
+  filter: blur(2px);
+  animation: beaconPulse 2.5s ease-in-out infinite alternate;
+  z-index: 1;
+}
+
+@keyframes beaconPulse {
+  0% { transform: scale(calc(0.75 + var(--light-intensity, 0.15) * 1.2)); opacity: calc(0.25 + var(--light-intensity, 0.15) * 0.6); }
+  100% { transform: scale(calc(0.9 + var(--light-intensity, 0.15) * 1.8)); opacity: calc(0.4 + var(--light-intensity, 0.15) * 0.8); }
+}
+
+.monolith-signal-waves {
+  position: absolute;
+  bottom: 30px;
+  width: 32px;
+  height: 32px;
+  border: 1px dashed rgba(223, 177, 37, 0.6);
+  border-radius: 50%;
+  animation: signalWaveExpand 2s cubic-bezier(0.2, 0.8, 0.4, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes signalWaveExpand {
+  0% { transform: scale(0.3); opacity: 0.9; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+
+.monolith-target-reticle {
+  position: absolute;
+  bottom: 20px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.reticle-ring {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #5af78e;
+  border-radius: 50%;
+  opacity: 0.7;
+}
+
+.reticle-crosshair {
+  position: absolute;
+  width: 34px;
+  height: 1px;
+  background: rgba(90, 247, 142, 0.6);
+}
+
+.monolith-viewport-scanline {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 1px, transparent 1px, transparent 3px);
+  pointer-events: none;
+  z-index: 4;
+}
+
+.monolith-viewport-caption {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.45rem;
+  background: linear-gradient(180deg, rgba(6,10,8,0.85) 0%, transparent 100%);
+}
+
+.telemetry-tag {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.52rem;
+  font-weight: 800;
+  letter-spacing: 0.08rem;
+  color: #dfb125;
+}
+
+.telemetry-status {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.52rem;
+  font-weight: 600;
+  color: #5af78e;
+  max-width: 155px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Expedition Leaderboard Widget */
@@ -435,7 +671,7 @@
 
 .leaderboard-rank {
   font-family: 'Fira Code', monospace;
-  font-size: 0.68rem;
+  font-size: 0.82rem;
   font-weight: 800;
   text-align: center;
 }
@@ -465,7 +701,7 @@
 }
 
 .leaderboard-team-name {
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #eae0c8;
   overflow: hidden;
@@ -499,13 +735,13 @@
 }
 
 .leaderboard-score-pill .score-num {
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   font-weight: 800;
   color: #dfb125;
 }
 
 .leaderboard-score-pill .score-unit {
-  font-size: 0.54rem;
+  font-size: 0.58rem;
   font-weight: 600;
   color: #8a9686;
 }
@@ -553,7 +789,7 @@
 }
 
 .desktop-icon-cell {
-  width: 86px;
+  width: 96px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -590,7 +826,8 @@
   font-size: 0.72rem;
   color: #eae0c8;
   text-align: center;
-  word-break: break-all;
+  word-break: normal;
+  overflow-wrap: break-word;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

@@ -65,6 +65,19 @@ export const setupBlocks = () => {
     }
   };
 
+  Blockly.Blocks['action_equip'] = {
+    init: function () {
+      this.jsonInit({
+        type: 'action_equip',
+        message0: 'Equip Item',
+        previousStatement: null,
+        nextStatement: null,
+        colour: '#c86f1e', // Orange/Brown for equip
+        tooltip: 'Equip an item from the current tile'
+      });
+    }
+  };
+
   Blockly.Blocks['sensor_beast_vulnerable'] = {
     init: function () {
       this.jsonInit({
@@ -85,6 +98,11 @@ export const setupBlocks = () => {
   // @ts-ignore
   javascriptGenerator.forBlock['action_defend'] = function(block: Blockly.Block) {
     return `await game.defend('${block.id}');\n`;
+  };
+
+  // @ts-ignore
+  javascriptGenerator.forBlock['action_equip'] = function(block: Blockly.Block) {
+    return `await game.equip('${block.id}');\n`;
   };
 
   // @ts-ignore

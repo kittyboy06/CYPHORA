@@ -14,6 +14,7 @@ export function PromptSection({
   touched,
   maxLength = 1500,
   minLength = 10,
+  phase = 1,
 }) {
   const currentLength = value ? value.length : 0;
   const isTooShort = touched && value.trim().length < minLength && value.trim().length > 0;
@@ -24,7 +25,7 @@ export function PromptSection({
       <div className="card-header">
         <div className="header-title-group">
           <Sparkles className="header-icon gold-text" size={20} />
-          <h3 id="prompt-heading">Recreation Prompt</h3>
+          <h3 id="prompt-heading">Recreation Prompt {phase === 1 ? '(Image 1)' : '(Image 2)'}</h3>
         </div>
         <div className="char-counter" aria-live="polite">
           <span className={currentLength > maxLength - 50 ? 'near-limit' : ''}>
@@ -37,9 +38,9 @@ export function PromptSection({
       <div className="input-group">
         <div className="label-row">
           <label htmlFor="participant-prompt" className="field-label">
-            Enter your prompt <span className="required-star" aria-hidden="true">*</span>
+            Enter your prompt for Image {phase} <span className="required-star" aria-hidden="true">*</span>
           </label>
-          <span className="field-hint">Describe the image composition, subject, style, lighting & details</span>
+          <span className="field-hint">Describe the image composition, subject, style, lighting & details for Image {phase}</span>
         </div>
 
         <div className="textarea-wrapper">
@@ -47,7 +48,7 @@ export function PromptSection({
             id="participant-prompt"
             name="prompt"
             className={`styled-textarea ${error && touched ? 'has-error' : ''} ${isValid ? 'is-valid' : ''}`}
-            placeholder="e.g., A cinematic wide-angle photograph of an ancient stone altar inside a dense bioluminescent jungle, morning mist illuminated by golden sunbeams, moss covered stone..."
+            placeholder="ENTER YOUR PROMPT"
             value={value}
             onChange={(e) => onChange(e.target.value)}
             rows={5}

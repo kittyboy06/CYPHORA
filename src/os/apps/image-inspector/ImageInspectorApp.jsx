@@ -1,25 +1,27 @@
 import React, { useState } from 'react';
-import { Image as ImageIcon, ZoomIn, ZoomOut, RefreshCw, Eye, CheckCircle } from 'lucide-react';
+import { Image as ImageIcon, ZoomIn, ZoomOut, RefreshCw, Eye, Folder } from 'lucide-react';
 import { useOS } from '../../state/OSContext.jsx';
+import { VirtualFilePicker } from '../../components/VirtualFilePicker.jsx';
 import './ImageInspectorApp.css';
 
-const SAMPLE_IMAGES = [
-  { label: 'field_poster.png (Task 02 Visual Clue)', path: '/Pictures/field_poster.png' },
-  { label: 'terrain_map.png (Pictures)', path: '/Pictures/terrain_map.png' },
-  { label: 'camp_photo.png (Pictures)', path: '/Pictures/camp_photo.png' }
+const DEFAULT_IMAGES = [
+  { label: 'evidence.jpg', path: '/Pictures/evidence.jpg' },
+  { label: 'poster.png', path: '/Pictures/poster.png' },
+  { label: 'archive_photo.png', path: '/Pictures/archive_photo.png' },
+  { label: 'map.png', path: '/Pictures/map.png' },
+  { label: 'device-9.jpg', path: '/Pictures/device-9.jpg' },
+  { label: 'device.png', path: '/Pictures/device.png' }
 ];
 
 export function ImageInspectorApp() {
   const { vfs, eventBus } = useOS();
-  const [selectedPath, setSelectedPath] = useState('');
+  const [selectedPath, setSelectedPath] = useState('/Pictures/poster.png');
   const [zoom, setZoom] = useState(100);
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
-  const [showOverlay, setShowOverlay] = useState(true);
-  const [statusMsg, setStatusMsg] = useState('');
+  const [showPicker, setShowPicker] = useState(false);
 
   const node = vfs.getNode(selectedPath);
-  const isPoster = selectedPath.includes('field_poster');
 
   const handleZoomIn = () => setZoom(z => Math.min(z + 25, 250));
   const handleZoomOut = () => setZoom(z => Math.max(z - 25, 50));
@@ -29,26 +31,10 @@ export function ImageInspectorApp() {
     setContrast(100);
   };
 
-  const handleSelectImage = (e) => {
-    const p = e.target.value;
-    setSelectedPath(p);
+  const handleSelectImage = (path) => {
+    setSelectedPath(path);
     handleReset();
-    eventBus.emit('IMAGE_INSPECTED', {
-      filePath: p,
-      clueAnswer: p.includes('field_poster') ? 'VECTOR-7' : 'STANDARD_IMAGE'
-    });
-  };
-
-  const handleSubmitVisualCode = () => {
-    const code = isPoster ? 'VECTOR-7' : 'FIELD_MAP_OK';
-    eventBus.emit('IMAGE_INSPECTED', {
-      clueAnswer: code
-    });
-    eventBus.emit('TASK_ANSWER_SUBMITTED', {
-      answer: code
-    });
-    setStatusMsg(`✓ Submitted visual clue code (${code}) to task!`);
-    setTimeout(() => setStatusMsg(''), 3000);
+    eventBus.emit('IMAGE_INSPECTED', { filePath: path });
   };
 
   return (
@@ -58,17 +44,30 @@ export function ImageInspectorApp() {
           <ImageIcon size={18} className="icon" />
           <span>Image Inspector</span>
         </div>
-        <p className="sub">Examine visual artifacts, symbols, color channels, and optical details</p>
+        <p className="sub">Examine visual artifacts, optical details, and image properties</p>
       </div>
 
       <div className="inspector-toolbar">
         <div className="select-wrap">
           <label>SELECT IMAGE:</label>
-          <select value={selectedPath} onChange={handleSelectImage} className="image-select">
-            {SAMPLE_IMAGES.map(img => (
+          <select
+            value={selectedPath}
+            onChange={(e) => handleSelectImage(e.target.value)}
+            className="image-select"
+          >
+            {DEFAULT_IMAGES.map(img => (
               <option key={img.path} value={img.path}>{img.label}</option>
             ))}
           </select>
+          <button
+            className="tool-btn"
+            onClick={() => setShowPicker(true)}
+            title="Browse Virtual OS"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.6rem' }}
+          >
+            <Folder size={14} color="#58a6ff" />
+            <span style={{ fontSize: '0.75rem' }}>Browse</span>
+          </button>
         </div>
 
         <div className="tool-controls">
@@ -76,9 +75,6 @@ export function ImageInspectorApp() {
           <span className="zoom-text">{zoom}%</span>
           <button className="tool-btn" onClick={handleZoomIn} title="Zoom In"><ZoomIn size={14} /></button>
           <button className="tool-btn" onClick={handleReset} title="Reset View"><RefreshCw size={14} /></button>
-          <button className={`tool-btn ${showOverlay ? 'active' : ''}`} onClick={() => setShowOverlay(o => !o)} title="Toggle Visual Feature Overlay">
-            <Eye size={14} />
-          </button>
         </div>
       </div>
 
@@ -92,23 +88,20 @@ export function ImageInspectorApp() {
           }}
         >
           <div className="simulated-image-frame">
-            <div className="poster-header">CYPHORA FIELD EXPEDITION POSTER</div>
+            <div className="poster-header">IMAGE FILE: {selectedPath.split('/').pop()}</div>
             <div className="poster-body">
-              <div className="symbols-row">
-                <span className={`symbol-badge ${showOverlay ? 'highlight' : ''}`}>[VECTOR]</span>
-                <span className="symbol-badge">[DELTA]</span>
-                <span className="symbol-badge">[ALPHA]</span>
-              </div>
-              <div className="number-focus">
-                <span className="label">NUMBER MARKER:</span>
-                <span className={`number-val ${showOverlay ? 'highlight' : ''}`}>7</span>
-              </div>
-              <div className="letter-focus">
-                <span className="label">HIGHLIGHTED LETTER:</span>
-                <span className={`letter-val ${showOverlay ? 'highlight' : ''}`}>K</span>
+              <div style={{ padding: '1.5rem', textAlign: 'center', color: '#eae0c8' }}>
+                <p style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
+                  {node?.content || `[VISUAL EVIDENCE: ${selectedPath}]`}
+                </p>
+                {node?.dimensions && (
+                  <p style={{ fontSize: '0.75rem', color: '#8b949e', marginTop: '0.5rem' }}>
+                    Dimensions: {node.dimensions} | Size: {node.size ? Math.round(node.size / 1024) : 0} KB
+                  </p>
+                )}
               </div>
             </div>
-            <div className="poster-footer">EXPEDITION RECONNAISSANCE POSTER // CLUE REF #02</div>
+            <div className="poster-footer">LOCATION: {selectedPath}</div>
           </div>
         </div>
 
@@ -125,25 +118,13 @@ export function ImageInspectorApp() {
         </div>
       </div>
 
-      {/* Inspection Breakdown */}
-      <div className="visual-breakdown-panel">
-        <div className="panel-title">VISUAL ELEMENT ANALYSIS SUMMARY</div>
-        <div className="elements-grid">
-          <div className="element-item"><span>Primary Symbol</span><strong>VECTOR</strong></div>
-          <div className="element-item"><span>Number Clue</span><strong>7</strong></div>
-          <div className="element-item"><span>Letter Clue</span><strong>K</strong></div>
-          <div className="element-item highlight-item"><span>Combined Code</span><strong className="code-highlight">VECTOR-7</strong></div>
-        </div>
-
-        <div className="panel-actions">
-          <button className="submit-code-btn" onClick={handleSubmitVisualCode}>
-            <CheckCircle size={15} />
-            <span>Submit Visual Code (VECTOR-7)</span>
-          </button>
-        </div>
-      </div>
-
-      {statusMsg && <div className="inspector-msg">{statusMsg}</div>}
+      {/* Virtual File Picker */}
+      <VirtualFilePicker
+        isOpen={showPicker}
+        onClose={() => setShowPicker(false)}
+        onSelectFile={(f) => handleSelectImage(f.path)}
+        title="Select Image to Inspect from Virtual OS"
+      />
     </div>
   );
 }

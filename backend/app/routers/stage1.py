@@ -12,97 +12,92 @@ from ..websocket_manager import ws_manager
 router = APIRouter(prefix="/api/stage1", tags=["Stage 1 - OS Navigation"])
 
 # Comprehensive catalog for Round 1 Investigation Tasks (12 Tasks across 4 Tiers)
+# Canonical Source of Truth as defined in Prompts/pro3.md
 STAGE1_TASKS = {
     "r1_t01": {
         "title": "Task 01 — Encoded Message",
         "points": 50,
         "stage": 1,
-        "description": "Convert the encoded value into a human-readable format",
+        "description": "Decode the numerical values in message.txt.",
         "accepted": ["HIDE"]
     },
     "r1_t02": {
         "title": "Task 02 — File Information",
         "points": 50,
         "stage": 1,
-        "description": "Investigate stored metadata and enter the recorded author",
-        "accepted": ["ARLO", "DR. ARLO VANCE", "DR ARLO VANCE", "ARLO VANCE"]
+        "description": "Inspect evidence.jpg metadata and find the registered author.",
+        "accepted": ["ARLO"]
     },
     "r1_t03": {
         "title": "Task 03 — Image Message",
         "points": 50,
         "stage": 1,
-        "description": "Analyze the visual evidence and recover the secret designation",
-        "accepted": ["SECTOR-7", "SECTOR 7", "SECTOR7"]
+        "description": "Scan the optical matrix in poster.png.",
+        "accepted": ["SECTOR-7"]
     },
     "r1_t04": {
-        "title": "Task 04 — Ordering / Reasoning",
+        "title": "Task 04 — The Earliest Record",
         "points": 75,
         "stage": 2,
-        "description": "Trace and order log records to identify the security classification",
+        "description": "Find the earliest timestamp in access.log and determine the associated color.",
         "accepted": ["YELLOW"]
     },
     "r1_t05": {
-        "title": "Task 05 — File Comparison",
+        "title": "Task 05 — The Changed Record",
         "points": 75,
         "stage": 2,
-        "description": "Compare data revisions and extract the changed checksum hash",
+        "description": "Compare the old and new transmission logs and find the changed value.",
         "accepted": ["9941"]
     },
     "r1_t06": {
         "title": "Task 06 — The Fragmented Password",
         "points": 75,
         "stage": 2,
-        "description": "Reassemble fragmented key tokens across the workstation",
-        "accepted": ["JUMP"]
+        "description": "Chronologically arrange three fragments and decode them.",
+        "accepted": ["CYPHORA"]
     },
     "r1_t07": {
-        "title": "Task 07 — Metadata → Conversion",
+        "title": "Task 07 — The Hidden Record",
         "points": 100,
         "stage": 3,
-        "description": "Follow metadata pointers and convert encoded payload",
-        "accepted": ["HELP"]
+        "description": "Inspect image metadata and decode the embedded character codes.",
+        "accepted": ["RESCUE"]
     },
     "r1_t08": {
-        "title": "Task 08 — Hidden Evidence",
+        "title": "Task 08 — The Disguised File",
         "points": 100,
         "stage": 3,
-        "description": "Extract hidden transmission parameters and frequency pin",
+        "description": "Find the file hidden inside the concealed directory.",
         "accepted": ["7314"]
     },
     "r1_t09": {
-        "title": "Task 09 — The Evidence Network",
+        "title": "Task 09 — The Evidence Trail",
         "points": 100,
         "stage": 3,
-        "description": "Correlate multiple network traces and determine host node ID",
+        "description": "Follow the image clue → index → activity log.",
         "accepted": ["17"]
     },
     "r1_t10": {
-        "title": "Task 10 — Diff → Interpret → Convert",
+        "title": "Task 10 — The Altered Record",
         "points": 150,
         "stage": 4,
-        "description": "Multi-stage diff inspection, interpretation, and decoding",
-        "accepted": ["JUMP"]
+        "description": "Compare two configuration files, identify the changed hexadecimal data, and decode it.",
+        "accepted": ["VECTOR"]
     },
     "r1_t11": {
-        "title": "Task 11 — Cross-Application Investigation",
+        "title": "Task 11 — Follow the Trail",
         "points": 150,
         "stage": 4,
-        "description": "Synthesize audio, image, and text evidence into unified access phrase",
+        "description": "Follow the chain from the incident note through the archive and device image, inspect the referenced metadata, and decode the recovered character sequence.",
         "accepted": ["SHIFT"]
     },
     "r1_t12": {
-        "title": "Task 12 — Final Boss: Trace the Transfer",
+        "title": "Task 12 — Trace the Incident",
         "points": 150,
         "stage": 4,
-        "description": "Trace full workstation transfer logs and unlock the core memory fragment",
+        "description": "Reconstruct the incident by following the references across the system record, device evidence, archive record, and transfer record. Decode the final hexadecimal payload to recover the clearance code.",
         "accepted": ["SYMPO"]
-    },
-    # Backward compatibility aliases
-    "terminal_boot": {"title": "Terminal Initialization", "points": 50, "stage": 1, "description": "Boot the simulated terminal shell", "accepted": []},
-    "find_cipher_file": {"title": "Locate Encrypted File", "points": 100, "stage": 1, "description": "Navigate filesystem to find secrets.txt", "accepted": []},
-    "decode_base64": {"title": "Decode Access Key", "points": 150, "stage": 1, "description": "Decode base64 encoded credential string", "accepted": []},
-    "patch_permission": {"title": "Grant Execution Right", "points": 100, "stage": 1, "description": "Fix script execute permission with chmod", "accepted": []},
-    "run_payload": {"title": "Execute Cyber Signal", "points": 200, "stage": 1, "description": "Launch the final OS navigation payload", "accepted": []}
+    }
 }
 
 def resolve_task_key(raw_key: str):
@@ -163,18 +158,27 @@ async def submit_stage1_task(
 
     task_info = STAGE1_TASKS[resolved_key]
 
-    # Validate answer if accepted answers list is defined and proof was sent
-    accepted = task_info.get("accepted", [])
-    if accepted and req.proof:
-        clean_proof = req.proof.strip().upper()
-        if clean_proof not in [a.strip().upper() for a in accepted]:
-            return TaskSubmitResponse(
-                success=False,
-                task_key=resolved_key,
-                points_awarded=0,
-                new_total_score=current_team.score,
-                message="Incorrect submission. Verify evidence and try again."
-            )
+    # Validate that an answer/proof was actually provided. Empty, null, whitespace-only submissions are strictly rejected!
+    if not req.proof or not req.proof.strip():
+        return TaskSubmitResponse(
+            success=False,
+            task_key=resolved_key,
+            points_awarded=0,
+            new_total_score=current_team.score,
+            message="Submission rejected: Answer cannot be empty."
+        )
+
+    clean_proof = req.proof.strip().upper()
+    accepted = [a.strip().upper() for a in task_info.get("accepted", [])]
+
+    if clean_proof not in accepted:
+        return TaskSubmitResponse(
+            success=False,
+            task_key=resolved_key,
+            points_awarded=0,
+            new_total_score=current_team.score,
+            message="Incorrect answer. Verify evidence and try again."
+        )
 
     # Check if already completed
     stmt = select(TaskSubmission).filter(

@@ -6,29 +6,94 @@ export const STORAGE_KEY = 'cyphora_round1_state';
 export const ROUND_1_SETS = [
   {
     id: 'set1',
-    title: 'TIER 1: ONE-STEP RECONNAISSANCE',
-    description: 'Master single conceptual operations across binary data, metadata, QR codes, patterns, and document diffs.',
+    title: 'SUBSYSTEM 1: POWER GRID RESTORATION',
+    subsystem: 'POWER',
+    description: 'Recover foundational workstation files, binary records, and metadata to restore the primary power distribution.',
     tasks: ['r1_t01', 'r1_t02', 'r1_t03', 'r1_t04', 'r1_t05']
   },
   {
     id: 'set2',
-    title: 'TIER 2A: MULTI-STEP CONVERSIONS',
-    description: 'Chain intermediate representations: Binary to 0-9 format to Readable format, Metadata to File access, and Hex decoding.',
+    title: 'SUBSYSTEM 2: RADIO TRANSMITTER RESTORATION',
+    subsystem: 'RADIO',
+    description: 'Decode intermediate transmissions and communication logs to reconnect the field station transceiver.',
     tasks: ['r1_t06', 'r1_t07', 'r1_t08']
   },
   {
     id: 'set3',
-    title: 'TIER 2B: CROSS-APP DISCOVERY',
-    description: 'Combine QR scanner references with frequency analysis and document comparison conversions.',
+    title: 'SUBSYSTEM 3: NAVIGATION & RADAR TRIANGULATION',
+    subsystem: 'NAVIGATION',
+    description: 'Triangulate signal frequencies, optical matrix codes, and sector maps to determine the route toward the Monolith.',
     tasks: ['r1_t09', 'r1_t10']
   },
   {
     id: 'set4',
-    title: 'TIER 3: ADVANCED CHAINED INVESTIGATION',
-    description: 'Execute deep multi-app investigation chains and unlock the final workstation clearance key.',
+    title: 'SUBSYSTEM 4: EXPEDITION ARCHIVE & MEMORY RECOVERY',
+    subsystem: 'ARCHIVE',
+    description: 'Reconstruct chained incident records across logs and transfers to unlock clearance and open the path to the Light.',
     tasks: ['r1_t11', 'r1_t12']
   }
 ];
+
+export function getSubsystemStatuses(state) {
+  const tasks = state?.tasks || [];
+  const set1Tasks = tasks.filter(t => t.setId === 'set1');
+  const set2Tasks = tasks.filter(t => t.setId === 'set2');
+  const set3Tasks = tasks.filter(t => t.setId === 'set3');
+  const set4Tasks = tasks.filter(t => t.setId === 'set4');
+
+  const set1Complete = set1Tasks.length > 0 && set1Tasks.every(t => t.status === 'COMPLETED');
+  const set2Complete = set2Tasks.length > 0 && set2Tasks.every(t => t.status === 'COMPLETED');
+  const set3Complete = set3Tasks.length > 0 && set3Tasks.every(t => t.status === 'COMPLETED');
+  const set4Complete = set4Tasks.length > 0 && set4Tasks.every(t => t.status === 'COMPLETED');
+
+  let routeToLight = 'OFFLINE';
+  let routeStatusText = 'AWAITING POWER RESTORATION';
+  let lightIntensity = 0.15; // Distant initial glow
+  let narrativePhase = 'INITIAL: Distant monolith visible only as a faint glow in the dark mist.';
+  let stageDescription = 'The station is powered down. Recover workstation files to restore power.';
+
+  if (set4Complete || state?.isCompleted) {
+    routeToLight = 'ROUTE AVAILABLE';
+    routeStatusText = 'THE PATH TO THE LIGHT IS OPEN';
+    lightIntensity = 1.0;
+    narrativePhase = 'FINAL: All field subsystems restored. The path to the Light is open.';
+    stageDescription = 'Coordinates locked. Expedition archive recovered. Proceed into the unknown.';
+  } else if (set3Complete) {
+    routeToLight = 'COMPUTING ROUTE';
+    routeStatusText = 'RADAR TRIANGULATING MONOLITH VECTOR';
+    lightIntensity = 0.75;
+    narrativePhase = 'NAVIGATION ONLINE: System is determining the route to the monolith.';
+    stageDescription = 'Triangulation grid active. Archive access required to decrypt final clearance.';
+  } else if (set2Complete) {
+    routeToLight = 'SIGNAL LOCKED';
+    routeStatusText = 'RADIO TRANSCEIVER RECEIVING PULSES';
+    lightIntensity = 0.50;
+    narrativePhase = 'RADIO ONLINE: Signal pulses from the monolith are growing stronger.';
+    stageDescription = 'Transceiver linked. Navigation triangulation required to plot coordinates.';
+  } else if (set1Complete) {
+    routeToLight = 'POWER RESTORED';
+    routeStatusText = 'STATION TERMINALS & SENSORS OPERATIONAL';
+    lightIntensity = 0.30;
+    narrativePhase = 'POWER ONLINE: Station systems and observation screens activated.';
+    stageDescription = 'Power grid stable. Radio communications required to lock signal source.';
+  }
+
+  return {
+    power: set1Complete ? 'ONLINE' : 'CRITICAL',
+    radio: set2Complete ? 'ONLINE' : 'OFFLINE',
+    navigation: set3Complete ? 'ONLINE' : 'OFFLINE',
+    archive: set4Complete ? 'UNLOCKED' : 'LOCKED',
+    set1Complete,
+    set2Complete,
+    set3Complete,
+    set4Complete,
+    routeToLight,
+    routeStatusText,
+    lightIntensity,
+    narrativePhase,
+    stageDescription
+  };
+}
 
 export const ROUND_1_TASKS = TASK_DEFINITIONS.map(def => {
   const parentSet = ROUND_1_SETS.find(s => s.tasks.includes(def.id));
@@ -315,7 +380,7 @@ const EVENT_TYPE_MAP = {
 
 export function processRound1Event(state, eventName, payload = {}) {
   const next = normalizeRound1State(state || buildDefaultRound1State());
-  if (!next.isTimerRunning || next.isExpired || next.isCompleted || next.round1Status === 'COMPLETED') {
+  if (next.isCompleted || next.round1Status === 'COMPLETED') {
     return next;
   }
 

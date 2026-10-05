@@ -1,20 +1,48 @@
-export const toolboxXml = `
-<xml xmlns="https://developers.google.com/blockly/xml">
-  <category name="Actions" colour="#5b80a5">
+export function getToolboxXml(level: number): string {
+  let actions = `
     <block type="action_run"></block>
     <block type="action_jump"></block>
-    <block type="action_attack"></block>
-    <block type="action_defend"></block>
-    <block type="action_activate_totem"></block>
-    <block type="action_dodge"></block>
-    <block type="action_slide"></block>
-    <block type="action_activate_tile"></block>
+  `;
+  
+  if (level === 2) {
+    actions += `
+      <block type="action_equip"></block>
+      <block type="action_attack"></block>
+      <block type="action_defend"></block>
+    `;
+  }
+  if (level === 3) {
+    actions += `
+      <block type="action_dodge"></block>
+      <block type="action_slide"></block>
+      <block type="action_activate_tile"></block>
+    `;
+  }
+  if (level === 4) {
+    actions += `
+      <block type="action_attack"></block>
+      <block type="action_activate_totem"></block>
+    `;
+  }
+
+  let sensors = '';
+  if (level === 2) {
+    sensors = `<category name="Sensors" colour="#a5935b">
+      <block type="sensor_beast_vulnerable"></block>
+    </category>`;
+  } else if (level === 3) {
+    sensors = `<category name="Sensors" colour="#a5935b">
+      <block type="sensor_tile_color"></block>
+      <block type="color_value"></block>
+    </category>`;
+  }
+
+  return `
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <category name="Actions" colour="#5b80a5">
+    ${actions}
   </category>
-  <category name="Sensors" colour="#a5935b">
-    <block type="sensor_beast_vulnerable"></block>
-    <block type="sensor_tile_color"></block>
-    <block type="color_value"></block>
-  </category>
+  ${sensors}
   <category name="Logic" colour="#5b80a5">
     <block type="controls_if"></block>
     <block type="logic_compare"></block>
@@ -50,4 +78,8 @@ export const toolboxXml = `
   <category name="Variables" colour="#a55b80" custom="VARIABLE"></category>
   <category name="Functions" colour="#995ba5" custom="PROCEDURE"></category>
 </xml>
-`;
+  `;
+}
+
+// Fallback for initialization
+export const toolboxXml = getToolboxXml(1);

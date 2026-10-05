@@ -70,6 +70,14 @@ export const INITIAL_VFS = {
     path: '/Shared',
     updatedAt: new Date().toISOString()
   },
+  '/Transfers': {
+    id: 'transfers',
+    name: 'Transfers',
+    type: 'dir',
+    parentId: 'root',
+    path: '/Transfers',
+    updatedAt: new Date().toISOString()
+  },
 
   // SUBDIRECTORIES
   '/Documents/clues': {
@@ -96,6 +104,27 @@ export const INITIAL_VFS = {
     path: '/Documents/Archive',
     updatedAt: new Date().toISOString()
   },
+  '/Documents/Archive/.hidden': {
+    id: 'dir_docs_archive_hidden',
+    name: '.hidden',
+    type: 'dir',
+    parentId: 'dir_docs_archive',
+    path: '/Documents/Archive/.hidden',
+    hidden: true,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/Archive/.hidden/clue.txt': {
+    id: 'file_docs_archive_clue',
+    name: 'clue.txt',
+    type: 'file',
+    parentId: 'dir_docs_archive_hidden',
+    path: '/Documents/Archive/.hidden/clue.txt',
+    mimeType: 'text/plain',
+    hidden: false,
+    size: 35,
+    content: `The missing value is:\n7314`,
+    updatedAt: new Date().toISOString()
+  },
   '/Documents/Transfers': {
     id: 'dir_docs_transfers',
     name: 'Transfers',
@@ -111,6 +140,57 @@ export const INITIAL_VFS = {
     parentId: 'archive',
     path: '/Archive/.hidden',
     hidden: true,
+    updatedAt: new Date().toISOString()
+  },
+  '/.hidden': {
+    id: 'dir_root_hidden',
+    name: '.hidden',
+    type: 'dir',
+    parentId: 'root',
+    path: '/.hidden',
+    hidden: true,
+    updatedAt: new Date().toISOString()
+  },
+  '/.hidden/clue.txt': {
+    id: 'file_root_hidden_clue',
+    name: 'clue.txt',
+    type: 'file',
+    parentId: 'dir_root_hidden',
+    path: '/.hidden/clue.txt',
+    mimeType: 'text/plain',
+    hidden: false,
+    size: 35,
+    content: `The missing value is:\n7314`,
+    updatedAt: new Date().toISOString()
+  },
+  '/System': {
+    id: 'system_root',
+    name: 'System',
+    type: 'dir',
+    parentId: 'root',
+    path: '/System',
+    locked: true,
+    updatedAt: new Date().toISOString()
+  },
+  '/System/logs': {
+    id: 'system_logs_dir',
+    name: 'logs',
+    type: 'dir',
+    parentId: 'system_root',
+    path: '/System/logs',
+    locked: true,
+    updatedAt: new Date().toISOString()
+  },
+  '/System/logs/kernel.log': {
+    id: 'file_system_kernel_log',
+    name: 'kernel.log',
+    type: 'file',
+    parentId: 'system_logs_dir',
+    path: '/System/logs/kernel.log',
+    mimeType: 'text/plain',
+    locked: true,
+    size: 84,
+    content: `[0.000000] Linux version 6.5-cyphora\n[0.001200] Workstation secure subsystem initialized`,
     updatedAt: new Date().toISOString()
   },
 
@@ -144,6 +224,25 @@ Investigate workstation files and tools to solve challenges.
 Applications do not auto-fill or solve tasks for you.
 
 Status: WORKSTATION OPERATIONAL
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Desktop/START.txt': {
+    id: 'file_desktop_start',
+    name: 'START.txt',
+    type: 'file',
+    parentId: 'desktop',
+    path: '/Desktop/START.txt',
+    mimeType: 'text/plain',
+    size: 480,
+    content: `================================================
+CYPHORA INVESTIGATION WORKSTATION MANUAL
+================================================
+1. Launch the Tasks application from your desktop or taskbar to view your current active objective.
+2. Use File Manager to explore workstation directories: /Documents, /Pictures, /Archive, and /Evidence.
+3. Utilize specialized utility applications (Metadata Inspector, Universal Converter, File Comparator, QR Scanner, Image Inspector, Audio Inspector) to analyze evidence files.
+4. Input discovered codes into the Tasks application to verify and proceed.
+5. Good luck, Operative.
 `,
     updatedAt: new Date().toISOString()
   },
@@ -188,12 +287,12 @@ Status: WORKSTATION OPERATIONAL
     parentId: 'documents',
     path: '/Documents/access.log',
     mimeType: 'text/plain',
-    size: 85,
-    content: `[04:12] BLUE
-[04:07] RED
-[04:19] GREEN
-[04:03] YELLOW
-[04:15] WHITE
+    size: 95,
+    content: `[04:12] #0000FF
+[04:07] #FF0000
+[04:19] #00FF00
+[04:03] #FFFF00
+[04:15] #FFFFFF
 `,
     updatedAt: new Date().toISOString()
   },
@@ -293,7 +392,7 @@ END_LOG
     parentId: 'dir_archive_hidden',
     path: '/Archive/.hidden/clue.txt',
     mimeType: 'text/plain',
-    hidden: true,
+    hidden: false,
     size: 35,
     content: `The missing value is:\n7314`,
     updatedAt: new Date().toISOString()
@@ -473,6 +572,34 @@ TR-904
     type: 'file',
     parentId: 'dir_docs_transfers',
     path: '/Documents/Transfers/TR-904.txt',
+    mimeType: 'text/plain',
+    size: 35,
+    content: `PAYLOAD:
+53 59 4D 50 4F
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Archive/VX-27.txt': {
+    id: 'file_archive_vx27_txt',
+    name: 'VX-27.txt',
+    type: 'file',
+    parentId: 'archive',
+    path: '/Archive/VX-27.txt',
+    mimeType: 'text/plain',
+    size: 45,
+    content: `DEVICE: VX-27
+
+TRANSFER ID:
+TR-904
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Transfers/TR-904.txt': {
+    id: 'file_transfers_tr904_txt',
+    name: 'TR-904.txt',
+    type: 'file',
+    parentId: 'transfers',
+    path: '/Transfers/TR-904.txt',
     mimeType: 'text/plain',
     size: 35,
     content: `PAYLOAD:

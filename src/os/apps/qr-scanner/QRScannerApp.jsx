@@ -4,14 +4,6 @@ import { useOS } from '../../state/OSContext.jsx';
 import { VirtualFilePicker } from '../../components/VirtualFilePicker.jsx';
 import './QRScannerApp.css';
 
-const DEFAULT_QR_IMAGES = [
-  { label: 'poster.png (Pictures - Task 03 Poster)', path: '/Pictures/poster.png' },
-  { label: 'map.png (Pictures - Task 09 Survey Map)', path: '/Pictures/map.png' },
-  { label: 'archive_map.png (Pictures)', path: '/Pictures/archive_map.png' },
-  { label: 'sector_qr.png (Pictures)', path: '/Pictures/sector_qr.png' },
-  { label: 'location_qr.png (Pictures)', path: '/Pictures/location_qr.png' }
-];
-
 export function QRScannerApp() {
   const { vfs, openApp, eventBus } = useOS();
   const [selectedPath, setSelectedPath] = useState('');
@@ -21,6 +13,7 @@ export function QRScannerApp() {
   const [showPicker, setShowPicker] = useState(false);
 
   const handleScan = (pathToScan = selectedPath) => {
+    if (!pathToScan) return;
     setIsScanning(true);
     setQrOutput('');
     setStatusMsg('');
@@ -33,13 +26,13 @@ export function QRScannerApp() {
       if (node && node.qrPayload) {
         payload = node.qrPayload;
       } else if (typeof pathToScan === 'string' && (pathToScan.includes('poster') || pathToScan.includes('sector'))) {
-        payload = '01010011 01000101 01000011 01010100 01001111 01000010 00101101 00110111';
-      } else if (typeof pathToScan === 'string' && (pathToScan.includes('archive') || pathToScan.includes('location') || pathToScan.includes('map'))) {
-        payload = '/Documents/clues/numbers.txt';
+        payload = 'SECTOR-7';
+      } else if (typeof pathToScan === 'string' && (pathToScan.includes('map') || pathToScan.includes('survey'))) {
+        payload = 'CLUE-42';
       } else if (typeof pathToScan === 'string' && (pathToScan.includes('beacon') || pathToScan.includes('logs'))) {
         payload = '/Documents/final_cipher.txt';
       } else {
-        payload = '01010011 01000101 01000011 01010100 01001111 01000010 00101101 00110111';
+        payload = 'SECTOR-7';
       }
 
       setQrOutput(payload);
@@ -56,12 +49,6 @@ export function QRScannerApp() {
     if (!virtualNode) return;
     setSelectedPath(virtualNode.path);
     handleScan(virtualNode.path);
-  };
-
-  const handleSelectImage = (e) => {
-    const p = e.target.value;
-    setSelectedPath(p);
-    handleScan(p);
   };
 
   const handleCopy = () => {
@@ -89,30 +76,34 @@ export function QRScannerApp() {
         <p className="sub">Extract embedded machine-readable data payloads from optical image streams</p>
       </div>
 
-      <div className="scanner-controls" style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <div className="control-group" style={{ flex: 1 }}>
-          <label>SELECT IMAGE FROM VFS:</label>
-          <select value={selectedPath} onChange={handleSelectImage} className="scanner-select">
-            <option value="">-- Select Image from Virtual OS --</option>
-            {DEFAULT_QR_IMAGES.map(img => (
-              <option key={img.path} value={img.path}>{img.label}</option>
-            ))}
-          </select>
+      <div className="scanner-controls">
+        <div className="file-selection-bar">
+          <div className="selected-file-display">
+            <span className="file-label">TARGET OPTICAL IMAGE:</span>
+            <span className={`file-path-tag ${selectedPath ? 'has-file' : 'no-file'}`}>
+              {selectedPath || 'No image selected — Click Browse to choose from Virtual OS'}
+            </span>
+          </div>
+
+          <div className="selection-actions">
+            <button
+              className="browse-vfs-btn"
+              onClick={() => setShowPicker(true)}
+            >
+              <Folder size={15} color="#58a6ff" />
+              <span>Browse Virtual OS</span>
+            </button>
+
+            <button
+              className="scan-btn"
+              onClick={() => handleScan(selectedPath)}
+              disabled={isScanning || !selectedPath}
+            >
+              <Scan size={15} />
+              <span>{isScanning ? 'Scanning...' : 'Scan Image'}</span>
+            </button>
+          </div>
         </div>
-
-        <button
-          className="scan-btn"
-          onClick={() => setShowPicker(true)}
-          style={{ background: '#21262d', color: '#c9d1d9', border: '1px solid #30363d' }}
-        >
-          <Folder size={15} color="#58a6ff" />
-          <span>Browse Virtual OS</span>
-        </button>
-
-        <button className="scan-btn" onClick={() => handleScan(selectedPath)} disabled={isScanning || !selectedPath}>
-          <Scan size={15} />
-          <span>{isScanning ? 'Scanning...' : 'Scan Image'}</span>
-        </button>
       </div>
 
       {/* Visual Scan Frame */}

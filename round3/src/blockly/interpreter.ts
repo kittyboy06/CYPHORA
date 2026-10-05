@@ -50,6 +50,15 @@ export const executeCode = async (code: string, gameRef: any, blocklyRef: any) =
       if (result === 'LEVEL_COMPLETE') throw new Error('LEVEL_COMPLETE');
       if (isFailed) throw new Error('Defend failed');
     },
+    equip: async (id: string) => {
+      if (isFailed) return;
+      blocklyRef.highlightBlock(id);
+      useGameStore.getState().incExecutedCommands();
+      const result = await gameRef.executeCommand({ type: 'EQUIP' });
+      if (result === 'FAILED') isFailed = true;
+      if (result === 'LEVEL_COMPLETE') throw new Error('LEVEL_COMPLETE');
+      if (isFailed) throw new Error('Equip failed');
+    },
     isBeastVulnerable: async () => {
       return await gameRef.isBeastVulnerable();
     },

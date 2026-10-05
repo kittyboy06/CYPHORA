@@ -346,7 +346,40 @@ export function OSProvider({
 export function useOS() {
   const context = useContext(OSContext);
   if (!context) {
-    throw new Error('useOS must be used within an OSProvider');
+    console.warn('[useOS] Warning: useOS accessed outside or during transition of OSProvider');
+    return {
+      windows: [],
+      activeWindowId: null,
+      isStartMenuOpen: false,
+      isMuted: false,
+      isFullscreen: false,
+      showExitBanner: false,
+      exitReason: '',
+      openApp: () => {},
+      closeApp: () => {},
+      focusWindow: () => {},
+      minimizeWindow: () => {},
+      maximizeWindow: () => {},
+      restoreWindow: () => {},
+      moveWindow: () => {},
+      resizeWindow: () => {},
+      toggleStartMenu: () => {},
+      closeStartMenu: () => {},
+      toggleMute: () => {},
+      requestFullscreen: () => {},
+      dismissExitBanner: () => {},
+      triggerLock: () => {},
+      unlockGate: () => {},
+      onReturnToHub: () => {},
+      round1State: null,
+      setRound1State: () => {},
+      vfs,
+      eventBus,
+      teamData: null,
+      liveExplorers: [],
+      isWsConnected: false,
+      fetchLeaderboard: () => {}
+    };
   }
   return context;
 }

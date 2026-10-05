@@ -1,4 +1,4 @@
-export type CommandType = 'RUN' | 'JUMP' | 'ATTACK' | 'DEFEND' | 'ACTIVATE_TOTEM' | 'DODGE' | 'SLIDE' | 'ACTIVATE_TILE';
+export type CommandType = 'RUN' | 'JUMP' | 'ATTACK' | 'DEFEND' | 'ACTIVATE_TOTEM' | 'DODGE' | 'SLIDE' | 'ACTIVATE_TILE' | 'EQUIP';
 
 export interface Command {
   type: CommandType;
@@ -17,6 +17,8 @@ export enum TileType {
   COLOR_RED = 9,
   COLOR_BLUE = 10,
   COLOR_GOLD = 11,
+  ITEM_SWORD = 12,
+  ITEM_SHIELD = 13,
 }
 
 export interface LevelDefinition {

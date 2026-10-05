@@ -428,3 +428,66 @@
 .fm-selected-desc {
   color: #dfb125;
 }
+
+/* Floating Right-Click Context Menu */
+.fm-context-menu {
+  position: fixed;
+  z-index: 9999;
+  background: #141a12;
+  border: 1px solid #dfb125;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  min-width: 190px;
+  padding: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  animation: contextFadeIn 0.12s ease-out;
+}
+
+@keyframes contextFadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.context-header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #735a11;
+  text-transform: uppercase;
+  letter-spacing: 0.05rem;
+  padding: 0.3rem 0.6rem;
+  border-bottom: 1px solid rgba(223, 177, 37, 0.2);
+  margin-bottom: 0.2rem;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: transparent;
+  border: none;
+  color: #eae0c8;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.82rem;
+  font-family: inherit;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.context-menu-item:hover {
+  background: rgba(223, 177, 37, 0.2);
+  color: #dfb125;
+}
+
+.context-menu-item.highlight-action {
+  font-weight: 700;
+  color: #dfb125;
+}
+
+.context-menu-item.highlight-action:hover {
+  background: rgba(223, 177, 37, 0.3);
+}

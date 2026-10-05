@@ -6,63 +6,96 @@ import { SpeechBubble } from './SpeechBubble.jsx';
 const scenes = [
   {
     title: 'THE AWAKENING',
-    narration: 'UNKNOWN LOCATION\nUNKNOWN TIME\nMEMORY STATUS: UNAVAILABLE',
+    location: 'UNKNOWN LOCATION · PRESENT DAY',
+    narration: 'UNKNOWN LOCATION\nUNKNOWN TIME\nMEMORY STATUS: UNAVAILABLE\n\nA distant glowing monolith pierces the dark forest—the only visible landmark and possible way out.',
     speaker: 'Explorer',
     lines: ['Where... am I?', "I can't remember anything."],
     variant: 'forest',
     image: '/assets/prologue/scene1_awakening.png',
-    alt: 'Explorer sitting on wet forest ground facing glowing distant monolith',
-    objectPosition: 'center 40%'
+    alt: 'Explorer waking alone on wet forest floor looking towards distant glowing monolith',
+    objectPosition: 'center',
+    tagline: 'THE LIGHT IS THE ONLY VISIBLE WAY FORWARD'
   },
   {
     title: 'THE LOST GEAR',
-    narration: 'FIELD EQUIPMENT\nPOWER ........ CRITICAL\nRADIO ........ OFFLINE\nNAVIGATION ... OFFLINE\nMEMORY ....... CORRUPTED',
+    location: 'ABANDONED EXPEDITION FIELD MODULE (EFM) · PRESENT DAY',
+    narration: 'EXPEDITION FIELD MODULE (EFM)\nField gear, computer terminals, and damaged instruments lie abandoned.\nThe field system is down.',
     speaker: 'Explorer',
-    lines: ['Nothing.', 'Not even a name.'],
+    lines: [
+      'This place was used by an expedition.',
+      'The system is broken... but the light is still visible outside.'
+    ],
     variant: 'gear',
     image: '/assets/prologue/scene2_gear.png',
-    alt: 'Abandoned expedition equipment and terminal screen displaying NO SIGNAL',
-    objectPosition: 'center'
+    alt: 'Abandoned Expedition Field Module and equipment in forest',
+    objectPosition: 'center',
+    systemStatus: [
+      { label: 'POWER', status: 'CRITICAL', type: 'crit' },
+      { label: 'RADIO', status: 'OFFLINE', type: 'off' },
+      { label: 'NAVIGATION', status: 'OFFLINE', type: 'off' },
+      { label: 'MEMORY', status: 'CORRUPTED', type: 'crit' }
+    ]
   },
   {
     title: 'THE LIGHT',
-    narration: 'The forest is black except for a single distant glow.',
+    location: 'MEMORY FRAGMENT · EXPEDITION PAST',
+    narration: 'A fragment of memory returns.\nI was part of the expedition that came here to investigate the light.',
     speaker: 'Explorer',
-    lines: ["What's that?", 'A light...'],
-    variant: 'light',
+    lines: ['That light...', "I've seen it before."],
+    variant: 'memory',
+    isMemory: true,
     image: '/assets/prologue/scene3_light.png',
-    alt: 'Explorer looking through forest towards distant glowing monolith',
-    objectPosition: 'center 30%'
+    alt: 'Memory fragment of the expedition team observing the glowing monolith',
+    objectPosition: 'center',
+    memoryBadge: 'MEMORY FRAGMENT — EXPEDITION PAST'
   },
   {
     title: 'THE RADIO',
-    narration: 'Static. A voice cuts through the mist.',
-    speaker: 'Radio',
-    lines: ['...do you copy...', '...if you can hear this...'],
+    location: 'EXPEDITION FIELD MODULE · PRESENT DAY',
+    narration: 'STATIC · INCOMING TRANSMISSION\nThe old field radio suddenly crackles to life before dropping into silence.\nSomeone knew about this place.',
+    speeches: [
+      { speaker: 'Radio', lines: ['...do you copy...', '...if you can hear this...'], side: 'right' },
+      { speaker: 'Explorer', lines: ['Someone knew about this place.'], side: 'left' }
+    ],
     variant: 'radio',
     image: '/assets/prologue/scene4_radio.png',
-    alt: 'Field radio communications terminal with active waveform display',
+    alt: 'Field radio hardware with active waveform transmission',
     objectPosition: 'center'
   },
   {
     title: 'SOMETHING IS WRONG',
-    narration: 'A familiar symbol. A scratch in the bark. A memory almost returns.',
+    location: 'EXPEDITION LOGBOOK · PRESENT DAY',
+    narration: 'A familiar symbol.\nA memory almost returns.',
     speaker: 'Explorer',
     lines: ["I've seen this before...", "But I don't remember being here."],
     variant: 'warning',
+    showSymbol: true,
     image: '/assets/prologue/scene5_warning.png',
-    alt: 'Explorer inspecting expedition logbook with glowing enclave symbol',
+    alt: 'Explorer discovering the recurring keyhole emblem on the expedition logbook',
     objectPosition: 'center'
   },
   {
     title: 'THE DECISION',
-    narration: 'FIELD SYSTEM STATUS\nPOWER      OFFLINE\nRADIO      OFFLINE\nNAVIGATION OFFLINE\nARCHIVE    LOCKED',
+    location: 'MAIN CONTROL CONSOLE · PRESENT DAY',
+    narration: 'FIELD SYSTEM STATUS\nAll navigation and route calculation systems are offline.\nRestoring the station is the only way forward.',
     speaker: 'Explorer',
-    lines: ["I don't know who I am.", "But I know I can't stay here.", 'If I can get the field systems running...', "...maybe I'll find my way out."],
+    lines: [
+      "I don't know who I am.",
+      "But I know I can't stay here.",
+      "If I can get the field systems running... maybe I'll find my way out.",
+      "And maybe... I can reach that light."
+    ],
     variant: 'decision',
     image: '/assets/prologue/scene6_decision.png',
-    alt: 'Explorer facing control panel displaying system offline status',
-    objectPosition: 'center'
+    alt: 'Explorer facing control console displaying system offline status',
+    objectPosition: 'center',
+    systemStatus: [
+      { label: 'POWER', status: 'OFFLINE', type: 'off' },
+      { label: 'RADIO', status: 'OFFLINE', type: 'off' },
+      { label: 'NAVIGATION', status: 'OFFLINE', type: 'off' },
+      { label: 'ARCHIVE', status: 'LOCKED', type: 'lock' }
+    ],
+    isFinalDecision: true
   }
 ];
 
@@ -108,7 +141,7 @@ export function Prologue({ teamName = 'Explorer', onBeginExpedition }) {
     setIsBooting(true);
     setTimeout(() => {
       if (onBeginExpedition) onBeginExpedition();
-    }, 900);
+    }, 1500);
   };
 
   return (
@@ -121,19 +154,26 @@ export function Prologue({ teamName = 'Explorer', onBeginExpedition }) {
           initial={{ opacity: 0, x: 24 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -24 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
         >
           <StoryScene
             title={scene.title}
+            location={scene.location}
             narration={scene.narration}
             variant={scene.variant}
             image={scene.image}
             alt={scene.alt}
             objectPosition={scene.objectPosition}
+            systemStatus={scene.systemStatus}
+            isMemory={scene.isMemory}
+            memoryBadge={scene.memoryBadge}
+            showSymbol={scene.showSymbol}
+            tagline={scene.tagline}
           >
             <SpeechBubble
               speaker={scene.speaker}
               lines={scene.lines}
+              speeches={scene.speeches}
               side={scene.speaker === 'Explorer' ? 'left' : 'right'}
             />
           </StoryScene>
@@ -170,25 +210,34 @@ export function Prologue({ teamName = 'Explorer', onBeginExpedition }) {
         </div>
       </div>
 
-      {!isLastScene && (
-        <div className="scene-caption">EXPEDITION OBJECTIVE: RESTORE THE FIELD SYSTEM</div>
-      )}
+      <div className="scene-caption">
+        FINAL STORY OBJECTIVE: RESTORE THE FIELD SYSTEM TO REACH THE LIGHT
+      </div>
 
       {isBooting && (
         <motion.div
           className="prologue-boot-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.4 }}
         >
           <div className="boot-terminal-box">
             <div className="boot-spinner" />
-            <p className="boot-text">RESTORING EXPEDITION FIELD SYSTEM...</p>
-            <p className="boot-subtext">INITIALIZING OS NAVIGATOR</p>
+            <p className="boot-text">EFM SYSTEM INITIALIZING...</p>
+            <div className="boot-lines">
+              <div>POWER ........ <span className="boot-line-status">[RESTORING]</span></div>
+              <div>RADIO ........ <span className="boot-line-status">[SEARCHING FREQUENCY]</span></div>
+              <div>NAVIGATION ... <span className="boot-line-status">[OFFLINE]</span></div>
+              <div>ARCHIVE ...... <span className="boot-line-status">[LOCKED]</span></div>
+            </div>
+            <p className="boot-subtext" style={{ marginTop: '1.2rem', marginBottom: 0 }}>
+              &gt; LAUNCHING CYPHORA OS WORKSTATION...
+            </p>
           </div>
         </motion.div>
       )}
     </div>
   );
 }
+
 
