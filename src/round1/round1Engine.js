@@ -403,7 +403,9 @@ export function processRound1Event(state, eventName, payload = {}) {
 
   let updatedTasks = next.tasks.map(item => {
     if (item.id !== task.id) return item;
-    const hintsCount = eventName === 'HINT_REVEALED' ? (item.hintsUsed || 0) + 1 : (item.hintsUsed || 0);
+    const hintsCount = eventName === 'HINT_REVEALED'
+      ? Math.max(item.hintsUsed || 0, payload.hintLevel || ((item.hintsUsed || 0) + 1))
+      : (item.hintsUsed || 0);
     const attempts = eventName === 'TASK_ANSWER_SUBMITTED' ? (item.attemptCount || 0) + 1 : (item.attemptCount || 0);
     return {
       ...item,
@@ -437,18 +439,26 @@ export function processRound1Event(state, eventName, payload = {}) {
   }
 
   // Task successfully completed!
+  const currentTaskState = nextState.tasks.find(item => item.id === task.id) || task;
+  const hintsCount = Math.min(2, Math.max(0, payload.hintsUsed !== undefined ? payload.hintsUsed : (currentTaskState.hintsUsed || 0)));
+  const hintPenalty = hintsCount * 5; // 0 hints: 0 pts penalty, 1 hint: 5 pts penalty, 2 hints: 10 pts penalty
+  const pointsAwarded = Math.max(0, 20 - hintPenalty); // 20 base pts per task
+
   const correctLogEntry = {
     eventName: 'answer_correct',
     taskId: task.id,
     timestamp,
-    submittedValue: payload.answer
+    submittedValue: payload.answer,
+    pointsAwarded,
+    hintsCount,
+    hintPenalty
   };
 
   const completedLogEntry = {
     eventName: 'task_completed',
     taskId: task.id,
     timestamp,
-    details: `Task ${task.id} completed successfully`
+    details: `Task ${task.id} completed successfully (+${pointsAwarded} pts, hints used: ${hintsCount})`
   };
 
   updatedTasks = nextState.tasks.map(item => {
@@ -456,15 +466,21 @@ export function processRound1Event(state, eventName, payload = {}) {
     return {
       ...item,
       status: 'COMPLETED',
+      hintsUsed: hintsCount,
+      hintPenalty,
+      pointsAwarded,
       completionTimestamp: timestamp,
       completionCount: (item.completionCount || 0) + 1,
       actionSequence: [...(item.actionSequence || []), correctLogEntry, completedLogEntry]
     };
   });
 
+  const totalScore = updatedTasks.filter(t => t.status === 'COMPLETED').reduce((acc, t) => acc + (t.pointsAwarded ?? 20), 0);
+
   nextState = {
     ...nextState,
     tasks: updatedTasks,
+    totalScore,
     taskCompletionTimestamps: {
       ...nextState.taskCompletionTimestamps,
       [task.id]: timestamp

@@ -246,6 +246,146 @@
   padding: 1.5rem;
 }
 
+/* ========================================================
+   PINNED TOP-CENTER EXPEDITION TIMER HUD
+   ======================================================== */
+.desktop-pinned-timer {
+  position: fixed;
+  top: 0.85rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  user-select: none;
+}
+
+.pinned-timer-capsule {
+  pointer-events: auto;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 1.25rem;
+  background: rgba(12, 17, 13, 0.92);
+  border: 1px solid rgba(223, 177, 37, 0.45);
+  border-radius: 9999px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.75), 0 0 15px rgba(223, 177, 37, 0.15);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: all 0.25s ease;
+  cursor: default;
+}
+
+.pinned-timer-capsule:hover {
+  border-color: #dfb125;
+  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.85), 0 0 22px rgba(223, 177, 37, 0.35);
+  background: rgba(16, 23, 17, 0.96);
+  transform: translateY(-1px);
+}
+
+.pinned-timer-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #7ee787;
+  box-shadow: 0 0 8px #7ee787;
+  flex-shrink: 0;
+}
+
+.pinned-timer-dot.running {
+  animation: timerDotPulse 1.8s infinite ease-in-out;
+}
+
+.pinned-timer-dot.idle {
+  background: #dfb125;
+  box-shadow: 0 0 6px #dfb125;
+}
+
+.pinned-timer-icon {
+  color: #dfb125;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(223, 177, 37, 0.5));
+}
+
+.pinned-timer-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.pinned-timer-label {
+  font-family: 'Cinzel', 'Montserrat', serif;
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #a0b299;
+  text-transform: uppercase;
+  margin-bottom: 0.15rem;
+}
+
+.pinned-timer-digits {
+  font-family: 'Fira Code', 'Cascadia Code', 'Courier New', monospace;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #dfb125;
+  letter-spacing: 2px;
+  text-shadow: 0 0 10px rgba(223, 177, 37, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Critical warning state (< 5 mins) */
+.pinned-timer-capsule.critical {
+  border-color: rgba(224, 108, 117, 0.7);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.75), 0 0 20px rgba(224, 108, 117, 0.35);
+}
+
+.pinned-timer-capsule.critical .pinned-timer-dot {
+  background: #e06c75;
+  box-shadow: 0 0 10px #e06c75;
+  animation: timerDotPulse 0.7s infinite ease-in-out;
+}
+
+.pinned-timer-capsule.critical .pinned-timer-icon {
+  color: #e06c75;
+}
+
+.pinned-timer-capsule.critical .pinned-timer-digits {
+  color: #e06c75;
+  text-shadow: 0 0 12px rgba(224, 108, 117, 0.7);
+}
+
+/* Expired state (00:00) */
+.pinned-timer-capsule.expired {
+  border-color: rgba(139, 148, 158, 0.4);
+}
+
+.pinned-timer-capsule.expired .pinned-timer-dot {
+  background: #8b949e;
+  box-shadow: none;
+  animation: none;
+}
+
+.pinned-timer-capsule.expired .pinned-timer-digits {
+  color: #8b949e;
+  text-shadow: none;
+}
+
+@keyframes timerDotPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+}
+
 /* Top-Right HUD Stack: Journey Progress + Synced Database Leaderboard */
 .desktop-top-right-hud {
   position: absolute;
@@ -1085,6 +1225,29 @@
   padding: 0.8rem 0.6rem;
   max-height: 320px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(223, 177, 37, 0.45) rgba(14, 20, 14, 0.65);
+}
+
+.start-menu-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.start-menu-content::-webkit-scrollbar-track {
+  background: rgba(14, 20, 14, 0.65);
+  border-radius: 4px;
+}
+
+.start-menu-content::-webkit-scrollbar-thumb {
+  background: rgba(223, 177, 37, 0.4);
+  border-radius: 4px;
+  border: 1px solid rgba(223, 177, 37, 0.2);
+  transition: all 0.2s ease;
+}
+
+.start-menu-content::-webkit-scrollbar-thumb:hover {
+  background: #dfb125;
+  box-shadow: 0 0 8px rgba(223, 177, 37, 0.7);
 }
 
 .start-section-title {

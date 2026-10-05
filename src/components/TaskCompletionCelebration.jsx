@@ -45,11 +45,24 @@ export function TaskCompletionCelebration({ task, setComplete }) {
         ) : (
           <CheckCircle size={26} aria-hidden="true" className="party-popper-icon" />
         )}
-        <div>
+        <div style={{ flex: 1 }}>
           <span className="task-completion-kicker">
             {setComplete ? setInfo.label : '✓ FIELD DATA RECOVERED'}
           </span>
           <strong>{setComplete ? setInfo.sub : title}</strong>
+        </div>
+        <div style={{
+          background: 'rgba(223, 177, 37, 0.2)',
+          border: '1px solid rgba(223, 177, 37, 0.5)',
+          color: '#dfb125',
+          fontWeight: 800,
+          fontSize: '0.85rem',
+          padding: '0.3rem 0.6rem',
+          borderRadius: '4px',
+          marginLeft: '0.75rem',
+          whiteSpace: 'nowrap'
+        }}>
+          +{task?.pointsAwarded ?? 20} PTS
         </div>
       </div>
     </div>

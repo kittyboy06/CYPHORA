@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import AdminPortal from './admin/AdminPortal.jsx'
-import Round2Page from './round2/Round2Page.jsx'
 import './index.css'
 
 function RootRouter() {
@@ -37,14 +36,7 @@ function RootRouter() {
 
   if (currentRoute === 'admin') return <AdminPortal />;
   if (currentRoute === 'round2') {
-    return (
-      <Round2Page
-        onReturnToHub={() => {
-          window.history.pushState({}, '', '/');
-          setCurrentRoute('app');
-        }}
-      />
-    );
+    return <App initialStage="os-desktop" defaultAppId="round2" />;
   }
   return <App />;
 }

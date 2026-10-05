@@ -16,84 +16,84 @@ router = APIRouter(prefix="/api/stage1", tags=["Stage 1 - OS Navigation"])
 STAGE1_TASKS = {
     "r1_t01": {
         "title": "Task 01 — Encoded Message",
-        "points": 50,
+        "points": 20,
         "stage": 1,
         "description": "Decode the numerical values in message.txt.",
         "accepted": ["HIDE"]
     },
     "r1_t02": {
         "title": "Task 02 — File Information",
-        "points": 50,
+        "points": 20,
         "stage": 1,
         "description": "Inspect evidence.jpg metadata and find the registered author.",
         "accepted": ["ARLO"]
     },
     "r1_t03": {
         "title": "Task 03 — Image Message",
-        "points": 50,
+        "points": 20,
         "stage": 1,
         "description": "Scan the optical matrix in poster.png.",
         "accepted": ["SECTOR-7"]
     },
     "r1_t04": {
         "title": "Task 04 — The Earliest Record",
-        "points": 75,
+        "points": 20,
         "stage": 2,
         "description": "Find the earliest timestamp in access.log and determine the associated color.",
         "accepted": ["YELLOW"]
     },
     "r1_t05": {
         "title": "Task 05 — The Changed Record",
-        "points": 75,
+        "points": 20,
         "stage": 2,
         "description": "Compare the old and new transmission logs and find the changed value.",
         "accepted": ["9941"]
     },
     "r1_t06": {
         "title": "Task 06 — The Fragmented Password",
-        "points": 75,
+        "points": 20,
         "stage": 2,
         "description": "Chronologically arrange three fragments and decode them.",
         "accepted": ["CYPHORA"]
     },
     "r1_t07": {
         "title": "Task 07 — The Hidden Record",
-        "points": 100,
+        "points": 20,
         "stage": 3,
         "description": "Inspect image metadata and decode the embedded character codes.",
         "accepted": ["RESCUE"]
     },
     "r1_t08": {
         "title": "Task 08 — The Disguised File",
-        "points": 100,
+        "points": 20,
         "stage": 3,
         "description": "Find the file hidden inside the concealed directory.",
         "accepted": ["7314"]
     },
     "r1_t09": {
         "title": "Task 09 — The Evidence Trail",
-        "points": 100,
+        "points": 20,
         "stage": 3,
         "description": "Follow the image clue → index → activity log.",
         "accepted": ["17"]
     },
     "r1_t10": {
         "title": "Task 10 — The Altered Record",
-        "points": 150,
+        "points": 20,
         "stage": 4,
         "description": "Compare two configuration files, identify the changed hexadecimal data, and decode it.",
         "accepted": ["VECTOR"]
     },
     "r1_t11": {
         "title": "Task 11 — Follow the Trail",
-        "points": 150,
+        "points": 20,
         "stage": 4,
         "description": "Follow the chain from the incident note through the archive and device image, inspect the referenced metadata, and decode the recovered character sequence.",
         "accepted": ["SHIFT"]
     },
     "r1_t12": {
         "title": "Task 12 — Trace the Incident",
-        "points": 150,
+        "points": 20,
         "stage": 4,
         "description": "Reconstruct the incident by following the references across the system record, device evidence, archive record, and transfer record. Decode the final hexadecimal payload to recover the clearance code.",
         "accepted": ["SYMPO"]
@@ -197,7 +197,10 @@ async def submit_stage1_task(
             message="Task was already completed by your team."
         )
 
-    points = task_info["points"]
+    base_points = task_info.get("points", 20)
+    hints_count = max(0, min(2, req.hints_used or 0))
+    hint_penalty = hints_count * 5
+    points = max(0, base_points - hint_penalty)
 
     # Award points & update stage
     current_team.score += points
@@ -212,7 +215,12 @@ async def submit_stage1_task(
         stage=1,
         task_key=resolved_key,
         points_awarded=points,
-        metadata_json=json.dumps({"proof": req.proof}) if req.proof else None
+        metadata_json=json.dumps({
+            "proof": req.proof,
+            "hints_used": hints_count,
+            "hint_penalty": hint_penalty,
+            "base_points": base_points
+        })
     )
     db.add(submission)
     await db.commit()
@@ -221,10 +229,11 @@ async def submit_stage1_task(
     # Real-time broadcast to all 100 workstations (Admin Portal + Participant HUDs)
     await ws_manager.broadcast_leaderboard(db)
 
+    penalty_msg = f" (-{hint_penalty} pts for {hints_count} hint{'s' if hints_count > 1 else ''})" if hint_penalty > 0 else ""
     return TaskSubmitResponse(
         success=True,
         task_key=resolved_key,
         points_awarded=points,
         new_total_score=current_team.score,
-        message=f"Success! {points} points awarded for completing {task_info['title']}."
+        message=f"Success! {points} points awarded for completing {task_info['title']}{penalty_msg}."
     )

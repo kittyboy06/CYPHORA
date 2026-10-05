@@ -1,10 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import Round2Page from './Round2Page.jsx';
+import App from '../App.jsx';
 import '../index.css';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <Round2Page />
+    <App initialStage="os-desktop" defaultAppId="round2" />
   </React.StrictMode>
 );

@@ -19,9 +19,10 @@ async def register_team(req: TeamRegisterRequest, request: Request, db: AsyncSes
         raise HTTPException(status_code=400, detail="Team name is already taken. Try logging in.")
 
     client_ip = request.client.host if request.client else None
+    pin_val = req.pin or "0000"
     team = Team(
         name=clean_name,
-        pin_hash=hash_pin(req.pin),
+        pin_hash=hash_pin(pin_val),
         last_ip=client_ip,
         member1=req.member1.strip() if req.member1 else None,
         member2=req.member2.strip() if req.member2 else None,
@@ -61,15 +62,16 @@ async def login_team(req: TeamLoginRequest, request: Request, db: AsyncSession =
 
 @router.post("/quick-join", response_model=AuthResponse)
 async def quick_join(req: TeamRegisterRequest, request: Request, db: AsyncSession = Depends(get_db)):
-    """Auto registers if new team, or logs in if existing with matching PIN."""
+    """Auto registers if new team, or logs in if existing."""
     clean_name = req.name.strip()
     result = await db.execute(select(Team).filter(Team.name == clean_name))
     team = result.scalar_one_or_none()
 
     client_ip = request.client.host if request.client else None
+    pin_val = req.pin or "0000"
 
     if team:
-        if not verify_pin(req.pin, team.pin_hash):
+        if req.pin and req.pin != "0000" and not verify_pin(req.pin, team.pin_hash):
             raise HTTPException(status_code=401, detail="Team already exists with a different PIN.")
         team.last_ip = client_ip
         team.status = "active"
@@ -83,7 +85,7 @@ async def quick_join(req: TeamRegisterRequest, request: Request, db: AsyncSessio
     else:
         team = Team(
             name=clean_name,
-            pin_hash=hash_pin(req.pin),
+            pin_hash=hash_pin(pin_val),
             last_ip=client_ip,
             status="active",
             member1=req.member1.strip() if req.member1 else None,

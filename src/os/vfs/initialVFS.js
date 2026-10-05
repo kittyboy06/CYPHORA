@@ -133,6 +133,108 @@ export const INITIAL_VFS = {
     path: '/Documents/Transfers',
     updatedAt: new Date().toISOString()
   },
+  '/Documents/prompts': {
+    id: 'dir_docs_prompts',
+    name: 'prompts',
+    type: 'dir',
+    parentId: 'documents',
+    path: '/Documents/prompts',
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/prompts/sample_prompt.txt': {
+    id: 'file_sample_prompt',
+    name: 'sample_prompt.txt',
+    type: 'file',
+    parentId: 'dir_docs_prompts',
+    path: '/Documents/prompts/sample_prompt.txt',
+    mimeType: 'text/plain',
+    size: 210,
+    content: `Towering ancient obsidian monolith standing isolated in vast desert dunes, dramatic sunset lighting with volumetric sunbeams, atmospheric dust haze, cinematic photorealistic composition, 8k resolution.`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Documents/stage2_briefing.txt': {
+    id: 'file_stage2_briefing',
+    name: 'stage2_briefing.txt',
+    type: 'file',
+    parentId: 'documents',
+    path: '/Documents/stage2_briefing.txt',
+    mimeType: 'text/plain',
+    size: 680,
+    content: `================================================
+CYPHORA EXPEDITION // STAGE 2: IMAGE NAVIGATION
+================================================
+MISSION OBJECTIVE:
+Reconstruct the lost visual records of the Sector 4 expedition through prompt engineering and AI cosine similarity evaluation.
+
+INTEGRATED OS SUITE:
+1. Stage 2: Image Navigation — Central expedition hub for Phase 1 & Phase 2 submissions.
+2. Vision Target Viewer — Protected optical inspector for Target 1 & Target 2 with 15s peek countdown.
+3. Prompt Studio — Advanced prompter with keyword chips, character counter, and VFS file sync.
+4. Similarity Evaluator — Independent cosine similarity tester for testing images against reference targets.
+5. Expedition Standings — Real-time live scoreboard of all connected teams.
+6. Mission Briefing — Recovered expedition story logs and audio transcript records.
+
+EVALUATION RULES:
+- Target 1 Cosine Similarity: Up to 200 Points
+- Target 2 Cosine Similarity: Up to 200 Points
+- Speed Bonus (15-min clock): Up to 600 Bonus Points
+- Total Possible Points: 1,000 Points
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Pictures/targets': {
+    id: 'dir_pictures_targets',
+    name: 'targets',
+    type: 'dir',
+    parentId: 'pictures',
+    path: '/Pictures/targets',
+    updatedAt: new Date().toISOString()
+  },
+  '/Pictures/targets/target1.jpg': {
+    id: 'file_target1_jpg',
+    name: 'target1.jpg',
+    type: 'file',
+    parentId: 'dir_pictures_targets',
+    path: '/Pictures/targets/target1.jpg',
+    mimeType: 'image/jpeg',
+    assetUrl: '/assets/round2/targets/target1.jpg',
+    description: 'Sector 4 Anomaly Target 1 — Monolith Structure',
+    size: 456870,
+    content: '[IMAGE FILE: SECTOR 4 MONOLITH TARGET 1 (1920x1080)]',
+    updatedAt: new Date().toISOString()
+  },
+  '/Pictures/targets/target2.jpg': {
+    id: 'file_target2_jpg',
+    name: 'target2.jpg',
+    type: 'file',
+    parentId: 'dir_pictures_targets',
+    path: '/Pictures/targets/target2.jpg',
+    mimeType: 'image/jpeg',
+    assetUrl: '/assets/round2/targets/target2.jpg',
+    description: 'Sector 4 Anomaly Target 2 — Desert Outpost Station',
+    size: 419468,
+    content: '[IMAGE FILE: SECTOR 4 OUTPOST TARGET 2 (1920x1080)]',
+    updatedAt: new Date().toISOString()
+  },
+  '/Desktop/Stage 2 - Image Navigation.txt': {
+    id: 'file_desktop_stage2_guide',
+    name: 'Stage 2 - Image Navigation.txt',
+    type: 'file',
+    parentId: 'desktop',
+    path: '/Desktop/Stage 2 - Image Navigation.txt',
+    mimeType: 'text/plain',
+    size: 380,
+    content: `CYPHORA STAGE 2 // IMAGE NAVIGATION
+------------------------------------
+Stage 2 is fully integrated into the OS!
+- Launch 'Stage 2: Image Navigation' from Desktop or Start Menu.
+- Use 'Vision Target' to study organizer reference images.
+- Use 'Prompt Studio' to craft descriptive prompts.
+- Use 'Similarity Evaluator' to test cosine similarity.
+- Check 'Expedition Standings' for real-time team rankings.
+`,
+    updatedAt: new Date().toISOString()
+  },
   '/Archive/.hidden': {
     id: 'dir_archive_hidden',
     name: '.hidden',

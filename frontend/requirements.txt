@@ -1,0 +1,26 @@
+# ==============================================================================
+# CYPHORA - Frontend System & Environment Requirements
+# ==============================================================================
+# Framework: React 18 + Vite
+# Runtime Environment: Node.js >= 18.0.0 (LTS recommended, e.g. Node 20.x)
+# Package Manager: npm >= 9.0.0 (or yarn / pnpm)
+#
+# Production Dependencies (Installed via `npm install`):
+# ------------------------------------------------------------------------------
+# react >= 18.2.0           (Core UI library)
+# react-dom >= 18.2.0       (React DOM renderer)
+# framer-motion >= 13.4.3   (Animation engine for CYPHORA OS & UI transitions)
+# lucide-react >= 0.344.0   (Cyberpunk / OS icons suite)
+#
+# Development & Build Tooling:
+# ------------------------------------------------------------------------------
+# vite >= 7.3.6             (Next-gen frontend build tool & dev server)
+# @vitejs/plugin-react >= 4.7.0 (Fast Refresh & JSX transform)
+#
+# Installation & Execution Commands:
+# ------------------------------------------------------------------------------
+# 1. Install packages:   npm install
+# 2. Start Dev Server:   npm run dev
+# 3. Production Build:   npm run build
+# 4. Preview Build:      npm run preview
+# ==============================================================================

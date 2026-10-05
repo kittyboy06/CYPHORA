@@ -90,8 +90,7 @@ async def get_current_team(
 
         # Substring / prefix fallback (e.g. KB0 vs KB06)
         res = await db.execute(select(Team).filter(
-            (func.lower(Team.name).like(f"{clean_name.lower()}%")) |
-            (func.literal(clean_name.lower()).like(func.concat(func.lower(Team.name), '%')))
+            func.lower(Team.name).like(f"{clean_name.lower()}%")
         ))
         team = res.scalars().first()
         if team:
