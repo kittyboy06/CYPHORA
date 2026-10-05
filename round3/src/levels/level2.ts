@@ -9,7 +9,7 @@ const X = TileType.GOAL;
 // Sword at 3rd block (idx 2).
 // Shield at 5th block (idx 4).
 // Beast at 10th block (idx 9).
-// Player must equip items and stop at 8th block (idx 7) to attack safely.
+// Player must equip items and stop at the 7th block (idx 6), exactly 3 tiles before the beast.
 export const level2: LevelDefinition = {
   id: 'level_02',
   name: "The Beast's Lair",
@@ -20,7 +20,7 @@ export const level2: LevelDefinition = {
   ],
   beast: {
     positionIndex: 9,
-    hp: 3,
-    vulnerablePattern: [false, false, true] // Shield, Shield, Drop Shield
+    hp: 4,
+    vulnerablePattern: [true, false, false, true, true, false, true]
   }
 };

@@ -9,8 +9,7 @@ export const level3: LevelDefinition = {
   length: 10,
   playerStartX: 0,
   tiles: [
-    TileType.COLOR_BLUE,
-    TileType.COLOR_BLUE,
+    TileType.COLOR_GOLD,
     TileType.COLOR_RED,
     TileType.COLOR_BLUE,
     TileType.COLOR_GOLD,
@@ -18,6 +17,7 @@ export const level3: LevelDefinition = {
     TileType.COLOR_BLUE,
     TileType.COLOR_RED,
     TileType.COLOR_GOLD,
+    TileType.COLOR_BLUE,
     TileType.GOAL
   ]
 };

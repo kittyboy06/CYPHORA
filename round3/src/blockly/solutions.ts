@@ -52,7 +52,6 @@ export const SOLUTIONS: Record<number, string> = {
   <block type="action_equip"><next>
   <block type="action_run"><next>
   <block type="action_run"><next>
-  <block type="action_run"><next>
   <block type="controls_if">
     <mutation else="1"></mutation>
     <value name="IF0">

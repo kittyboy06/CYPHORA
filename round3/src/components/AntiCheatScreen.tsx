@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { ShieldAlert, Maximize } from 'lucide-react';
 
 interface Props {
-  onReenter: () => void;
   onAdminUnlock: () => void;
 }
 
-export const AntiCheatScreen: React.FC<Props> = ({ onReenter, onAdminUnlock }) => {
+export const AntiCheatScreen: React.FC<Props> = ({ onAdminUnlock }) => {
   const [adminCode, setAdminCode] = useState('');
 
   const handleAdminSubmit = (e: React.FormEvent) => {
@@ -35,14 +34,7 @@ export const AntiCheatScreen: React.FC<Props> = ({ onReenter, onAdminUnlock }) =
           Fullscreen mode was exited. Focus is required to survive the trials.
         </p>
         
-        <div className="pt-8">
-          <button 
-            onClick={onReenter}
-            className="px-6 py-4 md:px-8 bg-red-900/40 border border-red-500 text-red-100 hover:bg-red-600 hover:text-white transition-all uppercase tracking-widest font-bold flex items-center gap-3 mx-auto shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:shadow-[0_0_25px_rgba(239,68,68,0.5)]"
-          >
-            <Maximize size={20} /> Return to the Path
-          </button>
-        </div>
+
 
         {/* Admin override */}
         <div className="pt-10 mt-10 border-t border-red-900/30">
