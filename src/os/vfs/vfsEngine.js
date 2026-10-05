@@ -21,6 +21,10 @@ class VFSEngine {
                 hydrated[path] = JSON.parse(JSON.stringify(node));
               } else {
                 hydrated[path].hidden = node.hidden;
+                if (node.hardwareId) hydrated[path].hardwareId = node.hardwareId;
+                if (node.deviceId) hydrated[path].deviceId = node.deviceId;
+                if (node.description) hydrated[path].description = node.description;
+                if (node.author) hydrated[path].author = node.author;
                 if (node.type === 'file' && node.content && hydrated[path].content !== node.content) {
                   hydrated[path].content = node.content;
                 }

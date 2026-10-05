@@ -102,6 +102,14 @@ export function ImageInspectorApp() {
                 <p style={{ fontFamily: 'monospace', fontSize: '0.9rem' }}>
                   {node?.content || `[VISUAL EVIDENCE: ${selectedPath}]`}
                 </p>
+                {(node?.hardwareId || node?.deviceId || selectedPath.includes('device.png')) && (
+                  <div style={{ margin: '0.8rem auto 0.4rem', padding: '0.5rem 1rem', background: 'rgba(88, 166, 255, 0.18)', border: '1px solid #58a6ff', borderRadius: '4px', display: 'inline-block' }}>
+                    <span style={{ color: '#8b949e', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>REGISTERED HARDWARE ID: </span>
+                    <strong style={{ color: '#58a6ff', fontSize: '1.15rem', fontFamily: 'monospace', marginLeft: '0.4rem' }}>
+                      {node?.hardwareId || node?.deviceId || 'VX-27'}
+                    </strong>
+                  </div>
+                )}
                 {node?.dimensions && (
                   <p style={{ fontSize: '0.75rem', color: '#8b949e', marginTop: '0.5rem' }}>
                     Dimensions: {node.dimensions} | Size: {node.size ? Math.round(node.size / 1024) : 0} KB

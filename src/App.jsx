@@ -615,11 +615,6 @@ function App() {
       setAuthError('Please enter your team name.');
       return;
     }
-    const finalPin = pinInput.trim();
-    if (!finalPin) {
-      setAuthError('Please enter your 4-digit team PIN.');
-      return;
-    }
     const finalMember1 = member1Input.trim();
     const finalMember2 = member2Input.trim();
 
@@ -629,7 +624,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: finalName,
-          pin: finalPin,
+          pin: '0000',
           member1: finalMember1,
           member2: finalMember2
         })
@@ -750,7 +745,7 @@ function App() {
         <div className="team-modal-backdrop">
           <div className="team-modal">
             <h2>Identify Your Team</h2>
-            <p>Declare your expedition team name, two crew members, and secret PIN.</p>
+            <p>Declare your expedition team name and crew members.</p>
             <form onSubmit={handleTeamSubmit} autoComplete="off" data-lpignore="true" data-form-type="other">
               {/* Team Name */}
               <div className="team-input-wrapper">
@@ -803,28 +798,6 @@ function App() {
                     data-lpignore="true"
                   />
                 </div>
-              </div>
-
-              {/* Secret Team PIN - Uses text type with CSS text-security disc to prevent browser breached-password popups */}
-              <div className="team-input-wrapper" style={{ marginTop: '0.8rem' }}>
-                <input
-                  type="text"
-                  name="cyphora_team_key"
-                  id="cyphora_team_key"
-                  inputMode="numeric"
-                  className="team-input pin-mask-input"
-                  placeholder="Secret Team PIN (e.g. 1234)..."
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  maxLength={8}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck="false"
-                  data-lpignore="true"
-                  data-1p-ignore="true"
-                  data-form-type="other"
-                />
               </div>
 
               {authError && (

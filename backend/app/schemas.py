@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 # Authentication
 class TeamRegisterRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=32, description="Team name")
-    pin: str = Field(..., min_length=4, max_length=8, description="4-8 digit numeric or alphanumeric PIN")
+    pin: Optional[str] = Field("0000", max_length=8, description="4-8 digit PIN (optional)")
     member1: Optional[str] = Field(None, max_length=64, description="Name of Member 1")
     member2: Optional[str] = Field(None, max_length=64, description="Name of Member 2")
 

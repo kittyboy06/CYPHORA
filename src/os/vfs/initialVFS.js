@@ -664,11 +664,12 @@ DEVICE-9
     path: '/Pictures/device.png',
     mimeType: 'image/png',
     author: 'DEVICE LOG',
-    description: 'Device ID: VX-27',
+    description: 'Hardware ID: VX-27',
     deviceId: 'VX-27',
+    hardwareId: 'VX-27',
     dimensions: '1024x1024',
     size: 870000,
-    content: '[DEVICE IMAGE — METADATA: Device ID: VX-27]',
+    content: '[REGISTERED HARDWARE EVIDENCE — HARDWARE ID: VX-27]',
     updatedAt: new Date().toISOString()
   },
   '/Documents/Archive/VX-27.txt': {

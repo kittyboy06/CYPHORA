@@ -38,7 +38,7 @@ export const TASK_DEFINITIONS = [
     order: 2,
     title: 'TASK 02 — FILE INFORMATION',
     story: 'An expedition image was recovered during the investigation, but its visual picture does not identify its creator. The underlying file records hold the author entry.',
-    question: 'Locate evidence.jpg.\nUse a file inspector to inspect the file properties and technical attributes rather than the visual pixels.\nEnter the registered author name below.',
+    question: 'Locate evidence.jpg.\nUse a meta data inspector to inspect the file properties and technical attributes rather than the visual pixels.\nEnter the registered author name below.',
     difficulty: 'easy',
     requiredInput: {
       type: 'file',
@@ -65,8 +65,8 @@ export const TASK_DEFINITIONS = [
     round: 1,
     order: 3,
     title: 'TASK 03 — IMAGE MESSAGE',
-    story: 'A recovered poster contains an embedded optical matrix marking that cannot be interpreted through standard visual viewing.',
-    question: 'Locate poster.png.\nUse an optical scanning inspector to scan the machine-readable matrix graphic.\nEnter the revealed sector code below.',
+    story: 'A recovered poster contains an embedded optical matrix marking(QR) that cannot be interpreted through standard visual viewing.',
+    question: 'Locate poster.png.\nUse an optical scanning inspector to scan the machine-readable matrix graphic(QR).\nEnter the revealed sector code below.',
     difficulty: 'easy',
     requiredInput: {
       type: 'image',
@@ -151,7 +151,7 @@ export const TASK_DEFINITIONS = [
     order: 6,
     title: 'TASK 06 — THE FRAGMENTED PASSWORD',
     story: 'Three fragments of a security passcode were recovered separately. Each fragment is incomplete on its own, and their order is scrambled.',
-    question: 'Locate fragment_01.txt, fragment_02.txt, and fragment_03.txt.\nInspect each fragment to determine its recorded timestamp and sort them chronologically.\nCombine the ordered values and use a data converter to decode the complete password below.',
+    question: 'Locate fragment_01.txt, fragment_02.txt, and fragment_03.txt.\nInspect each fragment to determine its recorded timestamp and sort them chronologically.\nCombine the ordered values and use a universal converter to decode the complete password below.',
     difficulty: 'hard',
     requiredInput: {
       type: 'files',
@@ -326,7 +326,7 @@ export const TASK_DEFINITIONS = [
     order: 12,
     title: 'TASK 12 — TRACE THE INCIDENT',
     story: 'Four pieces of evidence across logs, device photos, archives, and transfer records form a connected incident chain.',
-    question: 'Locate system.log to observe the incident sequence.\nUse a file inspector on device.png to identify the registered hardware ID.\nOpen the corresponding archive record to find the transfer ID, inspect the transfer document, and use a data converter to decode the clearance code below.',
+    question: 'Locate system.log to observe the incident sequence.\nUse a file inspector on device.png to identify the registered hardware ID.\nOpen the corresponding archive record to find the transfer ID, inspect the transfer document in transfer directory, and use a data converter to decode the clearance code below.',
     difficulty: 'boss',
     requiredInput: {
       type: 'files',

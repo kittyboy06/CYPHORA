@@ -22,6 +22,7 @@ export function MetadataInspectorApp() {
     const isEvidence = node.path.includes('evidence');
     const isPhoto = node.path.includes('photo');
     const isBeacon = node.path.includes('enclave_beacon');
+    const isDevice = node.path.toLowerCase().includes('device');
 
     const meta = {
       name: node.name,
@@ -29,10 +30,11 @@ export function MetadataInspectorApp() {
       size: `${node.size || 2145760} bytes`,
       mimeType: node.mimeType || 'image/jpeg',
       author: node.author || (isEvidence ? 'ARLO' : isPhoto ? 'ARCHIVIST-01' : 'UNKNOWN'),
+      hardwareId: node.hardwareId || node.deviceId || (node.path.includes('device.png') ? 'VX-27' : node.path.includes('device-9') ? 'DEV-09' : null),
       software: node.software || 'Workstation Pro v3',
       createdDate: node.createdDate || '2026-09-24T09:12:00.000Z',
       modifiedDate: node.modifiedDate || '2026-09-24T10:15:00.000Z',
-      description: node.description || 'STANDARD_METADATA',
+      description: node.description || (isDevice ? 'Hardware ID: VX-27' : 'STANDARD_METADATA'),
       cameraModel: 'Field Recon Camera Mark II',
       hashMD5: '7f9a2b819e410c558d0a319f'
     };
@@ -122,6 +124,14 @@ export function MetadataInspectorApp() {
               <span className="key">Author / Creator</span>
               <span className="val">{metadata.author}</span>
             </div>
+            {metadata.hardwareId && (
+              <div className="meta-row" style={{ background: 'rgba(88, 166, 255, 0.15)', borderLeft: '3px solid #58a6ff' }}>
+                <span className="key" style={{ color: '#58a6ff', fontWeight: 'bold' }}>Registered Hardware ID</span>
+                <span className="val" style={{ color: '#58a6ff', fontWeight: 'bold', fontFamily: 'monospace', fontSize: '1.05rem' }}>
+                  {metadata.hardwareId}
+                </span>
+              </div>
+            )}
             <div className="meta-row"><span className="key">Software Used</span><span className="val">{metadata.software}</span></div>
             <div className="meta-row"><span className="key">Time Created</span><span className="val">{metadata.createdDate}</span></div>
             <div className="meta-row"><span className="key">Time Modified</span><span className="val">{metadata.modifiedDate}</span></div>
