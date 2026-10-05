@@ -613,21 +613,42 @@ export function Round2Page({ onReturnToHub }) {
 
   // Remove screen scroll lock dynamically on mount
   useEffect(() => {
-    document.documentElement.style.overflowY = 'auto';
-    document.documentElement.style.overflowX = 'hidden';
-    document.documentElement.style.maxHeight = 'none';
-    document.documentElement.style.height = 'auto';
-    document.body.style.overflowY = 'auto';
-    document.body.style.overflowX = 'hidden';
-    document.body.style.maxHeight = 'none';
-    document.body.style.height = 'auto';
+    document.documentElement.style.setProperty('overflow-y', 'auto', 'important');
+    document.documentElement.style.setProperty('overflow-x', 'hidden', 'important');
+    document.documentElement.style.setProperty('max-height', 'none', 'important');
+    document.documentElement.style.setProperty('height', 'auto', 'important');
+
+    document.body.style.setProperty('overflow-y', 'auto', 'important');
+    document.body.style.setProperty('overflow-x', 'hidden', 'important');
+    document.body.style.setProperty('max-height', 'none', 'important');
+    document.body.style.setProperty('height', 'auto', 'important');
+
     const rootEl = document.getElementById('root');
     if (rootEl) {
-      rootEl.style.overflowY = 'visible';
-      rootEl.style.overflowX = 'hidden';
-      rootEl.style.maxHeight = 'none';
-      rootEl.style.height = 'auto';
+      rootEl.style.setProperty('overflow-y', 'visible', 'important');
+      rootEl.style.setProperty('overflow-x', 'hidden', 'important');
+      rootEl.style.setProperty('max-height', 'none', 'important');
+      rootEl.style.setProperty('height', 'auto', 'important');
     }
+
+    return () => {
+      document.documentElement.style.removeProperty('overflow-y');
+      document.documentElement.style.removeProperty('overflow-x');
+      document.documentElement.style.removeProperty('max-height');
+      document.documentElement.style.removeProperty('height');
+
+      document.body.style.removeProperty('overflow-y');
+      document.body.style.removeProperty('overflow-x');
+      document.body.style.removeProperty('max-height');
+      document.body.style.removeProperty('height');
+
+      if (rootEl) {
+        rootEl.style.removeProperty('overflow-y');
+        rootEl.style.removeProperty('overflow-x');
+        rootEl.style.removeProperty('max-height');
+        rootEl.style.removeProperty('height');
+      }
+    };
   }, []);
 
   // Speed and Points Calculation
