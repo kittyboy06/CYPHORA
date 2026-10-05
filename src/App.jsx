@@ -3,6 +3,7 @@ import { Terminal, Users, X, ChevronRight, Shield, Compass } from 'lucide-react'
 import { BootScreen } from './os/boot/BootScreen.jsx';
 import { OSContainer } from './os/OSContainer.jsx';
 import { Prologue } from './components/Story/Prologue.jsx';
+import { ParticleTextEffect } from './components/ParticleTextEffect.jsx';
 import { eventBus } from './os/events/eventBus.js';
 import {
   loadRound1State,
@@ -741,7 +742,7 @@ function App() {
 
       {/* Initial screen */}
       {stage === 'initial' && (
-        <button className="enter-btn" onClick={handleBeginClick}>Begin Journey</button>
+        <ParticleTextEffect onClick={handleBeginClick} />
       )}
 
       {/* Team & 2 Members Identification Modal */}
