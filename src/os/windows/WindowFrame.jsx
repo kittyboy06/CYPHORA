@@ -105,13 +105,13 @@ export function WindowFrame({ windowInstance, children }) {
 
   const style = isMaximized
     ? {
-        position: 'fixed',
-        top: '38px',
+        position: 'absolute',
+        top: 0,
         left: 0,
         right: 0,
-        bottom: '42px',
+        bottom: 0,
         width: '100%',
-        height: 'calc(100vh - 80px)',
+        height: '100%',
         zIndex
       }
     : {

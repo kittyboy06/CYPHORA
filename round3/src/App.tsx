@@ -3,23 +3,35 @@ import PhaserGame from './game/PhaserGame';
 import BlocklyEditor from './components/BlocklyEditor';
 import { GameOverlay } from './components/GameOverlay';
 import { StoryIntro } from './components/StoryIntro';
+import { TutorialScreen } from './components/TutorialScreen';
 import { LandingScreen } from './components/LandingScreen';
 import { AntiCheatScreen } from './components/AntiCheatScreen';
 import { useGameStore } from './state/gameStore';
 import { executeCode } from './blockly/interpreter';
-import { Play, RotateCcw } from 'lucide-react';
+import { Play, RotateCcw, Wand2 } from 'lucide-react';
+import { SOLUTIONS } from './blockly/solutions';
 
 function App() {
   const [hasEntered, setHasEntered] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [adminOverride, setAdminOverride] = useState(false);
   const [showStory, setShowStory] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
   const blocklyRef = useRef<any>(null);
   const gameRef = useRef<any>(null);
   const level = useGameStore((state) => state.level);
   const setStatus = useGameStore((state) => state.setStatus);
+  const timeRemaining = useGameStore((state) => state.timeRemaining);
+  const tickTime = useGameStore((state) => state.tickTime);
+
+  useEffect(() => {
+    if (!showStory && !showTutorial) {
+      const timer = setInterval(() => tickTime(), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [showStory, showTutorial, tickTime]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -41,6 +53,13 @@ function App() {
     }
   };
 
+  const handleSolve = () => {
+    if (blocklyRef.current && SOLUTIONS[level]) {
+      handleReset(); // ensure level is reset before loading solution
+      blocklyRef.current.setXml(SOLUTIONS[level]);
+    }
+  };
+
   const handleRun = async () => {
     if (!blocklyRef.current || !gameRef.current || isRunning) return;
     
@@ -56,6 +75,12 @@ function App() {
     } finally {
       setIsRunning(false);
     }
+  };
+
+  const handleNextLevel = (nextLevel: number) => {
+    setStatus('idle');
+    useGameStore.getState().setLevel(nextLevel);
+    if (gameRef.current) gameRef.current.resetLevel();
   };
 
   const handleReset = () => {
@@ -76,16 +101,28 @@ function App() {
   // }
 
   if (showStory) {
+    return <StoryIntro onComplete={() => { setShowStory(false); setShowTutorial(true); }} />;
+  }
+
+  if (showTutorial) {
+    return <TutorialScreen onComplete={() => setShowTutorial(false)} />;
     return <StoryIntro onComplete={() => setShowStory(false)} />;
   }
 
   return (
     <div className="w-screen h-screen flex flex-col relative bg-[var(--bg-dark)] overflow-hidden">
-      <GameOverlay onRetry={handleReset} />
+      <GameOverlay onRetry={handleReset} onNextLevel={handleNextLevel} />
 
       {/* ═══ TOP HALF: Game Canvas ═══ */}
       <div className="h-[40%] min-h-[200px] relative bg-[#050804] border-b border-[var(--border-gold)]">
         <PhaserGame ref={gameRef} levelIndex={level} />
+        
+        {/* MASTER TIMER OVERLAY */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center pointer-events-none">
+          <span className={`text-3xl font-mono font-bold tracking-widest ${timeRemaining < 300 ? 'text-red-500' : 'text-white'}`} style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.8)' }}>
+            {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
+          </span>
+        </div>
       </div>
 
       {/* ═══ TASK STRIP ═══ */}
@@ -97,7 +134,7 @@ function App() {
                 Current Task: The Broken Bridge
               </h3>
               <p className="text-sm leading-relaxed text-[var(--text-primary)]">
-                The bridge gaps are expanding! First you must run 1 tile and jump, then run 2 tiles and jump, then 3 tiles, and so on... (a triangular number progression). Use variables and nested loops with <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">run()</code> and <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code> to reach the other side!
+                The bridge gaps are expanding! First you must jump, then run 1 tile and jump, then run 2 tiles and jump, then 3 tiles, and so on... (a triangular number progression). <strong className="text-red-400">⚠️ Low-hanging branches block jumping on solid ground — you can only jump over gaps!</strong> Use variables and nested loops with <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">run()</code> and <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code> to reach the other side!
               </p>
             </>
           )}
@@ -107,8 +144,9 @@ function App() {
                 Current Task: The Beast's Lair
               </h3>
               <p className="text-sm leading-relaxed text-[var(--text-primary)]">
-                The Guardian blocks the path! 
-                Run forward, <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code> over the fire at the 5th block, and <strong>stop exactly 2 blocks before the beast</strong> (at block 8).
+                The Guardian blocks the path! Run forward on the continuous bridge. 
+                Use <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">equip()</code> at the 3rd tile to pick up the Sword (required to attack), and again at the 5th tile to pick up the Shield (required to defend). 
+                Stop exactly 2 blocks before the beast.
                 Then check its shield: if <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">is_beast_vulnerable()</code>, use <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">attack()</code>. 
                 Otherwise, <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">defend()</code>.
               </p>
@@ -174,6 +212,16 @@ function App() {
           )}
 
           <div className="flex gap-2">
+            {isAdminUnlocked && (
+              <button
+                onClick={handleSolve}
+                disabled={isRunning}
+                className="flex items-center gap-2 px-4 py-2.5 font-bold text-sm tracking-wider uppercase transition-all rounded-sm bg-purple-600/20 text-purple-400 border border-purple-500/50 hover:bg-purple-600/40"
+                title="Load Solution"
+              >
+                <Wand2 size={15} /> Solve
+              </button>
+            )}
             <button
               onClick={handleRun}
               disabled={isRunning}
@@ -200,10 +248,17 @@ function App() {
 
       {/* ═══ BOTTOM HALF: Blockly Workspace (toolbox on left, workspace spanning full width) ═══ */}
       <div className="flex-1 relative">
-        <BlocklyEditor ref={blocklyRef} />
+        <BlocklyEditor ref={blocklyRef} level={level} />
       </div>
     </div>
   );
 }
 
 export default App;
+
+
+
+
+
+
+

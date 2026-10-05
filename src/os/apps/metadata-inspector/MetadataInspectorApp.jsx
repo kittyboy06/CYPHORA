@@ -28,11 +28,11 @@ export function MetadataInspectorApp() {
       path: node.path,
       size: `${node.size || 2145760} bytes`,
       mimeType: node.mimeType || 'image/jpeg',
-      author: node.author || (isEvidence ? 'ARLO' : isPhoto ? 'ARCHIVIST' : 'UNKNOWN'),
+      author: node.author || (isEvidence ? 'ARLO' : isPhoto ? 'ARCHIVIST-01' : 'UNKNOWN'),
       software: node.software || 'Workstation Pro v3',
       createdDate: node.createdDate || '2026-09-24T09:12:00.000Z',
       modifiedDate: node.modifiedDate || '2026-09-24T10:15:00.000Z',
-      description: node.description || (isEvidence ? '48 45 4C 50' : isPhoto ? 'ARCHIVE_04' : isBeacon ? 'Beacon QR payload inside /System/logs/beacon_scan.png' : 'STANDARD_METADATA'),
+      description: node.description || 'STANDARD_METADATA',
       cameraModel: 'Field Recon Camera Mark II',
       hashMD5: '7f9a2b819e410c558d0a319f'
     };
@@ -118,26 +118,16 @@ export function MetadataInspectorApp() {
             <div className="meta-row"><span className="key">File Path</span><span className="val">{metadata.path}</span></div>
             <div className="meta-row"><span className="key">File Size</span><span className="val">{metadata.size}</span></div>
             <div className="meta-row"><span className="key">MIME Type</span><span className="val">{metadata.mimeType}</span></div>
-            <div className="meta-row highlight-row">
+            <div className="meta-row">
               <span className="key">Author / Creator</span>
-              <span className="val highlight" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>{metadata.author}</span>
-                <button className="copy-icon-btn" onClick={() => handleCopyVal('author', metadata.author)} title="Copy value">
-                  {copiedKey === 'author' ? <Check size={13} color="#7ee787" /> : <Copy size={13} />}
-                </button>
-              </span>
+              <span className="val">{metadata.author}</span>
             </div>
             <div className="meta-row"><span className="key">Software Used</span><span className="val">{metadata.software}</span></div>
             <div className="meta-row"><span className="key">Time Created</span><span className="val">{metadata.createdDate}</span></div>
             <div className="meta-row"><span className="key">Time Modified</span><span className="val">{metadata.modifiedDate}</span></div>
-            <div className="meta-row highlight-row">
+            <div className="meta-row">
               <span className="key">Description / Comment</span>
-              <span className="val highlight" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>{metadata.description}</span>
-                <button className="copy-icon-btn" onClick={() => handleCopyVal('desc', metadata.description)} title="Copy value">
-                  {copiedKey === 'desc' ? <Check size={13} color="#7ee787" /> : <Copy size={13} />}
-                </button>
-              </span>
+              <span className="val">{metadata.description}</span>
             </div>
             <div className="meta-row"><span className="key">Camera Model</span><span className="val">{metadata.cameraModel}</span></div>
             <div className="meta-row"><span className="key">MD5 Hash</span><span className="val mono">{metadata.hashMD5}</span></div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  CheckSquare,
   Terminal,
   Folder,
   FileText,
@@ -11,8 +12,6 @@ import {
   BarChart2,
   GitCompare,
   Volume2,
-  FilePlus,
-  RotateCcw,
   Trophy,
   Radio
 } from 'lucide-react';
@@ -33,7 +32,6 @@ export function Desktop() {
   } = useOS();
   const [desktopFiles, setDesktopFiles] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
-  const [contextMenu, setContextMenu] = useState(null);
 
   useEffect(() => {
     if (typeof fetchLeaderboard === 'function') {
@@ -66,7 +64,14 @@ export function Desktop() {
   const loadDesktopItems = () => {
     try {
       const files = vfs.listDir('/Desktop', false);
-      setDesktopFiles(files);
+      const sorted = [...files].sort((a, b) => {
+        const priority = { 'Getting Started.txt': 1, 'App Usage.txt': 2 };
+        const pA = priority[a.name] || 99;
+        const pB = priority[b.name] || 99;
+        if (pA !== pB) return pA - pB;
+        return a.name.localeCompare(b.name);
+      });
+      setDesktopFiles(sorted);
     } catch (e) {
       console.error('Failed to load desktop items', e);
     }
@@ -78,39 +83,20 @@ export function Desktop() {
 
   const handleDesktopClick = () => {
     setSelectedId(null);
-    setContextMenu(null);
     closeStartMenu();
   };
 
   const handleContextMenu = (e) => {
     e.preventDefault();
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY
-    });
-  };
-
-  const handleCreateNewFile = () => {
-    setContextMenu(null);
-    const fileName = `note_${Date.now().toString().slice(-4)}.txt`;
-    const targetPath = `/Desktop/${fileName}`;
-    vfs.writeFile(targetPath, 'New document created.\n', 'desktop');
-    loadDesktopItems();
-    openApp('text-editor', {
-      title: `Text Editor - ${fileName}`,
-      meta: { filePath: targetPath }
-    });
-  };
-
-  const handleResetDesktop = () => {
-    setContextMenu(null);
-    if (confirm('Reset Virtual Filesystem to default factory configuration?')) {
-      vfs.resetVFS();
-      loadDesktopItems();
-    }
   };
 
   const systemApps = [
+    {
+      id: 'tasks',
+      title: 'Tasks',
+      icon: <CheckSquare size={32} className="desktop-icon-svg settings-color" />,
+      action: () => openApp('tasks')
+    },
     {
       id: 'converter',
       title: 'Universal Converter',
@@ -224,7 +210,7 @@ export function Desktop() {
             }}
           >
             <div className="desktop-icon-glyph">
-              <FileText size={32} className="desktop-icon-svg file-color" />
+              <FileText size={32} className={`desktop-icon-svg ${(file.name.includes('Getting Started') || file.name.includes('App Usage')) ? 'settings-color' : 'file-color'}`} />
             </div>
             <span className="desktop-icon-label" title={file.name}>
               {file.name}
@@ -240,7 +226,6 @@ export function Desktop() {
         onClick={(e) => {
           e.stopPropagation();
           closeStartMenu();
-          setContextMenu(null);
         }}
       >
         <div className="desktop-journey-hud">
@@ -343,55 +328,6 @@ export function Desktop() {
           </div>
         </div>
       </aside>
-
-      {/* Right-click Context Menu */}
-      {contextMenu && (
-        <div
-          className="desktop-context-menu"
-          style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            className="ctx-item"
-            onClick={() => {
-              setContextMenu(null);
-              openApp('converter');
-            }}
-          >
-            <RefreshCw size={14} />
-            <span>Open Universal Converter</span>
-          </button>
-          <button
-            className="ctx-item"
-            onClick={() => {
-              setContextMenu(null);
-              openApp('terminal');
-            }}
-          >
-            <Terminal size={14} />
-            <span>Open Terminal</span>
-          </button>
-          <button
-            className="ctx-item"
-            onClick={() => {
-              setContextMenu(null);
-              openApp('file-manager');
-            }}
-          >
-            <Folder size={14} />
-            <span>Open File Manager</span>
-          </button>
-          <div className="ctx-sep" />
-          <button className="ctx-item" onClick={handleCreateNewFile}>
-            <FilePlus size={14} />
-            <span>New Text Document</span>
-          </button>
-          <button className="ctx-item" onClick={handleResetDesktop}>
-            <RotateCcw size={14} />
-            <span>Reset VFS Filesystem</span>
-          </button>
-        </div>
-      )}
     </div>
   );
 }

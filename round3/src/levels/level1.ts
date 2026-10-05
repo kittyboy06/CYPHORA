@@ -18,13 +18,13 @@ const X = TileType.GOAL;
 export const level1: LevelDefinition = {
   id: 'level_01',
   name: 'The Broken Bridge',
-  length: 19,
-  playerStartX: 0,
+  length: 25,
+  playerStartX: 1,
   tiles: [
-    G, G, T,             // runs: 1 (idx 0 to 1, length 2)
-    G, G, G, T,          // runs: 2 (idx 3 to 5, length 3)
-    G, G, G, G, T,       // runs: 3 (idx 7 to 10, length 4)
-    G, G, G, G, G,       // runs: 4 (idx 12 to 16, length 5)
-    X                    // Goal at idx 17 (wait, length is 18. Index 17)
+    G, G, G, T,                   // 2 blocks (idx 0-1) -> run 1
+    G, G, G, T,                // 3 blocks (idx 3-5) -> run 2
+    G, G, G, G, T,             // 4 blocks (idx 7-10) -> run 3
+    G, G, G, G, G, T,          // 5 blocks (idx 12-16) -> run 4
+    G, G, G, G, G, X           // 6 blocks (idx 18-23) -> run 5
   ]
 };

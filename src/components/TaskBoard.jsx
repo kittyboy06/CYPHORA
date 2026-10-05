@@ -270,11 +270,11 @@ export function TaskBoard({ round1State }) {
               </div>
 
               {/* Hint Modal Display */}
-              {hintLevel > 0 && presentation.hints && presentation.hints[hintLevel - 1] && (
+              {hintLevel > 0 && presentation.hints && presentation.hints.length > 0 && (
                 <div className="objective-hint" style={{ marginTop: '1rem', background: '#1c2128', border: '1px solid #d29922', borderRadius: '6px', padding: '0.8rem 1rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#e3b341', letterSpacing: '0.05rem' }}>
-                      HINT {hintLevel} OF {presentation.hints.length}
+                      REVEALED HINTS ({hintLevel} OF {presentation.hints.length})
                     </span>
                     {hintLevel < presentation.hints.length && (
                       <button
@@ -286,9 +286,18 @@ export function TaskBoard({ round1State }) {
                       </button>
                     )}
                   </div>
-                  <p style={{ margin: 0, fontSize: '0.9rem', color: '#c9d1d9', lineHeight: 1.4 }}>
-                    {presentation.hints[hintLevel - 1]}
-                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                    {presentation.hints.slice(0, hintLevel).map((hText, idx) => (
+                      <div key={idx} style={{ borderTop: idx > 0 ? '1px solid rgba(210, 153, 34, 0.2)' : 'none', paddingTop: idx > 0 ? '0.4rem' : '0' }}>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#e3b341', display: 'block', marginBottom: '0.15rem' }}>
+                          HINT {idx + 1} OF {presentation.hints.length}
+                        </span>
+                        <p style={{ margin: 0, fontSize: '0.9rem', color: '#c9d1d9', lineHeight: 1.4 }}>
+                          {hText}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </section>

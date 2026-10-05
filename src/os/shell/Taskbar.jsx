@@ -8,9 +8,21 @@ import {
   Wifi,
   AppWindow,
   Compass,
-  Settings
+  Settings,
+  RefreshCw,
+  Info,
+  QrCode,
+  Image,
+  BarChart2,
+  GitCompare,
+  CheckSquare,
+  Maximize,
+  Minimize,
+  LogOut,
+  Clock
 } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
+import { formatCountdown } from '../../round1/round1Engine.js';
 
 export function Taskbar() {
   const {
@@ -22,14 +34,25 @@ export function Taskbar() {
     toggleStartMenu,
     isMuted,
     toggleMute,
-    round1State
+    round1State,
+    isFullscreen,
+    requestFullscreen,
+    onReturnToHub
   } = useOS();
 
   const getTaskIcon = (appId) => {
     switch (appId) {
+      case 'tasks': return <CheckSquare size={15} />;
       case 'terminal': return <Terminal size={15} />;
       case 'file-manager': return <Folder size={15} />;
       case 'text-editor': return <FileText size={15} />;
+      case 'converter': return <RefreshCw size={15} />;
+      case 'metadata-inspector': return <Info size={15} />;
+      case 'qr-scanner': return <QrCode size={15} />;
+      case 'image-inspector': return <Image size={15} />;
+      case 'text-analyzer': return <BarChart2 size={15} />;
+      case 'file-comparator': return <GitCompare size={15} />;
+      case 'audio-inspector': return <Volume2 size={15} />;
       case 'settings': return <Settings size={15} />;
       default: return <AppWindow size={15} />;
     }
@@ -40,6 +63,16 @@ export function Taskbar() {
       minimizeWindow(win.id);
     } else {
       focusWindow(win.id);
+    }
+  };
+
+  const handleToggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+      requestFullscreen();
+    } else {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      }
     }
   };
 
@@ -77,6 +110,22 @@ export function Taskbar() {
 
       {/* System Tray */}
       <div className="taskbar-tray">
+        {/* Round 1 Timer */}
+        {round1State?.round1StartedAt && (
+          <div className="tray-timer" title="Round 1 Remaining Time">
+            <Clock size={13} style={{ color: '#dfb125' }} />
+            <span className="tray-timer-val">{formatCountdown(round1State.remainingTimeMs ?? 1200000)}</span>
+          </div>
+        )}
+
+        <button
+          className="tray-btn"
+          onClick={handleToggleFullscreen}
+          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+        >
+          {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
+        </button>
+
         <button
           className="tray-btn"
           onClick={toggleMute}
@@ -89,9 +138,14 @@ export function Taskbar() {
           <Wifi size={14} />
         </div>
 
-        <div className="tray-clock">
-          <span>{round1State?.simulatedClock?.replace('CYPHORA-EXPEDITION-', '').replace('-', ' ') || 'UNSYNCED'}</span>
-        </div>
+        <button
+          className="tray-btn tray-return-btn"
+          onClick={onReturnToHub}
+          title="Return to Expedition Hub"
+        >
+          <LogOut size={14} />
+          <span className="tray-return-text">Hub</span>
+        </button>
       </div>
     </footer>
   );

@@ -70,6 +70,14 @@ export const INITIAL_VFS = {
     path: '/Shared',
     updatedAt: new Date().toISOString()
   },
+  '/Transfers': {
+    id: 'transfers',
+    name: 'Transfers',
+    type: 'dir',
+    parentId: 'root',
+    path: '/Transfers',
+    updatedAt: new Date().toISOString()
+  },
 
   // SUBDIRECTORIES
   '/Documents/clues': {
@@ -216,6 +224,145 @@ Investigate workstation files and tools to solve challenges.
 Applications do not auto-fill or solve tasks for you.
 
 Status: WORKSTATION OPERATIONAL
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Desktop/START.txt': {
+    id: 'file_desktop_start',
+    name: 'START.txt',
+    type: 'file',
+    parentId: 'desktop',
+    path: '/Desktop/START.txt',
+    mimeType: 'text/plain',
+    size: 480,
+    content: `================================================
+CYPHORA INVESTIGATION WORKSTATION MANUAL
+================================================
+1. Launch the Tasks application from your desktop or taskbar to view your current active objective.
+2. Use File Manager to explore workstation directories: /Documents, /Pictures, /Archive, and /Evidence.
+3. Utilize specialized utility applications (Metadata Inspector, Universal Converter, File Comparator, QR Scanner, Image Inspector, Audio Inspector) to analyze evidence files.
+4. Input discovered codes into the Tasks application to verify and proceed.
+5. Good luck, Operative.
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Desktop/Getting Started.txt': {
+    id: 'file_desktop_getting_started',
+    name: 'Getting Started.txt',
+    type: 'file',
+    parentId: 'desktop',
+    path: '/Desktop/Getting Started.txt',
+    mimeType: 'text/plain',
+    size: 1100,
+    content: `GETTING STARTED WITH CYPHORA OS
+===============================
+
+Welcome to Cyphora OS! This workstation has all the tools you need to solve
+challenges, investigate clues, and reach The Monolith.
+
+Quick Start:
+1. Open Tasks: Double-click "Tasks" on the desktop to see your current objective.
+2. Explore Files: Use "File Manager" or "Terminal" to search folders and find clues.
+3. Decode Clues: Use the specialized tools to decode text, check metadata, or inspect images.
+4. Submit Answers: Type your answer in the Tasks app to unlock the next mission.
+5. Track Progress: Watch your journey progress and live leaderboard on the top right.
+
+For detailed instructions on every tool, open "App Usage.txt" on the desktop.
+
+--------------------------------------------------
+APP USAGE SUMMARY
+--------------------------------------------------
+• Tasks: View your current mission, hints, and submit answers.
+• File Manager: Browse folders and open files.
+• Terminal: Run command-line searches (ls, cd, cat, grep).
+• Text Editor: Read, edit, and save text notes and logs.
+• Universal Converter: Decode Hex, Base64, Binary, ASCII, and ciphers.
+• Metadata Inspector: View hidden file details, author tags, and device IDs.
+• QR Scanner: Scan barcodes and QR codes from images.
+• Image Inspector: Zoom, invert colors, and isolate color channels.
+• Text Analyzer: Analyze character frequency to solve ciphers.
+• File Comparison: Compare two files side-by-side to find differences.
+• Audio Inspector: Play audio and inspect sound wave frequencies.
+• Settings: Adjust volume, sound effects, and display preferences.
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Desktop/App Usage.txt': {
+    id: 'file_desktop_app_usage',
+    name: 'App Usage.txt',
+    type: 'file',
+    parentId: 'desktop',
+    path: '/Desktop/App Usage.txt',
+    mimeType: 'text/plain',
+    size: 2400,
+    content: `CYPHORA OS - APPLICATION USAGE GUIDE
+====================================
+
+This guide describes each available application and how to use it:
+
+1. TASKS
+   • What it does: Your mission control dashboard.
+   • How to use: Open it anytime to view your active objective briefing,
+     reveal encrypted hints if you get stuck, and enter your answer codes to proceed.
+
+2. FILE MANAGER
+   • What it does: Graphical file explorer.
+   • How to use: Browse folders like /Desktop, /Documents, /Pictures, /Archive,
+     and /Evidence. Double-click any file to open it.
+
+3. TERMINAL
+   • What it does: Command-line shell interface.
+   • How to use: Run commands like:
+     - ls -a   : List all files including hidden ones.
+     - cd      : Change directories.
+     - cat     : View the contents of a file.
+     - grep    : Search for specific text inside files.
+     - help    : Show all available commands.
+
+4. TEXT EDITOR
+   • What it does: Plain text reader and notepad.
+   • How to use: Double-click text files to read clues, edit notes, and save
+     changes with Ctrl+S.
+
+5. UNIVERSAL CONVERTER
+   • What it does: Multi-format decoding and encoding tool.
+   • How to use: Paste encoded text and convert between Hexadecimal, Base64,
+     Binary, ASCII Decimal numbers, and Rot13 ciphers.
+
+6. METADATA INSPECTOR
+   • What it does: Deep file forensics inspector.
+   • How to use: Select or drag-and-drop any file to reveal hidden EXIF tags,
+     author names, camera details, device IDs, and creation dates.
+
+7. QR / BARCODE SCANNER
+   • What it does: Optical code reader.
+   • How to use: Load an image containing a QR code or barcode to extract the
+     hidden text payload or link.
+
+8. IMAGE INSPECTOR
+   • What it does: Visual analysis workstation.
+   • How to use: Zoom into graphics, invert colors, adjust brightness/contrast,
+     or isolate Red, Green, and Blue channels to reveal faint hidden clues.
+
+9. TEXT ANALYZER
+   • What it does: Cryptanalysis and letter frequency scanner.
+   • How to use: Paste cipher text to view character counts, letter frequency
+     charts, and entropy to help solve substitution ciphers.
+
+10. FILE COMPARISON
+    • What it does: Side-by-side file diff tool.
+    • How to use: Select two files to view highlighted differences, line additions,
+      and modified tokens side by side.
+
+11. AUDIO INSPECTOR
+    • What it does: Sonic signal visualizer.
+    • How to use: Play audio files, view the waveform, and inspect frequency
+      spectrums to detect Morse code or hidden audio tones.
+
+12. SETTINGS
+    • What it does: Workstation preferences.
+    • How to use: Adjust ambient music volume, toggle UI sound effects, and
+      configure display settings.
 `,
     updatedAt: new Date().toISOString()
   },
@@ -545,6 +692,34 @@ TR-904
     type: 'file',
     parentId: 'dir_docs_transfers',
     path: '/Documents/Transfers/TR-904.txt',
+    mimeType: 'text/plain',
+    size: 35,
+    content: `PAYLOAD:
+53 59 4D 50 4F
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Archive/VX-27.txt': {
+    id: 'file_archive_vx27_txt',
+    name: 'VX-27.txt',
+    type: 'file',
+    parentId: 'archive',
+    path: '/Archive/VX-27.txt',
+    mimeType: 'text/plain',
+    size: 45,
+    content: `DEVICE: VX-27
+
+TRANSFER ID:
+TR-904
+`,
+    updatedAt: new Date().toISOString()
+  },
+  '/Transfers/TR-904.txt': {
+    id: 'file_transfers_tr904_txt',
+    name: 'TR-904.txt',
+    type: 'file',
+    parentId: 'transfers',
+    path: '/Transfers/TR-904.txt',
     mimeType: 'text/plain',
     size: 35,
     content: `PAYLOAD:

@@ -28,13 +28,13 @@ export function QRScannerApp() {
       } else if (typeof pathToScan === 'string' && pathToScan.toLowerCase().includes('map.png')) {
         payload = 'CLUE-42';
       } else if (typeof pathToScan === 'string' && (pathToScan.includes('poster') || pathToScan.includes('sector'))) {
-        payload = '01010011 01000101 01000011 01010100 01001111 01000010 00101101 00110111';
-      } else if (typeof pathToScan === 'string' && (pathToScan.includes('archive') || pathToScan.includes('location') || pathToScan.includes('terrain_map'))) {
-        payload = '/Documents/clues/numbers.txt';
+        payload = 'SECTOR-7';
+      } else if (typeof pathToScan === 'string' && (pathToScan.includes('map') || pathToScan.includes('survey'))) {
+        payload = 'CLUE-42';
       } else if (typeof pathToScan === 'string' && (pathToScan.includes('beacon') || pathToScan.includes('logs'))) {
         payload = '/Documents/final_cipher.txt';
       } else {
-        payload = 'CLUE-42';
+        payload = 'SECTOR-7';
       }
 
       setQrOutput(payload);

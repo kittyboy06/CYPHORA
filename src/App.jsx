@@ -3,6 +3,7 @@ import { Terminal, Users, X, ChevronRight, Shield, Compass } from 'lucide-react'
 import { BootScreen } from './os/boot/BootScreen.jsx';
 import { OSContainer } from './os/OSContainer.jsx';
 import { Prologue } from './components/Story/Prologue.jsx';
+import { ParticleTextEffect } from './components/ParticleTextEffect.jsx';
 import { eventBus } from './os/events/eventBus.js';
 import {
   loadRound1State,
@@ -64,7 +65,12 @@ function App() {
   const socketRef = useRef(null);
   const teamDataRef = useRef(teamData);
   const round1StateRef = useRef(round1State);
+  const stageRef = useRef(stage);
   const syncedTasksRef = useRef(new Set());
+
+  useEffect(() => {
+    stageRef.current = stage;
+  }, [stage]);
 
   useEffect(() => {
     teamDataRef.current = teamData;
@@ -242,21 +248,50 @@ function App() {
     return () => { if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current); };
   }, []);
 
-  // Strict full-webpage scroll lock for computer screen app (landing page & story page)
+  // Strict full-webpage scroll lock for computer screen app (landing page, eye animation, story page before OS)
   useEffect(() => {
-    window.scrollTo(0, 0);
-    if (document.documentElement) {
-      document.documentElement.scrollTop = 0;
-      document.documentElement.scrollLeft = 0;
-    }
-    if (document.body) {
-      document.body.scrollTop = 0;
-      document.body.scrollLeft = 0;
-    }
+    const lockScroll = () => {
+      window.scrollTo(0, 0);
+      if (document.documentElement) {
+        document.documentElement.scrollTop = 0;
+        document.documentElement.scrollLeft = 0;
+        document.documentElement.style.overflow = 'hidden';
+      }
+      if (document.body) {
+        document.body.scrollTop = 0;
+        document.body.scrollLeft = 0;
+        document.body.style.overflow = 'hidden';
+      }
+      const container = document.querySelector('.app-container');
+      if (container) {
+        container.scrollTop = 0;
+        container.scrollLeft = 0;
+        container.style.overflow = 'hidden';
+      }
+    };
+
+    lockScroll();
 
     const preventScroll = (e) => {
+      const currentStage = stageRef.current;
+      const isPreOS = ['initial', 'waking', 'prologue', 'main'].includes(currentStage);
       const target = e.target;
-      // Allow scrolling inside internal scrollable elements (e.g., explorer side panel list or OS app containers)
+
+      // In landing, eye animation screen, and story screen before OS, absolutely no scrolling is permitted
+      if (isPreOS) {
+        if (e.type === 'wheel' || e.type === 'touchmove') {
+          e.preventDefault();
+        }
+        if (e.type === 'keydown') {
+          const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+          if (!isInput && [' ', 'PageUp', 'PageDown', 'End', 'Home', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+            e.preventDefault();
+          }
+        }
+        return;
+      }
+
+      // In OS desktop mode, allow scrolling inside internal scrollable elements (e.g., terminal, text editor, file manager, leaderboard)
       if (target && target.closest && target.closest('.panel-list, .terminal-body, .window-body, .start-menu-content, .virtual-file-list, .text-editor-textarea, .desktop-leaderboard-list')) {
         return;
       }
@@ -271,9 +306,9 @@ function App() {
       }
     };
 
-    window.addEventListener('wheel', preventScroll, { passive: false });
-    window.addEventListener('touchmove', preventScroll, { passive: false });
-    window.addEventListener('keydown', preventScroll, { passive: false });
+    window.addEventListener('wheel', preventScroll, { passive: false, capture: true });
+    window.addEventListener('touchmove', preventScroll, { passive: false, capture: true });
+    window.addEventListener('keydown', preventScroll, { passive: false, capture: true });
 
     const handleWindowScroll = () => {
       if (window.scrollX !== 0 || window.scrollY !== 0) {
@@ -289,48 +324,36 @@ function App() {
     window.addEventListener('scroll', handleWindowScroll, { passive: true });
 
     return () => {
-      window.removeEventListener('wheel', preventScroll);
-      window.removeEventListener('touchmove', preventScroll);
-      window.removeEventListener('keydown', preventScroll);
+      window.removeEventListener('wheel', preventScroll, { capture: true });
+      window.removeEventListener('touchmove', preventScroll, { capture: true });
+      window.removeEventListener('keydown', preventScroll, { capture: true });
       window.removeEventListener('scroll', handleWindowScroll);
-    };
-  }, []);
-
-  // Automatically request fullscreen at start of the app (and on first user interaction)
-  useEffect(() => {
-    const triggerAutoFullscreen = () => {
-      if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      }
-    };
-
-    // Attempt immediately when app mounts/starts
-    triggerAutoFullscreen();
-
-    // Browser security may require a user gesture; trigger on the first interaction anywhere
-    const onFirstInteraction = () => {
-      triggerAutoFullscreen();
-    };
-
-    window.addEventListener('click', onFirstInteraction, { capture: true });
-    window.addEventListener('keydown', onFirstInteraction, { capture: true });
-    window.addEventListener('touchstart', onFirstInteraction, { capture: true });
-    window.addEventListener('pointerdown', onFirstInteraction, { capture: true });
-
-    return () => {
-      window.removeEventListener('click', onFirstInteraction, { capture: true });
-      window.removeEventListener('keydown', onFirstInteraction, { capture: true });
-      window.removeEventListener('touchstart', onFirstInteraction, { capture: true });
-      window.removeEventListener('pointerdown', onFirstInteraction, { capture: true });
     };
   }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    if (document.documentElement) {
+      document.documentElement.scrollTop = 0;
+      document.documentElement.scrollLeft = 0;
+      document.documentElement.style.overflow = 'hidden';
+    }
+    if (document.body) {
+      document.body.scrollTop = 0;
+      document.body.scrollLeft = 0;
+      document.body.style.overflow = 'hidden';
+    }
     const container = document.querySelector('.app-container');
     if (container) {
       container.scrollTop = 0;
       container.scrollLeft = 0;
+      container.style.overflow = 'hidden';
+    }
+    const prologue = document.querySelector('.prologue-shell');
+    if (prologue) {
+      prologue.scrollTop = 0;
+      prologue.scrollLeft = 0;
+      prologue.style.overflow = 'hidden';
     }
   }, [stage]);
 
@@ -548,13 +571,20 @@ function App() {
     if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
     if (finalPin) localStorage.setItem('cyphora_team_pin', finalPin);
 
+    // Clear previous OS session and lock states to prevent cross-team bleed
+    try {
+      sessionStorage.removeItem('cyphora_os_session');
+      sessionStorage.removeItem('cyphora_os_locked');
+      localStorage.removeItem('cyphora_vfs_data');
+    } catch (e) {}
+
     setRound1State(previousState => {
-      const savedTeamId = normalizeTeamName(previousState.teamId);
+      const savedTeamId = normalizeTeamName(previousState?.teamId);
       const currentTeamName = normalizeTeamName(finalName);
       const sameTeam = !savedTeamId
         || savedTeamId === currentTeamName
         || savedTeamId.startsWith(`${currentTeamName}-`);
-      return sameTeam ? previousState : buildDefaultRound1State();
+      return sameTeam ? previousState : buildDefaultRound1State(finalName);
     });
 
     setTeamData(prev => ({
@@ -712,7 +742,7 @@ function App() {
 
       {/* Initial screen */}
       {stage === 'initial' && (
-        <button className="enter-btn" onClick={handleBeginClick}>Begin Journey</button>
+        <ParticleTextEffect onClick={handleBeginClick} />
       )}
 
       {/* Team & 2 Members Identification Modal */}

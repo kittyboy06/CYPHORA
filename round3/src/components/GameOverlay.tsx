@@ -4,11 +4,12 @@ import { RefreshCcw } from 'lucide-react';
 
 interface Props {
   onRetry: () => void;
+  onNextLevel: (next: number) => void;
 }
 
-const LEVEL_ORDER = [1, 2, 4];
+const LEVEL_ORDER = [1, 2, 3, 4];
 
-export const GameOverlay: React.FC<Props> = ({ onRetry }) => {
+export const GameOverlay: React.FC<Props> = ({ onRetry, onNextLevel }) => {
   const { status, score, totalCommands, level, setLevel } = useGameStore();
 
   if (status === 'idle' || status === 'running') return null;
@@ -42,7 +43,7 @@ export const GameOverlay: React.FC<Props> = ({ onRetry }) => {
 
           {nextLevel ? (
             <button 
-              onClick={() => setLevel(nextLevel)}
+              onClick={() => onNextLevel(nextLevel)}
               className="w-full py-4 bg-[var(--accent-gold)] text-[var(--bg-dark)] font-bold tracking-widest hover:brightness-110 transition-all uppercase">
               Next Level
             </button>

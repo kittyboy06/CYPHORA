@@ -5,7 +5,7 @@ import './TextEditorApp.css';
 
 export function TextEditorApp({ meta = {} }) {
   const { vfs, eventBus } = useOS();
-  const filePath = meta.filePath || '/Desktop/welcome.txt';
+  const filePath = meta.filePath || '/Desktop/Getting Started.txt';
   const [content, setContent] = useState('');
   const [isDirty, setIsDirty] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
