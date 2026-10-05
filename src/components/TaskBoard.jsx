@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronUp, Maximize2, Minus, PartyPopper, CheckCircle, FileText, Folder } from 'lucide-react';
+import { ChevronUp, Maximize2, Minus, CheckCircle, CheckSquare } from 'lucide-react';
 import { useOS } from '../os/state/OSContext.jsx';
 import { SET_PRESENTATIONS, TASK_PRESENTATIONS, TASK_DEFINITIONS } from '../round1/taskContent.js';
 import { ROUND_1_SETS } from '../round1/round1Engine.js';
@@ -52,7 +52,10 @@ export function TaskBoard({ round1State }) {
     if (celebrationTimeout.current) window.clearTimeout(celebrationTimeout.current);
     const setTasks = tasks.filter(task => task.setId === newlyCompleted.setId);
     const setComplete = setTasks.length > 0 && setTasks.every(task => task.status === 'COMPLETED');
-    setCelebratedTask({ task: { ...newlyCompleted, ...TASK_PRESENTATIONS[newlyCompleted.id] }, setComplete });
+    const pointsAwarded = newlyCompleted.pointsAwarded !== undefined
+      ? newlyCompleted.pointsAwarded
+      : Math.max(0, 20 - ((newlyCompleted.hintsUsed || 0) * 5));
+    setCelebratedTask({ task: { ...newlyCompleted, ...TASK_PRESENTATIONS[newlyCompleted.id], pointsAwarded }, setComplete });
     celebrationTimeout.current = window.setTimeout(() => {
       setCelebratedTask(null);
       celebrationTimeout.current = null;
@@ -68,9 +71,6 @@ export function TaskBoard({ round1State }) {
     const handleKeyDown = (event) => {
       if (event.key !== 'Escape') return;
       if (objectiveMode === 'expanded') {
-        event.preventDefault();
-        setObjectiveMode('docked');
-      } else if (objectiveMode === 'docked') {
         event.preventDefault();
         setObjectiveMode('minimized');
       }
@@ -122,14 +122,18 @@ export function TaskBoard({ round1State }) {
     if (!val) return;
 
     eventBus.emit('TASK_ANSWER_SUBMITTED', {
-      answer: val
+      answer: val,
+      hintsUsed: hintLevel,
+      taskId: activeTask.id
     });
 
     const isAnswerCorrect = activeTask.validator({ answer: val });
 
     if (isAnswerCorrect) {
       setIsCorrect(true);
-      setFeedbackMsg('✓ CORRECT\n\nTask complete.');
+      const points = Math.max(0, 20 - (hintLevel * 5));
+      const penaltyNote = hintLevel > 0 ? ` (${hintLevel} hint${hintLevel > 1 ? 's' : ''} used: -${hintLevel * 5} pts)` : '';
+      setFeedbackMsg(`✓ CORRECT (+${points} PTS EARNED${penaltyNote})\n\nTask complete.`);
     } else {
       setIsCorrect(false);
       setFeedbackMsg('Not quite.\n\nReview the information you recovered and try again.');
@@ -147,7 +151,7 @@ export function TaskBoard({ round1State }) {
     <>
       <div className={`objective-shell objective-${objectiveMode}`}>
         {objectiveMode === 'expanded' && (
-          <div className="objective-backdrop" onClick={() => setObjectiveMode('docked')}>
+          <div className="objective-backdrop" onClick={() => setObjectiveMode('minimized')}>
             <section
               className="objective-modal"
               role="dialog"
@@ -165,12 +169,24 @@ export function TaskBoard({ round1State }) {
                   <span className="objective-task-label" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#8b949e', marginLeft: '0.75rem' }}>
                     TASK {presentation.number} / 12
                   </span>
+                  <span style={{
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    color: hintLevel === 0 ? '#3fb950' : hintLevel === 1 ? '#d29922' : '#f85149',
+                    background: hintLevel === 0 ? 'rgba(46, 160, 67, 0.15)' : hintLevel === 1 ? 'rgba(210, 153, 34, 0.15)' : 'rgba(248, 81, 73, 0.15)',
+                    border: `1px solid ${hintLevel === 0 ? 'rgba(46, 160, 67, 0.3)' : hintLevel === 1 ? 'rgba(210, 153, 34, 0.3)' : 'rgba(248, 81, 73, 0.3)'}`,
+                    padding: '0.15rem 0.5rem',
+                    borderRadius: '12px',
+                    marginLeft: '0.75rem'
+                  }}>
+                    {hintLevel === 0 ? '20 PTS' : hintLevel === 1 ? '15 PTS (-5 HINT)' : '10 PTS (-10 HINT)'}
+                  </span>
                 </div>
                 <button
                   className="objective-icon-button"
-                  onClick={() => setObjectiveMode('docked')}
-                  aria-label="Conceal objective"
-                  title="Conceal objective"
+                  onClick={() => setObjectiveMode('minimized')}
+                  aria-label="Minimize task to bottom left"
+                  title="Minimize task to bottom left"
                 >
                   <Minus size={16} />
                 </button>
@@ -233,40 +249,49 @@ export function TaskBoard({ round1State }) {
                     type="button"
                     className="objective-secondary-button"
                     onClick={revealHint}
+                    title="Getting a hint reduces 5 points (2 hints reduce 10 points)"
                     style={{ background: '#21262d', color: '#e3b341', border: '1px solid #d29922', padding: '0.45rem 0.85rem', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                   >
-                    <span>? HINT</span>
+                    <span>? HINT (-5 PTS)</span>
                     {hintLevel > 0 && <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>({hintLevel}/{presentation.hints.length})</span>}
                   </button>
                 ) : <div />}
                 
-                {isCorrect ? (
-                  <button
-                    type="button"
-                    className="objective-primary-button"
-                    onClick={() => {
-                      setIsCorrect(false);
-                      setFeedbackMsg('');
-                      setSubmittedAnswer('');
-                    }}
-                    style={{
-                      background: '#238636',
-                      color: '#ffffff',
-                      border: 'none',
-                      padding: '0.55rem 1.25rem',
-                      borderRadius: '4px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      fontSize: '0.9rem'
-                    }}
+                <div style={{ display: 'flex', gap: '0.6rem' }}>
+                  <button 
+                    type="button" 
+                    className="objective-secondary-button" 
+                    onClick={() => setObjectiveMode('minimized')}
+                    style={{ background: 'rgba(255, 255, 255, 0.06)', color: '#c9d1d9', border: '1px solid #30363d', padding: '0.55rem 1rem', borderRadius: '4px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
                   >
-                    PROCEED TO NEXT TASK →
+                    <Minus size={14} />
+                    <span>MINIMIZE TO BOTTOM LEFT</span>
                   </button>
-                ) : (
-                  <button className="objective-primary-button" onClick={() => setObjectiveMode('docked')}>
-                    MINIMIZE PANEL
-                  </button>
-                )}
+
+                  {isCorrect && (
+                    <button
+                      type="button"
+                      className="objective-primary-button"
+                      onClick={() => {
+                        setIsCorrect(false);
+                        setFeedbackMsg('');
+                        setSubmittedAnswer('');
+                      }}
+                      style={{
+                        background: '#238636',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '0.55rem 1.25rem',
+                        borderRadius: '4px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        fontSize: '0.9rem'
+                      }}
+                    >
+                      PROCEED TO NEXT TASK →
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Hint Modal Display */}
@@ -274,7 +299,7 @@ export function TaskBoard({ round1State }) {
                 <div className="objective-hint" style={{ marginTop: '1rem', background: '#1c2128', border: '1px solid #d29922', borderRadius: '6px', padding: '0.8rem 1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#e3b341', letterSpacing: '0.05rem' }}>
-                      REVEALED HINTS ({hintLevel} OF {presentation.hints.length})
+                      REVEALED HINTS ({hintLevel} OF {presentation.hints.length}) &bull; -{hintLevel * 5} PTS PENALTY
                     </span>
                     {hintLevel < presentation.hints.length && (
                       <button
@@ -309,8 +334,8 @@ export function TaskBoard({ round1State }) {
             <div className="objective-widget-header">
               <span>CURRENT OBJECTIVE — TASK {presentation.number}</span>
               <div>
-                <button onClick={() => setObjectiveMode('expanded')} aria-label="Expand objective" title="Expand objective"><Maximize2 size={14} /></button>
-                <button onClick={() => setObjectiveMode('minimized')} aria-label="Minimize objective" title="Minimize objective"><Minus size={14} /></button>
+                <button onClick={() => setObjectiveMode('expanded')} aria-label="Expand objective popup" title="Expand objective popup"><Maximize2 size={14} /></button>
+                <button onClick={() => setObjectiveMode('minimized')} aria-label="Minimize to bottom left tab" title="Minimize to bottom left tab"><Minus size={14} /></button>
               </div>
             </div>
             <button className="objective-widget-main" onClick={() => setObjectiveMode('expanded')}>
@@ -322,8 +347,18 @@ export function TaskBoard({ round1State }) {
         )}
 
         {objectiveMode === 'minimized' && (
-          <button className="objective-tab" onClick={() => setObjectiveMode('docked')} aria-label="Restore current objective" title="Restore current objective">
-            <PartyPopper size={15} /> TASK {presentation.number} <Maximize2 size={13} />
+          <button 
+            className="objective-tab" 
+            onClick={() => setObjectiveMode('expanded')} 
+            aria-label="Open task popup" 
+            title="Open task popup (Task details and answer submission)"
+          >
+            <CheckSquare size={16} style={{ color: '#dfb125' }} />
+            <span style={{ color: '#dfb125', fontWeight: 800, letterSpacing: '0.05rem' }}>TASK {presentation.number}</span>
+            <span style={{ color: '#c9d1d9', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {presentation.playerTitle}
+            </span>
+            <ChevronUp size={15} style={{ color: '#dfb125', marginLeft: '0.2rem' }} />
           </button>
         )}
       </div>

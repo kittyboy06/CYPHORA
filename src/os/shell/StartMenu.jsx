@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import {
+  CheckSquare,
   Search,
   Terminal,
   Folder,
   FileText,
-  LogOut,
   Shield,
   Layers,
   Settings,
@@ -14,13 +14,19 @@ import {
   Image as ImageIcon,
   BarChart2,
   GitCompare,
-  Volume2
+  Volume2,
+  Compass,
+  Eye,
+  Sparkles,
+  Zap,
+  Trophy,
+  BookOpen
 } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
 import { APP_REGISTRY } from '../apps/registry.js';
 
 export function StartMenu() {
-  const { isStartMenuOpen, closeStartMenu, openApp, onReturnToHub, teamData } = useOS();
+  const { isStartMenuOpen, closeStartMenu, openApp, teamData } = useOS();
   const [searchQuery, setSearchQuery] = useState('');
 
   if (!isStartMenuOpen) return null;
@@ -33,6 +39,13 @@ export function StartMenu() {
 
   const getAppIcon = (iconName) => {
     switch (iconName) {
+      case 'CheckSquare': return <CheckSquare size={20} className="start-app-icon settings" />;
+      case 'Compass': return <Compass size={20} className="start-app-icon folder" />;
+      case 'Eye': return <Eye size={20} className="start-app-icon" />;
+      case 'Sparkles': return <Sparkles size={20} className="start-app-icon text" />;
+      case 'Zap': return <Zap size={20} className="start-app-icon settings" />;
+      case 'Trophy': return <Trophy size={20} className="start-app-icon folder" />;
+      case 'BookOpen': return <BookOpen size={20} className="start-app-icon" />;
       case 'Terminal': return <Terminal size={20} className="start-app-icon" />;
       case 'Folder': return <Folder size={20} className="start-app-icon folder" />;
       case 'FileText': return <FileText size={20} className="start-app-icon text" />;
@@ -93,24 +106,12 @@ export function StartMenu() {
         </div>
       </div>
 
-      {/* Footer Profile & Shutdown */}
+      {/* Footer Profile */}
       <div className="start-menu-footer">
         <div className="start-user-badge">
           <Shield size={16} className="user-icon" />
           <span className="user-name">{teamData.name || 'Navigator'}</span>
         </div>
-
-        <button
-          className="start-logout-btn"
-          onClick={() => {
-            closeStartMenu();
-            onReturnToHub();
-          }}
-          title="Exit Virtual OS"
-        >
-          <LogOut size={15} />
-          <span>Exit OS</span>
-        </button>
       </div>
     </div>
   );

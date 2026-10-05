@@ -426,6 +426,17 @@ export function FileManagerApp() {
               <div className="prop-row"><span>Path:</span><strong>{selectedItem.path}</strong></div>
               <div className="prop-row"><span>Exact Size:</span><strong className="size-val">{selectedItem.size || 4096} bytes</strong></div>
               <div className="prop-row"><span>MIME Type:</span><strong>{selectedItem.mimeType || 'text/plain'}</strong></div>
+              {(selectedItem.hardwareId || selectedItem.deviceId || selectedItem.path?.includes('device.png')) && (
+                <div className="prop-row" style={{ background: 'rgba(88, 166, 255, 0.12)', padding: '0.35rem 0.5rem', borderRadius: '4px' }}>
+                  <span style={{ color: '#58a6ff', fontWeight: 'bold' }}>Registered Hardware ID:</span>
+                  <strong style={{ color: '#58a6ff', fontFamily: 'monospace', fontSize: '1rem' }}>
+                    {selectedItem.hardwareId || selectedItem.deviceId || 'VX-27'}
+                  </strong>
+                </div>
+              )}
+              {selectedItem.description && (
+                <div className="prop-row"><span>Description:</span><strong>{selectedItem.description}</strong></div>
+              )}
             </div>
           </div>
         </div>

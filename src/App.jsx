@@ -36,29 +36,59 @@ const formatOrdinal = (rank) => {
 
 const normalizeTeamName = (name) => (name || '').trim().toLowerCase();
 
-function App() {
-  const [stage, setStage] = useState(() => (
-    typeof window !== 'undefined'
-      ? (new URLSearchParams(window.location.search).get('stage') || 'initial')
-      : 'initial'
-  ));
+function App({ initialStage = null, defaultAppId = null }) {
+  const [stage, setStage] = useState(() => {
+    if (initialStage) return initialStage;
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get('stage');
+      if (s) return s;
+      if (params.get('round') === '2') return 'os-desktop';
+    }
+    return 'initial';
+  });
+  const [initialAppId, setInitialAppId] = useState(() => {
+    if (defaultAppId) return defaultAppId;
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('app') || (params.get('round') === '2' || params.get('stage') === 'round2' ? 'round2' : null);
+    }
+    return null;
+  });
   const [panelOpen, setPanelOpen] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [teamInput, setTeamInput] = useState('');
   const [member1Input, setMember1Input] = useState('');
   const [member2Input, setMember2Input] = useState('');
-  const [pinInput, setPinInput] = useState('');
   const [authError, setAuthError] = useState('');
   const [liveExplorers, setLiveExplorers] = useState([]);
   const [isWsConnected, setIsWsConnected] = useState(false);
-  const [teamData, setTeamData] = useState({
-    id: null,
-    name: '',
-    member1: '',
-    member2: '',
-    standing: 'Unranked',
-    score: 0,
-    isSelected: false,
+  const [teamData, setTeamData] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlTeam = params.get('team');
+      const savedName = localStorage.getItem('cyphora_team_name') || urlTeam;
+      if (savedName) {
+        return {
+          id: parseInt(localStorage.getItem('cyphora_team_id'), 10) || null,
+          name: savedName,
+          member1: localStorage.getItem('cyphora_member1') || '',
+          member2: localStorage.getItem('cyphora_member2') || '',
+          standing: '1st',
+          score: 0,
+          isSelected: true,
+        };
+      }
+    }
+    return {
+      id: null,
+      name: '',
+      member1: '',
+      member2: '',
+      standing: 'Unranked',
+      score: 0,
+      isSelected: false,
+    };
   });
   const [round1State, setRound1State] = useState(() => loadRound1State());
   const wakeTimerRef = useRef(null);
@@ -82,7 +112,7 @@ function App() {
   }, [round1State]);
 
   // Synchronize task completion with backend SQLite database
-  const syncTaskSubmission = async (taskId, answer) => {
+  const syncTaskSubmission = async (taskId, answer, hintsUsed = 0) => {
     if (!taskId) return;
     try {
       const token = localStorage.getItem('cyphora_token');
@@ -99,7 +129,8 @@ function App() {
         headers,
         body: JSON.stringify({
           task_key: taskId,
-          proof: answer || null
+          proof: answer || null,
+          hints_used: hintsUsed
         })
       });
 
@@ -223,7 +254,8 @@ function App() {
         const currentState = round1StateRef.current;
         const activeTask = currentState.tasks.find(t => t.status === 'ACTIVE');
         if (activeTask && activeTask.validator && activeTask.validator(event.payload)) {
-          syncTaskSubmission(activeTask.id, event.payload.answer);
+          const hintsUsed = event.payload.hintsUsed !== undefined ? event.payload.hintsUsed : (activeTask.hintsUsed || 0);
+          syncTaskSubmission(activeTask.id, event.payload.answer, hintsUsed);
         }
       }
     });
@@ -272,6 +304,49 @@ function App() {
 
     lockScroll();
 
+    // Helper to find the primary scroll container of an OS window
+    const getWindowScrollContainer = (winFrame) => {
+      if (!winFrame) return null;
+      // Dedicated app scroll containers
+      const appScroll = winFrame.querySelector(
+        '.universal-converter-app, .metadata-inspector-app, .file-comparator-app, ' +
+        '.image-inspector-app, .audio-inspector-app, .qr-scanner-app, .text-analyzer-app, ' +
+        '.fm-content-pane, .settings-main, .terminal-body, .text-editor-textarea, ' +
+        '.tasks-scroll-content, .virtual-file-picker-body'
+      );
+      if (appScroll) return appScroll;
+
+      // Inner window content area
+      const contentArea = winFrame.querySelector('.window-content-area');
+      if (contentArea) return contentArea;
+
+      return winFrame;
+    };
+
+    const isInsideScrollable = (element, boundary) => {
+      let cur = element;
+      while (cur && cur !== boundary && cur !== document.body && cur !== document.documentElement) {
+        if (cur.matches && cur.matches(
+          '.universal-converter-app, .metadata-inspector-app, .file-comparator-app, ' +
+          '.image-inspector-app, .audio-inspector-app, .qr-scanner-app, .text-analyzer-app, ' +
+          '.fm-content-pane, .fm-sidebar, .settings-main, .terminal-body, .text-editor-textarea, ' +
+          '.tasks-scroll-content, .virtual-file-picker-body, .start-menu-content, ' +
+          '.desktop-leaderboard-list, .virtual-file-list, .panel-list, ' +
+          '.objective-modal, .objective-shell, .window-content-area'
+        )) {
+          return cur;
+        }
+        if (typeof window !== 'undefined') {
+          const style = window.getComputedStyle(cur);
+          if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && cur.scrollHeight > cur.clientHeight) {
+            return cur;
+          }
+        }
+        cur = cur.parentElement;
+      }
+      return null;
+    };
+
     const preventScroll = (e) => {
       const currentStage = stageRef.current;
       const isPreOS = ['initial', 'waking', 'prologue', 'main'].includes(currentStage);
@@ -291,16 +366,106 @@ function App() {
         return;
       }
 
-      // In OS desktop mode, allow scrolling inside internal scrollable elements (e.g., terminal, text editor, file manager, leaderboard)
-      if (target && target.closest && target.closest('.panel-list, .terminal-body, .window-body, .start-menu-content, .virtual-file-list, .text-editor-textarea, .desktop-leaderboard-list')) {
+      // In OS desktop mode:
+      if (e.type === 'wheel') {
+        // 1. Standalone desktop UI elements (Start Menu, Leaderboard, File Picker, Objective Modal)
+        const standaloneScrollable = target && target.closest && target.closest(
+          '.start-menu-content, .desktop-leaderboard-list, .virtual-file-list, .panel-list, .objective-modal, .objective-shell'
+        );
+        if (standaloneScrollable) {
+          return; // Allow native scroll
+        }
+
+        // If objective backdrop is open, route scroll to the objective modal
+        const objectiveModal = document.querySelector('.objective-modal');
+        if (objectiveModal && target && target.closest && target.closest('.objective-backdrop')) {
+          e.preventDefault();
+          objectiveModal.scrollBy({
+            top: e.deltaY,
+            left: e.deltaX,
+            behavior: 'auto'
+          });
+          return;
+        }
+
+        // 2. Cursor is hovering a window
+        const hoveredWindow = target && target.closest ? target.closest('.window-frame') : null;
+        if (hoveredWindow) {
+          // If cursor is directly inside a scroll container in this window, allow native scroll
+          const innerScrollable = isInsideScrollable(target, hoveredWindow);
+          if (innerScrollable) {
+            return; // Allow native scroll with momentum and trackpad precision
+          }
+
+          // If cursor is on the window titlebar, header, or non-scrollable area:
+          // Smoothly scroll the window's primary content container
+          const primaryScroll = getWindowScrollContainer(hoveredWindow);
+          if (primaryScroll) {
+            e.preventDefault();
+            primaryScroll.scrollBy({
+              top: e.deltaY,
+              left: e.deltaX,
+              behavior: 'auto'
+            });
+            return;
+          }
+        }
+
+        // 3. Immersive Selected App Scroll:
+        // When cursor is anywhere on the OS workspace/canvas, drive the currently selected/focused app!
+        const focusedWindow = document.querySelector('.window-frame.window-focused');
+        if (focusedWindow) {
+          const primaryScroll = getWindowScrollContainer(focusedWindow);
+          if (primaryScroll) {
+            e.preventDefault();
+            primaryScroll.scrollBy({
+              top: e.deltaY,
+              left: e.deltaX,
+              behavior: 'auto'
+            });
+            return;
+          }
+        }
+
+        // Always prevent the outer browser document from scrolling or bouncing
+        e.preventDefault();
         return;
       }
-      if (e.type === 'wheel' || e.type === 'touchmove') {
+
+      if (e.type === 'touchmove') {
+        const scrollable = isInsideScrollable(target, null);
+        if (scrollable) {
+          return; // Allow touch scroll on scrollable element
+        }
         e.preventDefault();
+        return;
       }
+
       if (e.type === 'keydown') {
         const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
-        if (!isInput && [' ', 'PageUp', 'PageDown', 'End', 'Home', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        if (isInput) {
+          return; // Allow normal input typing and arrow keys
+        }
+
+        if ([' ', 'PageUp', 'PageDown', 'End', 'Home', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+          // If a window is focused in OS desktop mode, drive the selected app's scroll container
+          const focusedWindow = document.querySelector('.window-frame.window-focused');
+          if (focusedWindow) {
+            const primaryScroll = getWindowScrollContainer(focusedWindow);
+            if (primaryScroll) {
+              e.preventDefault();
+              const delta = e.key === 'ArrowDown' ? 60 :
+                            e.key === 'ArrowUp' ? -60 :
+                            e.key === 'PageDown' || e.key === ' ' ? 260 :
+                            e.key === 'PageUp' ? -260 :
+                            e.key === 'Home' ? -100000 :
+                            e.key === 'End' ? 100000 : 0;
+              if (delta !== 0) {
+                primaryScroll.scrollBy({ top: delta, behavior: 'smooth' });
+              }
+              return;
+            }
+          }
           e.preventDefault();
         }
       }
@@ -411,13 +576,11 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const paramTeam = params.get('team');
     let savedTeam = '';
-    let savedPin = '';
     let savedMember1 = '';
     let savedMember2 = '';
     let savedId = null;
     try {
       savedTeam = localStorage.getItem('cyphora_team_name') || '';
-      savedPin = localStorage.getItem('cyphora_team_pin') || '';
       savedMember1 = localStorage.getItem('cyphora_member1') || '';
       savedMember2 = localStorage.getItem('cyphora_member2') || '';
       const rawId = localStorage.getItem('cyphora_team_id');
@@ -441,9 +604,6 @@ function App() {
     }));
     if (paramTeam || savedTeam) {
       setTeamInput(paramTeam || savedTeam);
-    }
-    if (savedPin) {
-      setPinInput(savedPin);
     }
     if (savedMember1) setMember1Input(savedMember1);
     if (savedMember2) setMember2Input(savedMember2);
@@ -561,7 +721,7 @@ function App() {
     setShowTeamModal(true);
   };
 
-  const completeRegistration = (finalName, finalPin, finalMember1, finalMember2, teamId = null, currentScore = 0, currentStanding = 'Unranked') => {
+  const completeRegistration = (finalName, finalMember1, finalMember2, teamId = null, currentScore = 0, currentStanding = 'Unranked') => {
     if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
     }
@@ -569,7 +729,6 @@ function App() {
     localStorage.setItem('cyphora_team_name', finalName);
     if (finalMember1) localStorage.setItem('cyphora_member1', finalMember1);
     if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
-    if (finalPin) localStorage.setItem('cyphora_team_pin', finalPin);
 
     // Clear previous OS session and lock states to prevent cross-team bleed
     try {
@@ -615,11 +774,6 @@ function App() {
       setAuthError('Please enter your team name.');
       return;
     }
-    const finalPin = pinInput.trim();
-    if (!finalPin) {
-      setAuthError('Please enter your 4-digit team PIN.');
-      return;
-    }
     const finalMember1 = member1Input.trim();
     const finalMember2 = member2Input.trim();
 
@@ -629,7 +783,7 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: finalName,
-          pin: finalPin,
+          pin: '0000',
           member1: finalMember1,
           member2: finalMember2
         })
@@ -654,13 +808,11 @@ function App() {
       localStorage.setItem('cyphora_token', data.token);
       localStorage.setItem('cyphora_team_id', String(data.team.id));
       localStorage.setItem('cyphora_team_name', data.team.name);
-      localStorage.setItem('cyphora_team_pin', finalPin);
       if (finalMember1) localStorage.setItem('cyphora_member1', finalMember1);
       if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
 
       completeRegistration(
         data.team.name,
-        finalPin,
         data.team.member1 || finalMember1,
         data.team.member2 || finalMember2,
         data.team.id,
@@ -707,6 +859,18 @@ function App() {
       if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
+      setInitialAppId('tasks');
+      setStage('os-boot');
+      return;
+    }
+    if (level === 2) {
+      try {
+        sessionStorage.removeItem('cyphora_os_locked');
+      } catch (e) {}
+      if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+      setInitialAppId('round2');
       setStage('os-boot');
       return;
     }
@@ -750,16 +914,18 @@ function App() {
         <div className="team-modal-backdrop">
           <div className="team-modal">
             <h2>Identify Your Team</h2>
-            <p>Declare your expedition team name, two crew members, and secret PIN.</p>
+            <p>Declare your expedition team name and crew members.</p>
             <form onSubmit={handleTeamSubmit} autoComplete="off" data-lpignore="true" data-form-type="other">
               {/* Team Name */}
               <div className="team-input-wrapper">
+                <label htmlFor="cyphora_team_identity" className="team-input-label">
+                  Team Name
+                </label>
                 <input
                   type="text"
                   name="cyphora_team_identity"
                   id="cyphora_team_identity"
                   className="team-input"
-                  placeholder="Enter Team Name..."
                   value={teamInput}
                   onChange={(e) => setTeamInput(e.target.value)}
                   autoFocus
@@ -774,13 +940,16 @@ function App() {
               </div>
 
               {/* Two Team Members */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem', marginTop: '0.8rem' }}>
+              <div className="team-members-grid">
                 <div className="team-input-wrapper">
+                  <label htmlFor="cyphora_crew_alpha" className="team-input-label">
+                    Member 1 Name
+                  </label>
                   <input
                     type="text"
                     name="cyphora_crew_alpha"
+                    id="cyphora_crew_alpha"
                     className="team-input"
-                    placeholder="Member 1 Name..."
                     value={member1Input}
                     onChange={(e) => setMember1Input(e.target.value)}
                     maxLength={30}
@@ -790,11 +959,14 @@ function App() {
                   />
                 </div>
                 <div className="team-input-wrapper">
+                  <label htmlFor="cyphora_crew_beta" className="team-input-label">
+                    Member 2 Name
+                  </label>
                   <input
                     type="text"
                     name="cyphora_crew_beta"
+                    id="cyphora_crew_beta"
                     className="team-input"
-                    placeholder="Member 2 Name..."
                     value={member2Input}
                     onChange={(e) => setMember2Input(e.target.value)}
                     maxLength={30}
@@ -803,28 +975,6 @@ function App() {
                     data-lpignore="true"
                   />
                 </div>
-              </div>
-
-              {/* Secret Team PIN - Uses text type with CSS text-security disc to prevent browser breached-password popups */}
-              <div className="team-input-wrapper" style={{ marginTop: '0.8rem' }}>
-                <input
-                  type="text"
-                  name="cyphora_team_key"
-                  id="cyphora_team_key"
-                  inputMode="numeric"
-                  className="team-input pin-mask-input"
-                  placeholder="Secret Team PIN (e.g. 1234)..."
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value)}
-                  maxLength={8}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck="false"
-                  data-lpignore="true"
-                  data-1p-ignore="true"
-                  data-form-type="other"
-                />
               </div>
 
               {authError && (
@@ -983,6 +1133,7 @@ function App() {
           liveExplorers={liveExplorers}
           isWsConnected={isWsConnected}
           fetchLeaderboard={fetchLeaderboard}
+          initialAppId={initialAppId}
         />
       )}
     </div>

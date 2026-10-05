@@ -9,16 +9,69 @@ import { ImageInspectorApp } from './image-inspector/ImageInspectorApp.jsx';
 import { TextAnalyzerApp } from './text-analyzer/TextAnalyzerApp.jsx';
 import { FileComparatorApp } from './file-comparator/FileComparatorApp.jsx';
 import { AudioInspectorApp } from './audio-inspector/AudioInspectorApp.jsx';
-import { TasksApp } from './tasks/TasksApp.jsx';
+import { Round2App } from './round2/Round2App.jsx';
+import { VisionTargetApp } from './round2/VisionTargetApp.jsx';
+import { PromptStudioApp } from './round2/PromptStudioApp.jsx';
+import { ImageEvaluatorApp } from './round2/ImageEvaluatorApp.jsx';
+import { LeaderboardApp } from './round2/LeaderboardApp.jsx';
+import { PrologueApp } from './round2/PrologueApp.jsx';
 
 export const APP_REGISTRY = {
-  'tasks': {
-    id: 'tasks',
-    title: 'Tasks',
-    icon: 'CheckSquare',
-    category: 'System',
-    defaultBounds: { width: 560, height: 600 },
-    component: TasksApp
+  'round2': {
+    id: 'round2',
+    title: 'Stage 2: Image Navigation',
+    icon: 'Compass',
+    category: 'Expedition',
+    defaultBounds: { width: 1060, height: 690 },
+    component: Round2App
+  },
+  'image-navigation': {
+    id: 'image-navigation',
+    title: 'Stage 2: Image Navigation',
+    icon: 'Compass',
+    category: 'Expedition',
+    defaultBounds: { width: 1060, height: 690 },
+    component: Round2App
+  },
+  'vision-target': {
+    id: 'vision-target',
+    title: 'Vision Target Viewer',
+    icon: 'Eye',
+    category: 'Expedition',
+    defaultBounds: { width: 860, height: 600 },
+    component: VisionTargetApp
+  },
+  'prompt-studio': {
+    id: 'prompt-studio',
+    title: 'Prompt Studio',
+    icon: 'Sparkles',
+    category: 'Expedition',
+    defaultBounds: { width: 820, height: 570 },
+    component: PromptStudioApp
+  },
+  'image-evaluator': {
+    id: 'image-evaluator',
+    title: 'Similarity Evaluator',
+    icon: 'Zap',
+    category: 'Expedition',
+    defaultBounds: { width: 840, height: 590 },
+    component: ImageEvaluatorApp
+  },
+  'leaderboard': {
+    id: 'leaderboard',
+    title: 'Expedition Standings',
+    icon: 'Trophy',
+    category: 'Expedition',
+    defaultBounds: { width: 720, height: 540 },
+    component: LeaderboardApp
+  },
+  'mission-prologue': {
+    id: 'mission-prologue',
+    title: 'Sector 4 Briefing',
+    icon: 'BookOpen',
+    category: 'Expedition',
+    defaultBounds: { width: 880, height: 620 },
+    component: PrologueApp
   },
   'terminal': {
     id: 'terminal',

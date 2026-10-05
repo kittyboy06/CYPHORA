@@ -28,8 +28,8 @@ import './Round2.css';
 import './Round2Page.css';
 
 const ROUND_2_DURATION_SECONDS = 15 * 60; // 15 minutes = 900 seconds
-const BASE_POINTS = 400;
-const MAX_SPEED_BONUS = 600;
+const POINTS_PER_IMAGE = 50; // 50 points for 100% Accuracy, reduced proportionally
+const MAX_ROUND_2_POINTS = 100; // 2 images * 50 points max
 
 // --- Grand Dust Burst Effect (ancient door reveal, one-shot ~3s) ---
 const DustParticles = ({ count = 400 }) => {
@@ -516,9 +516,9 @@ export function Round2Page({ onReturnToHub }) {
     if (img1) {
       try {
         const parsed = JSON.parse(img1);
-        return parsed.score || 200;
+        return parsed.score || 50;
       } catch {
-        return 200;
+        return 50;
       }
     }
     return 0;
@@ -651,10 +651,9 @@ export function Round2Page({ onReturnToHub }) {
     };
   }, []);
 
-  // Speed and Points Calculation
+  // Accuracy-Based Points Calculation (50 PTS per Image, Max 100 PTS)
   const elapsedSeconds = ROUND_2_DURATION_SECONDS - secondsRemaining;
-  const currentSpeedBonus = Math.round((secondsRemaining / ROUND_2_DURATION_SECONDS) * MAX_SPEED_BONUS);
-  const currentPotentialTotal = BASE_POINTS + currentSpeedBonus;
+  const currentPotentialTotal = MAX_ROUND_2_POINTS;
 
   const formatTime = (secs) => {
     const m = Math.floor(secs / 60).toString().padStart(2, '0');
@@ -801,6 +800,8 @@ export function Round2Page({ onReturnToHub }) {
       const isDev = window.location.port === '5173';
       const apiBase = isDev ? `http://${hostname}:8000` : '';
       const token = localStorage.getItem('cyphora_token') || '';
+      const teamId = localStorage.getItem('cyphora_team_id') || '';
+      const storedTeamName = localStorage.getItem('cyphora_team_name') || teamName || '';
 
       const filename = (image1File?.name || '').toLowerCase();
       let simValue = 82 + Math.random() * 12;
@@ -808,7 +809,7 @@ export function Round2Page({ onReturnToHub }) {
         simValue = 100.0;
       }
       let simMatch = simValue.toFixed(1) + '%';
-      let phase1Points = Math.round(200 * (simValue / 100));
+      let phase1Points = Math.round(50 * (simValue / 100));
 
       const getBase64 = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -823,10 +824,12 @@ export function Round2Page({ onReturnToHub }) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            ...(teamId ? { 'X-Team-Id': String(teamId) } : {}),
+            ...(storedTeamName ? { 'X-Team-Name': storedTeamName } : {})
           },
           body: JSON.stringify({
-            team_name: teamName,
+            team_name: storedTeamName || teamName,
             prompt: prompt.trim(),
             image1_filename: image1File?.name || 'image_1.png',
             image1_base64: image1Base64,
@@ -838,11 +841,14 @@ export function Round2Page({ onReturnToHub }) {
             simMatch = resJson.similarity;
             const simParsed = parseFloat(resJson.similarity.replace('%', ''));
             if (!isNaN(simParsed)) {
-              phase1Points = Math.round(200 * (simParsed / 100));
+              phase1Points = Math.round(50 * (simParsed / 100));
             }
           }
-          if (resJson.points && !resJson.similarity) {
+          if (resJson.points !== undefined) {
             phase1Points = resJson.points;
+          }
+          if (resJson.new_total_score !== undefined) {
+            localStorage.setItem('cyphora_team_score', resJson.new_total_score.toString());
           }
         }
       } catch {
@@ -874,7 +880,7 @@ export function Round2Page({ onReturnToHub }) {
       localStorage.removeItem('cyphora_round2_prompt');
 
       setPhaseSuccessNotice(
-        `✓ Image 1 evaluated (+${phase1Points} pts)! Slot for Image 2 is now unlocked.`
+        `✓ Image 1 evaluated (+${phase1Points} pts out of 50 max)! Slot for Image 2 is now unlocked.`
       );
     } catch {
       setFormGlobalError('Error communicating with evaluation server. Please retry.');
@@ -899,22 +905,20 @@ export function Round2Page({ onReturnToHub }) {
     setFormGlobalError('');
     setIsSubmitting(true);
 
-    // Speed bonus calculation based on remaining 15-minute clock
     const finalElapsed = ROUND_2_DURATION_SECONDS - secondsRemaining;
-    const finalBonus = Math.round((secondsRemaining / ROUND_2_DURATION_SECONDS) * MAX_SPEED_BONUS);
     
-    // Evaluate Image 2 (local fallback simulation)
+    // Evaluate Image 2 (50 points max for 100% accuracy, reduced proportionally)
     const filename2 = (image2File?.name || '').toLowerCase();
     let image2SimValue = 85 + Math.random() * 12;
     if (filename2.includes('target2')) {
       image2SimValue = 100.0;
     }
     let image2Similarity = image2SimValue.toFixed(1) + '%';
-    let image2Points = Math.round(200 * (image2SimValue / 100));
+    let image2Points = Math.round(50 * (image2SimValue / 100));
 
-    // Total points = points earned from Image 1 similarity + points from Image 2 + speed bonus
-    const image1Points = image1EvaluatedData?.score || 200;
-    let finalTotalPoints = image1Points + image2Points + finalBonus;
+    // Total points = points earned from Image 1 accuracy + points from Image 2 accuracy (max 100)
+    const image1Points = image1EvaluatedData?.score || 50;
+    let finalTotalPoints = image1Points + image2Points;
     const formattedSpeed = formatTime(finalElapsed);
 
     try {
@@ -922,6 +926,8 @@ export function Round2Page({ onReturnToHub }) {
       const isDev = window.location.port === '5173';
       const apiBase = isDev ? `http://${hostname}:8000` : '';
       const token = localStorage.getItem('cyphora_token') || '';
+      const teamId = localStorage.getItem('cyphora_team_id') || '';
+      const storedTeamName = localStorage.getItem('cyphora_team_name') || teamName || '';
 
       const getBase64 = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -935,33 +941,39 @@ export function Round2Page({ onReturnToHub }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(teamId ? { 'X-Team-Id': String(teamId) } : {}),
+          ...(storedTeamName ? { 'X-Team-Name': storedTeamName } : {})
         },
         body: JSON.stringify({
-          team_name: teamName,
+          team_name: storedTeamName || teamName,
           prompt: prompt.trim(),
           slot2_filename: image1EvaluatedData?.fileName || 'image_1.png',
           slot3_filename: image2File.name,
           slot3_base64: slot3Base64,
           elapsed_seconds: finalElapsed,
           remaining_seconds: secondsRemaining,
-          calculated_points: finalTotalPoints,
+          calculated_points: image2Points,
         })
       });
 
       if (res.ok) {
         const resData = await res.json();
-        // If backend returned its own image2 similarity, update the calculation
         if (resData.image2_similarity) {
           image2Similarity = resData.image2_similarity;
           const simParsed = parseFloat(resData.image2_similarity.replace('%', ''));
           if (!isNaN(simParsed)) {
-            image2Points = Math.round(200 * (simParsed / 100));
-            finalTotalPoints = image1Points + image2Points + finalBonus;
+            image2Points = Math.round(50 * (simParsed / 100));
+            finalTotalPoints = image1Points + image2Points;
           }
         }
-        // Override backend points with the exact sum of all 3 components
-        // just in case the backend is running old, cached code
+        if (resData.image2_points !== undefined) {
+          image2Points = resData.image2_points;
+          finalTotalPoints = image1Points + image2Points;
+        }
+        if (resData.new_total_score !== undefined) {
+          localStorage.setItem('cyphora_team_score', resData.new_total_score.toString());
+        }
         setEvaluatedScore(finalTotalPoints);
       } else {
         setEvaluatedScore(finalTotalPoints);
@@ -977,11 +989,11 @@ export function Round2Page({ onReturnToHub }) {
         image1Name: image1EvaluatedData?.fileName || 'image_1.png',
         image2Name: image2File.name,
         image1Similarity: image1EvaluatedData?.similarity || '85.0%',
-        image1Points: image1EvaluatedData?.score || 200,
+        image1Points: image1EvaluatedData?.score || 50,
         image2Similarity: image2Similarity,
         image2Points: image2Points,
         timeCompleted: formattedSpeed,
-        speedBonus: finalBonus,
+        speedBonus: 0,
         totalPoints: finalTotalPoints,
         timestamp: new Date().toLocaleTimeString(),
       };
@@ -994,7 +1006,7 @@ export function Round2Page({ onReturnToHub }) {
       localStorage.setItem('cyphora_round2_submissions', JSON.stringify(prevSubmissions));
 
       setTeamPoints(finalTotalPoints);
-      setPointsDelta(finalTotalPoints - (image1EvaluatedData?.score || 200));
+      setPointsDelta(image2Points);
       window.dispatchEvent(new Event('cyphora_points_updated'));
       setSubmittedData(payload);
       setShowImage2Modal(true);
@@ -1171,13 +1183,13 @@ export function Round2Page({ onReturnToHub }) {
                 <Flame size={20} className="gold-text" />
               </div>
               <div className="speed-text-wrap">
-                <span className="speed-label">SPEED EVALUATION POTENTIAL</span>
+                <span className="speed-label">ACCURACY SCORING (50 PTS / IMAGE)</span>
                 <div className="points-tally">
-                  <span className="base-pts">{BASE_POINTS} Base</span>
-                  <span className="plus-sign">+</span>
-                  <span className="bonus-pts gold-text">+{currentSpeedBonus} Speed Bonus</span>
+                  <span className="base-pts">50 PTS / Image</span>
+                  <span className="plus-sign">&bull;</span>
+                  <span className="bonus-pts gold-text">100% Match = 50 PTS</span>
                   <span className="equals-sign">=</span>
-                  <span className="total-pts gold-text">{currentPotentialTotal} PTS</span>
+                  <span className="total-pts gold-text">Max 100 PTS</span>
                 </div>
               </div>
             </div>
@@ -1251,7 +1263,7 @@ export function Round2Page({ onReturnToHub }) {
                     ) : (
                       <>
                         <Send size={16} />
-                        <span>Submit Image 2 (Finalize: {currentPotentialTotal} PTS)</span>
+                        <span>Submit Image 2 (Finalize Round 2)</span>
                       </>
                     )}
                   </button>
@@ -1318,13 +1330,13 @@ export function Round2Page({ onReturnToHub }) {
             <h3 id="image1-modal-title" className="celebration-title">Image 1 Submitted &amp; Verified!</h3>
             
             <div className="celebration-score-pill">
-              <span className="pts-plus">+{pointsDelta || image1EvaluatedData?.score || 200}</span>
+              <span className="pts-plus">+{pointsDelta || image1EvaluatedData?.score || 50}</span>
               <span className="pts-txt">PTS EARNED</span>
             </div>
 
             <p className="celebration-desc">
               Your prompt re-creation for <strong>Image 1</strong> has been successfully processed. 
-              Points have been credited to your live team score. 
+              Points ({pointsDelta || image1EvaluatedData?.score || 50}/50 PTS) have been synced with the database and admin panel. 
               The slot for <strong>Image 2</strong> is now unlocked!
             </p>
 
@@ -1356,13 +1368,13 @@ export function Round2Page({ onReturnToHub }) {
             <h3 className="celebration-title">Image 2 Submitted &amp; Verified!</h3>
             
             <div className="celebration-score-pill">
-              <span className="pts-plus">+{submittedData?.image2Points || 200}</span>
+              <span className="pts-plus">+{submittedData?.image2Points || 50}</span>
               <span className="pts-txt">PTS EARNED</span>
             </div>
 
             <p className="celebration-desc">
               Your prompt re-creation for <strong>Image 2</strong> has been successfully processed. 
-              The evaluation is complete and speed bonus has been calculated!
+              Points ({submittedData?.image2Points || 50}/50 PTS) have been synced with the database and admin panel!
             </p>
 
             <button
@@ -1395,15 +1407,15 @@ export function Round2Page({ onReturnToHub }) {
 
             <h3 id="modal-success-title">Round 2 Successfully Completed!</h3>
             <p className="modal-description">
-              Both Image 1 and Image 2 have been evaluated. Your speed points have been logged
-              to the symposium database.
+              Both Image 1 and Image 2 have been evaluated against their target references.
+              Every point scored has been synced in real time with the database and admin panel.
             </p>
 
             <div className="modal-score-banner">
               <span className="score-banner-label">FINAL EVALUATED ROUND 2 SCORE</span>
-              <span className="score-banner-val gold-text">+{evaluatedScore ?? submittedData.totalPoints} PTS</span>
+              <span className="score-banner-val gold-text">+{evaluatedScore ?? submittedData.totalPoints} / 100 PTS</span>
               <span className="score-banner-sub">
-                Completed in {submittedData.timeCompleted} &bull; Speed Bonus: +{submittedData.speedBonus} pts
+                Completed in {submittedData.timeCompleted} &bull; Image 1: +{submittedData.image1Points} pts &bull; Image 2: +{submittedData.image2Points} pts
               </span>
             </div>
 
