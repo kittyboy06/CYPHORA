@@ -64,7 +64,12 @@ function App() {
   const socketRef = useRef(null);
   const teamDataRef = useRef(teamData);
   const round1StateRef = useRef(round1State);
+  const stageRef = useRef(stage);
   const syncedTasksRef = useRef(new Set());
+
+  useEffect(() => {
+    stageRef.current = stage;
+  }, [stage]);
 
   useEffect(() => {
     teamDataRef.current = teamData;
@@ -242,21 +247,50 @@ function App() {
     return () => { if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current); };
   }, []);
 
-  // Strict full-webpage scroll lock for computer screen app (landing page & story page)
+  // Strict full-webpage scroll lock for computer screen app (landing page, eye animation, story page before OS)
   useEffect(() => {
-    window.scrollTo(0, 0);
-    if (document.documentElement) {
-      document.documentElement.scrollTop = 0;
-      document.documentElement.scrollLeft = 0;
-    }
-    if (document.body) {
-      document.body.scrollTop = 0;
-      document.body.scrollLeft = 0;
-    }
+    const lockScroll = () => {
+      window.scrollTo(0, 0);
+      if (document.documentElement) {
+        document.documentElement.scrollTop = 0;
+        document.documentElement.scrollLeft = 0;
+        document.documentElement.style.overflow = 'hidden';
+      }
+      if (document.body) {
+        document.body.scrollTop = 0;
+        document.body.scrollLeft = 0;
+        document.body.style.overflow = 'hidden';
+      }
+      const container = document.querySelector('.app-container');
+      if (container) {
+        container.scrollTop = 0;
+        container.scrollLeft = 0;
+        container.style.overflow = 'hidden';
+      }
+    };
+
+    lockScroll();
 
     const preventScroll = (e) => {
+      const currentStage = stageRef.current;
+      const isPreOS = ['initial', 'waking', 'prologue', 'main'].includes(currentStage);
       const target = e.target;
-      // Allow scrolling inside internal scrollable elements (e.g., explorer side panel list or OS app containers)
+
+      // In landing, eye animation screen, and story screen before OS, absolutely no scrolling is permitted
+      if (isPreOS) {
+        if (e.type === 'wheel' || e.type === 'touchmove') {
+          e.preventDefault();
+        }
+        if (e.type === 'keydown') {
+          const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+          if (!isInput && [' ', 'PageUp', 'PageDown', 'End', 'Home', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+            e.preventDefault();
+          }
+        }
+        return;
+      }
+
+      // In OS desktop mode, allow scrolling inside internal scrollable elements (e.g., terminal, text editor, file manager, leaderboard)
       if (target && target.closest && target.closest('.panel-list, .terminal-body, .window-body, .start-menu-content, .virtual-file-list, .text-editor-textarea, .desktop-leaderboard-list')) {
         return;
       }
@@ -271,9 +305,9 @@ function App() {
       }
     };
 
-    window.addEventListener('wheel', preventScroll, { passive: false });
-    window.addEventListener('touchmove', preventScroll, { passive: false });
-    window.addEventListener('keydown', preventScroll, { passive: false });
+    window.addEventListener('wheel', preventScroll, { passive: false, capture: true });
+    window.addEventListener('touchmove', preventScroll, { passive: false, capture: true });
+    window.addEventListener('keydown', preventScroll, { passive: false, capture: true });
 
     const handleWindowScroll = () => {
       if (window.scrollX !== 0 || window.scrollY !== 0) {
@@ -289,19 +323,36 @@ function App() {
     window.addEventListener('scroll', handleWindowScroll, { passive: true });
 
     return () => {
-      window.removeEventListener('wheel', preventScroll);
-      window.removeEventListener('touchmove', preventScroll);
-      window.removeEventListener('keydown', preventScroll);
+      window.removeEventListener('wheel', preventScroll, { capture: true });
+      window.removeEventListener('touchmove', preventScroll, { capture: true });
+      window.removeEventListener('keydown', preventScroll, { capture: true });
       window.removeEventListener('scroll', handleWindowScroll);
     };
   }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    if (document.documentElement) {
+      document.documentElement.scrollTop = 0;
+      document.documentElement.scrollLeft = 0;
+      document.documentElement.style.overflow = 'hidden';
+    }
+    if (document.body) {
+      document.body.scrollTop = 0;
+      document.body.scrollLeft = 0;
+      document.body.style.overflow = 'hidden';
+    }
     const container = document.querySelector('.app-container');
     if (container) {
       container.scrollTop = 0;
       container.scrollLeft = 0;
+      container.style.overflow = 'hidden';
+    }
+    const prologue = document.querySelector('.prologue-shell');
+    if (prologue) {
+      prologue.scrollTop = 0;
+      prologue.scrollLeft = 0;
+      prologue.style.overflow = 'hidden';
     }
   }, [stage]);
 

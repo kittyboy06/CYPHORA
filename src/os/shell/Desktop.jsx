@@ -64,7 +64,14 @@ export function Desktop() {
   const loadDesktopItems = () => {
     try {
       const files = vfs.listDir('/Desktop', false);
-      setDesktopFiles(files);
+      const sorted = [...files].sort((a, b) => {
+        const priority = { 'Getting Started.txt': 1, 'App Usage.txt': 2 };
+        const pA = priority[a.name] || 99;
+        const pB = priority[b.name] || 99;
+        if (pA !== pB) return pA - pB;
+        return a.name.localeCompare(b.name);
+      });
+      setDesktopFiles(sorted);
     } catch (e) {
       console.error('Failed to load desktop items', e);
     }
@@ -203,7 +210,7 @@ export function Desktop() {
             }}
           >
             <div className="desktop-icon-glyph">
-              <FileText size={32} className="desktop-icon-svg file-color" />
+              <FileText size={32} className={`desktop-icon-svg ${(file.name.includes('Getting Started') || file.name.includes('App Usage')) ? 'settings-color' : 'file-color'}`} />
             </div>
             <span className="desktop-icon-label" title={file.name}>
               {file.name}

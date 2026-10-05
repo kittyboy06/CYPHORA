@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { OSProvider, useOS } from './state/OSContext.jsx';
 import { Desktop } from './shell/Desktop.jsx';
 import { WindowManager } from './windows/WindowManager.jsx';
@@ -12,15 +12,6 @@ import './OSContainer.css';
 function OSContent({ stage, setStage, teamData, round1State }) {
   const { windows = [], openApp = () => {}, showExitBanner = false, exitReason = '', unlockGate = () => {} } = useOS();
 
-  // Auto-launch Tasks app as native OS window upon entering OS desktop
-  useEffect(() => {
-    if (stage === 'os-desktop') {
-      const hasTasks = windows.some(w => w.appId === 'tasks');
-      if (!hasTasks) {
-        openApp('tasks');
-      }
-    }
-  }, [stage]);
 
   return (
     <div className="os-desktop-root">
