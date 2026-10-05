@@ -12,90 +12,163 @@ from ..websocket_manager import ws_manager
 router = APIRouter(prefix="/api/stage1", tags=["Stage 1 - OS Navigation"])
 
 # Comprehensive catalog for Round 1 Investigation Tasks (12 Tasks across 4 Tiers)
-# Canonical Source of Truth as defined in Prompts/pro3.md
+# Comprehensive catalog for Round 1 Investigation Tasks (12 Tasks across 4 Tiers)
+# Canonical Source of Truth as defined in Prompts/pro3.md and taskContent.js
 STAGE1_TASKS = {
     "r1_t01": {
         "title": "Task 01 — Encoded Message",
         "points": 50,
         "stage": 1,
-        "description": "Decode the numerical values in message.txt.",
+        "scenario": "A short message recovered from an unknown source has been left on the workstation. Its original meaning is unreadable in its current numerical form.",
+        "objective": "Locate message.txt.\nUse a data converter to translate the numerical character values into readable text.\nEnter the decoded word below.",
+        "description": "Locate message.txt.\nUse a data converter to translate the numerical character values into readable text.\nEnter the decoded word below.",
+        "hints": [
+            "message.txt is located on the Desktop.",
+            "Open the file and identify the number sequence. Use a Universal Converter and convert the values from Decimal/ASCII → Text."
+        ],
         "accepted": ["HIDE"]
     },
     "r1_t02": {
         "title": "Task 02 — File Information",
         "points": 50,
         "stage": 1,
-        "description": "Inspect evidence.jpg metadata and find the registered author.",
-        "accepted": ["ARLO"]
+        "scenario": "An expedition image was recovered during the investigation, but its visual picture does not identify its creator. The underlying file records hold the author entry.",
+        "objective": "Locate evidence.jpg.\nUse a file inspector to inspect the file properties and technical attributes rather than the visual pixels.\nEnter the registered author name below.",
+        "description": "Locate evidence.jpg.\nUse a file inspector to inspect the file properties and technical attributes rather than the visual pixels.\nEnter the registered author name below.",
+        "hints": [
+            "evidence.jpg is located in the Pictures folder.",
+            "Open the image with a Metadata Inspector and examine the available information fields. Look specifically for the field related to the creator/author."
+        ],
+        "accepted": ["ARLO", "DR. ARLO VANCE", "DR ARLO VANCE", "ARLO VANCE"]
     },
     "r1_t03": {
         "title": "Task 03 — Image Message",
         "points": 50,
         "stage": 1,
-        "description": "Scan the optical matrix in poster.png.",
-        "accepted": ["SECTOR-7"]
+        "scenario": "A recovered poster contains an embedded optical matrix marking that cannot be interpreted through standard visual viewing.",
+        "objective": "Locate poster.png.\nUse an optical scanning inspector to scan the machine-readable matrix graphic.\nEnter the revealed sector code below.",
+        "description": "Locate poster.png.\nUse an optical scanning inspector to scan the machine-readable matrix graphic.\nEnter the revealed sector code below.",
+        "hints": [
+            "poster.png is located in the Pictures folder.",
+            "Open the image using a QR/Barcode Scanner and scan the optical matrix to retrieve its encoded message."
+        ],
+        "accepted": ["SECTOR-7", "SECTOR 7", "SECTOR7"]
     },
     "r1_t04": {
         "title": "Task 04 — The Earliest Record",
         "points": 75,
         "stage": 2,
-        "description": "Find the earliest timestamp in access.log and determine the associated color.",
-        "accepted": ["YELLOW"]
+        "scenario": "Workstation access records are scrambled out of order. An initial trigger event initiated the recorded sequence.",
+        "objective": "Locate access.log.\nInspect the chronological timestamps at the beginning of each line using a document inspector or text reader.\nIdentify the earliest entry and use the Universal Converter to decode its color code into a readable color name.\nEnter the decoded color name below.",
+        "description": "Locate access.log.\nInspect the chronological timestamps at the beginning of each line using a document inspector or text reader.\nIdentify the earliest entry and use the Universal Converter to decode its color code into a readable color name.\nEnter the decoded color name below.",
+        "hints": [
+            "access.log is located in the Documents folder.",
+            "Open the log and compare all the timestamps to identify the earliest entry. Use the Universal Converter (Color Code → Text) to translate the color code into readable text."
+        ],
+        "accepted": ["YELLOW", "Yellow", "yellow", "#FFFF00", "FFFF00"]
     },
     "r1_t05": {
         "title": "Task 05 — The Changed Record",
         "points": 75,
         "stage": 2,
-        "description": "Compare the old and new transmission logs and find the changed value.",
+        "scenario": "Two versions of a critical transmission log exist on the workstation. Most lines are identical, but one operational parameter was modified.",
+        "objective": "Locate message_old.txt and message_new.txt.\nUse a file comparison inspector to analyze both documents side-by-side.\nEnter the updated operational value from the revised record below.",
+        "description": "Locate message_old.txt and message_new.txt.\nUse a file comparison inspector to analyze both documents side-by-side.\nEnter the updated operational value from the revised record below.",
+        "hints": [
+            "message_old.txt and message_new.txt are located in the Documents folder.",
+            "Open both files in a File Comparison Tool and compare them line by line. Locate the value that differs between the two versions."
+        ],
         "accepted": ["9941"]
     },
     "r1_t06": {
         "title": "Task 06 — The Fragmented Password",
         "points": 75,
         "stage": 2,
-        "description": "Chronologically arrange three fragments and decode them.",
-        "accepted": ["CYPHORA"]
+        "scenario": "Three fragments of a security passcode were recovered separately. Each fragment is incomplete on its own, and their order is scrambled.",
+        "objective": "Locate fragment_01.txt, fragment_02.txt, and fragment_03.txt.\nInspect each fragment to determine its recorded timestamp and sort them chronologically.\nCombine the ordered values and use a data converter to decode the complete password below.",
+        "description": "Locate fragment_01.txt, fragment_02.txt, and fragment_03.txt.\nInspect each fragment to determine its recorded timestamp and sort them chronologically.\nCombine the ordered values and use a data converter to decode the complete password below.",
+        "hints": [
+            "The three fragment files are located in the Documents folder.",
+            "Check the timestamps of all three fragments and arrange them from earliest to latest. Combine the fragments and decode the resulting string using Base64."
+        ],
+        "accepted": ["CYPHORA", "JUMP"]
     },
     "r1_t07": {
         "title": "Task 07 — The Hidden Record",
         "points": 100,
         "stage": 3,
-        "description": "Inspect image metadata and decode the embedded character codes.",
-        "accepted": ["RESCUE"]
+        "scenario": "An archival survey photograph appears ordinary, but operational data was preserved inside its descriptive technical properties.",
+        "objective": "Locate archive_photo.png.\nUse a file inspector to examine its technical file properties and recover the embedded description code.\nUse a data converter to translate the character codes into readable text and enter the message below.",
+        "description": "Locate archive_photo.png.\nUse a file inspector to examine its technical file properties and recover the embedded description code.\nUse a data converter to translate the character codes into readable text and enter the message below.",
+        "hints": [
+            "archive_photo.png is located in the Pictures folder.",
+            "Open the image with a Metadata Inspector and examine its description/details. Convert the numerical character codes using Decimal/ASCII → Text."
+        ],
+        "accepted": ["RESCUE", "HELP"]
     },
     "r1_t08": {
         "title": "Task 08 — The Disguised File",
         "points": 100,
         "stage": 3,
-        "description": "Find the file hidden inside the concealed directory.",
-        "accepted": ["7314"]
+        "scenario": "Crucial investigation evidence has been deliberately concealed in a hidden subdirectory within the workstation archives.",
+        "objective": "Explore the directory structure using a file inspector or manager capable of revealing concealed files.\nLocate clue.txt inside the hidden archive.\nSubmit the numerical passcode contained within.",
+        "description": "Explore the directory structure using a file inspector or manager capable of revealing concealed files.\nLocate clue.txt inside the hidden archive.\nSubmit the numerical passcode contained within.",
+        "hints": [
+            "Look inside the Archive folder.",
+            "Open the Archive folder in File Manager, right-click and select \"Show Hidden Files\" to reveal concealed directories, then locate clue.txt."
+        ],
+        "accepted": ["7314", "RECOVERY"]
     },
     "r1_t09": {
         "title": "Task 09 — The Evidence Trail",
         "points": 100,
         "stage": 3,
-        "description": "Follow the image clue → index → activity log.",
-        "accepted": ["17"]
+        "scenario": "An investigative trail spans across multiple records, beginning with an optical marking on a survey map.",
+        "objective": "Locate map.png and use an optical scanning inspector to recover the clue reference key.\nCross-reference that key in index.txt to determine the target log record.\nInspect activity.log to identify which file ID USER-A downloaded, and enter that number below.",
+        "description": "Locate map.png and use an optical scanning inspector to recover the clue reference key.\nCross-reference that key in index.txt to determine the target log record.\nInspect activity.log to identify which file ID USER-A downloaded, and enter that number below.",
+        "hints": [
+            "The starting image is in Pictures; related files are in Documents.",
+            "Scan the image to obtain the first clue. Use that clue to locate the relevant entry in the index file, then follow its reference to the activity log and inspect the specified record."
+        ],
+        "accepted": ["17", "FILE=17", "FILE 17"]
     },
     "r1_t10": {
         "title": "Task 10 — The Altered Record",
         "points": 150,
         "stage": 4,
-        "description": "Compare two configuration files, identify the changed hexadecimal data, and decode it.",
-        "accepted": ["VECTOR"]
+        "scenario": "Two versions of a secure configuration record contain a subtle hexadecimal difference that conceals an operational word.",
+        "objective": "Locate alpha.txt and beta.txt.\nUse a file comparison inspector to isolate the modified configuration entry.\nUse a data converter to translate the altered hexadecimal sequence into readable text and enter the resulting word below.",
+        "description": "Locate alpha.txt and beta.txt.\nUse a file comparison inspector to isolate the modified configuration entry.\nUse a data converter to translate the altered hexadecimal sequence into readable text and enter the resulting word below.",
+        "hints": [
+            "alpha.txt and beta.txt are located in the Documents folder.",
+            "Compare both configuration files and locate the modified line. Identify the hexadecimal sequence and convert it from Hexadecimal → Text."
+        ],
+        "accepted": ["VECTOR", "JUMP"]
     },
     "r1_t11": {
         "title": "Task 11 — Follow the Trail",
         "points": 150,
         "stage": 4,
-        "description": "Follow the chain from the incident note through the archive and device image, inspect the referenced metadata, and decode the recovered character sequence.",
+        "scenario": "A field note points to an archive document, which links to monitored hardware evidence across the workstation.",
+        "objective": "Locate incident_note.txt and follow its pointer to the referenced archive record.\nCheck the archive file to identify the target device photo.\nUse a file inspector on the device image to retrieve its encoded attribute, then use a data converter to translate the value into the clearance word below.",
+        "description": "Locate incident_note.txt and follow its pointer to the referenced archive record.\nCheck the archive file to identify the target device photo.\nUse a file inspector on the device image to retrieve its encoded attribute, then use a data converter to translate the value into the clearance word below.",
+        "hints": [
+            "Start with incident_note.txt in the Documents folder.",
+            "Follow the reference path given in the note. Continue through the archive and device image, then inspect the image metadata and decode the character sequence using the appropriate conversion method."
+        ],
         "accepted": ["SHIFT"]
     },
     "r1_t12": {
         "title": "Task 12 — Trace the Incident",
         "points": 150,
         "stage": 4,
-        "description": "Reconstruct the incident by following the references across the system record, device evidence, archive record, and transfer record. Decode the final hexadecimal payload to recover the clearance code.",
+        "scenario": "Four pieces of evidence across logs, device photos, archives, and transfer records form a connected incident chain.",
+        "objective": "Locate system.log to observe the incident sequence.\nUse a file inspector on device.png to identify the registered hardware ID.\nOpen the corresponding archive record to find the transfer ID, inspect the transfer document, and use a data converter to decode the clearance code below.",
+        "description": "Locate system.log to observe the incident sequence.\nUse a file inspector on device.png to identify the registered hardware ID.\nOpen the corresponding archive record to find the transfer ID, inspect the transfer document, and use a data converter to decode the clearance code below.",
+        "hints": [
+            "The evidence is spread across Documents, Pictures, Archive, and Transfers folders.",
+            "Start with the system record and follow each file/reference identifier to the next piece of evidence. Reach the final transfer file and decode its hexadecimal payload into text."
+        ],
         "accepted": ["SYMPO"]
     }
 }
@@ -134,7 +207,10 @@ async def list_stage1_tasks(
                 "title": data["title"],
                 "points": data["points"],
                 "stage": data.get("stage", 1),
+                "scenario": data.get("scenario", ""),
+                "objective": data.get("objective", ""),
                 "description": data["description"],
+                "hints": data.get("hints", []),
                 "is_completed": key in completed_keys
             })
 
