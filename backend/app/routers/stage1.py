@@ -74,7 +74,7 @@ STAGE1_TASKS = {
         "points": 100,
         "stage": 3,
         "description": "Correlate multiple network traces and determine host node ID",
-        "accepted": ["17"]
+        "accepted": ["17", "FILE=17", "FILE 17"]
     },
     "r1_t10": {
         "title": "Task 10 — Diff → Interpret → Convert",
