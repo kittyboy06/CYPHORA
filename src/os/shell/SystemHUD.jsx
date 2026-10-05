@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Maximize, Minimize, LogOut, Award, Clock } from 'lucide-react';
+import { Shield, Maximize, Minimize, Award, Clock } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
 import { formatCountdown, getSubsystemStatuses } from '../../round1/round1Engine.js';
 
@@ -9,7 +9,7 @@ const formatSimulatedClock = (value) => {
 };
 
 export function SystemHUD() {
-  const { teamData, isFullscreen, requestFullscreen, onReturnToHub, round1State } = useOS();
+  const { teamData, isFullscreen, requestFullscreen, round1State } = useOS();
   const subsystems = getSubsystemStatuses(round1State);
 
   const handleToggleFullscreen = async () => {
@@ -86,15 +86,6 @@ export function SystemHUD() {
           title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
         >
           {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
-        </button>
-
-        <button
-          className="hud-action-btn hud-exit-btn"
-          onClick={onReturnToHub}
-          title="Return to Expedition Hub"
-        >
-          <LogOut size={14} />
-          <span>Return to Hub</span>
         </button>
       </div>
     </header>

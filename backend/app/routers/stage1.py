@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/stage1", tags=["Stage 1 - OS Navigation"])
 STAGE1_TASKS = {
     "r1_t01": {
         "title": "Task 01 — Encoded Message",
-        "points": 50,
+        "points": 20,
         "stage": 1,
         "scenario": "A short message recovered from an unknown source has been left on the workstation. Its original meaning is unreadable in its current numerical form.",
         "objective": "Locate message.txt.\nUse a data converter to translate the numerical character values into readable text.\nEnter the decoded word below.",
@@ -30,7 +30,7 @@ STAGE1_TASKS = {
     },
     "r1_t02": {
         "title": "Task 02 — File Information",
-        "points": 50,
+        "points": 20,
         "stage": 1,
         "scenario": "An expedition image was recovered during the investigation, but its visual picture does not identify its creator. The underlying file records hold the author entry.",
         "objective": "Locate evidence.jpg.\nUse a file inspector to inspect the file properties and technical attributes rather than the visual pixels.\nEnter the registered author name below.",
@@ -43,7 +43,7 @@ STAGE1_TASKS = {
     },
     "r1_t03": {
         "title": "Task 03 — Image Message",
-        "points": 50,
+        "points": 20,
         "stage": 1,
         "scenario": "A recovered poster contains an embedded optical matrix marking that cannot be interpreted through standard visual viewing.",
         "objective": "Locate poster.png.\nUse an optical scanning inspector to scan the machine-readable matrix graphic.\nEnter the revealed sector code below.",
@@ -56,7 +56,7 @@ STAGE1_TASKS = {
     },
     "r1_t04": {
         "title": "Task 04 — The Earliest Record",
-        "points": 75,
+        "points": 20,
         "stage": 2,
         "scenario": "Workstation access records are scrambled out of order. An initial trigger event initiated the recorded sequence.",
         "objective": "Locate access.log.\nInspect the chronological timestamps at the beginning of each line using a document inspector or text reader.\nIdentify the earliest entry and use the Universal Converter to decode its color code into a readable color name.\nEnter the decoded color name below.",
@@ -69,7 +69,7 @@ STAGE1_TASKS = {
     },
     "r1_t05": {
         "title": "Task 05 — The Changed Record",
-        "points": 75,
+        "points": 20,
         "stage": 2,
         "scenario": "Two versions of a critical transmission log exist on the workstation. Most lines are identical, but one operational parameter was modified.",
         "objective": "Locate message_old.txt and message_new.txt.\nUse a file comparison inspector to analyze both documents side-by-side.\nEnter the updated operational value from the revised record below.",
@@ -82,7 +82,7 @@ STAGE1_TASKS = {
     },
     "r1_t06": {
         "title": "Task 06 — The Fragmented Password",
-        "points": 75,
+        "points": 20,
         "stage": 2,
         "scenario": "Three fragments of a security passcode were recovered separately. Each fragment is incomplete on its own, and their order is scrambled.",
         "objective": "Locate fragment_01.txt, fragment_02.txt, and fragment_03.txt.\nInspect each fragment to determine its recorded timestamp and sort them chronologically.\nCombine the ordered values and use a data converter to decode the complete password below.",
@@ -95,7 +95,7 @@ STAGE1_TASKS = {
     },
     "r1_t07": {
         "title": "Task 07 — The Hidden Record",
-        "points": 100,
+        "points": 20,
         "stage": 3,
         "scenario": "An archival survey photograph appears ordinary, but operational data was preserved inside its descriptive technical properties.",
         "objective": "Locate archive_photo.png.\nUse a file inspector to examine its technical file properties and recover the embedded description code.\nUse a data converter to translate the character codes into readable text and enter the message below.",
@@ -108,7 +108,7 @@ STAGE1_TASKS = {
     },
     "r1_t08": {
         "title": "Task 08 — The Disguised File",
-        "points": 100,
+        "points": 20,
         "stage": 3,
         "scenario": "Crucial investigation evidence has been deliberately concealed in a hidden subdirectory within the workstation archives.",
         "objective": "Explore the directory structure using a file inspector or manager capable of revealing concealed files.\nLocate clue.txt inside the hidden archive.\nSubmit the numerical passcode contained within.",
@@ -121,7 +121,7 @@ STAGE1_TASKS = {
     },
     "r1_t09": {
         "title": "Task 09 — The Evidence Trail",
-        "points": 100,
+        "points": 20,
         "stage": 3,
         "scenario": "An investigative trail spans across multiple records, beginning with an optical marking on a survey map.",
         "objective": "Locate map.png and use an optical scanning inspector to recover the clue reference key.\nCross-reference that key in index.txt to determine the target log record.\nInspect activity.log to identify which file ID USER-A downloaded, and enter that number below.",
@@ -134,7 +134,7 @@ STAGE1_TASKS = {
     },
     "r1_t10": {
         "title": "Task 10 — The Altered Record",
-        "points": 150,
+        "points": 20,
         "stage": 4,
         "scenario": "Two versions of a secure configuration record contain a subtle hexadecimal difference that conceals an operational word.",
         "objective": "Locate alpha.txt and beta.txt.\nUse a file comparison inspector to isolate the modified configuration entry.\nUse a data converter to translate the altered hexadecimal sequence into readable text and enter the resulting word below.",
@@ -147,7 +147,7 @@ STAGE1_TASKS = {
     },
     "r1_t11": {
         "title": "Task 11 — Follow the Trail",
-        "points": 150,
+        "points": 20,
         "stage": 4,
         "scenario": "A field note points to an archive document, which links to monitored hardware evidence across the workstation.",
         "objective": "Locate incident_note.txt and follow its pointer to the referenced archive record.\nCheck the archive file to identify the target device photo.\nUse a file inspector on the device image to retrieve its encoded attribute, then use a data converter to translate the value into the clearance word below.",
@@ -160,7 +160,7 @@ STAGE1_TASKS = {
     },
     "r1_t12": {
         "title": "Task 12 — Trace the Incident",
-        "points": 150,
+        "points": 20,
         "stage": 4,
         "scenario": "Four pieces of evidence across logs, device photos, archives, and transfer records form a connected incident chain.",
         "objective": "Locate system.log to observe the incident sequence.\nUse a file inspector on device.png to identify the registered hardware ID.\nOpen the corresponding archive record to find the transfer ID, inspect the transfer document, and use a data converter to decode the clearance code below.",
@@ -273,7 +273,10 @@ async def submit_stage1_task(
             message="Task was already completed by your team."
         )
 
-    points = task_info["points"]
+    base_points = task_info.get("points", 20)
+    hints_count = max(0, min(2, req.hints_used or 0))
+    hint_penalty = hints_count * 5
+    points = max(0, base_points - hint_penalty)
 
     # Award points & update stage
     current_team.score += points
@@ -288,7 +291,12 @@ async def submit_stage1_task(
         stage=1,
         task_key=resolved_key,
         points_awarded=points,
-        metadata_json=json.dumps({"proof": req.proof}) if req.proof else None
+        metadata_json=json.dumps({
+            "proof": req.proof,
+            "hints_used": hints_count,
+            "hint_penalty": hint_penalty,
+            "base_points": base_points
+        })
     )
     db.add(submission)
     await db.commit()
@@ -297,10 +305,11 @@ async def submit_stage1_task(
     # Real-time broadcast to all 100 workstations (Admin Portal + Participant HUDs)
     await ws_manager.broadcast_leaderboard(db)
 
+    penalty_msg = f" (-{hint_penalty} pts for {hints_count} hint{'s' if hints_count > 1 else ''})" if hint_penalty > 0 else ""
     return TaskSubmitResponse(
         success=True,
         task_key=resolved_key,
         points_awarded=points,
         new_total_score=current_team.score,
-        message=f"Success! {points} points awarded for completing {task_info['title']}."
+        message=f"Success! {points} points awarded for completing {task_info['title']}{penalty_msg}."
     )

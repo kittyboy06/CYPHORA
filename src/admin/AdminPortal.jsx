@@ -268,13 +268,19 @@ export function AdminPortal() {
   // Quick Score Update
   const handleQuickScore = async (teamId, delta) => {
     try {
+      const reasonTag = delta === 20 ? 'Round 1 Task (+20 pts)'
+        : delta === 50 ? 'Round 2 Image (+50 pts)'
+        : delta === -5 ? 'Hint 1 deduction (-5 pts)'
+        : delta === -10 ? 'Hints 1 & 2 deduction (-10 pts)'
+        : `Score adjustment (${delta > 0 ? '+' : ''}${delta} pts)`;
+
       await fetch(`${API_BASE}/api/admin/teams/${teamId}/score`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Admin-Password': HARDCODED_ADMIN_PASS
         },
-        body: JSON.stringify({ points_delta: delta, reason: `Quick adjustment (${delta > 0 ? '+' : ''}${delta} pts)` })
+        body: JSON.stringify({ points_delta: delta, reason: reasonTag })
       });
       fetchTeams();
     } catch (e) {
@@ -778,24 +784,31 @@ export function AdminPortal() {
                           <div className="quick-pts-btns">
                             <button
                               className="quick-pt-btn"
+                              onClick={() => handleQuickScore(t.id, 20)}
+                              title="Award +20 points (Round 1 Task)"
+                            >
+                              +20
+                            </button>
+                            <button
+                              className="quick-pt-btn"
                               onClick={() => handleQuickScore(t.id, 50)}
-                              title="Award +50 points"
+                              title="Award +50 points (Round 2 Image 100%)"
                             >
                               +50
                             </button>
                             <button
-                              className="quick-pt-btn"
-                              onClick={() => handleQuickScore(t.id, 100)}
-                              title="Award +100 points"
+                              className="quick-pt-btn minus"
+                              onClick={() => handleQuickScore(t.id, -5)}
+                              title="Deduct -5 points (1 Hint)"
                             >
-                              +100
+                              -5
                             </button>
                             <button
                               className="quick-pt-btn minus"
-                              onClick={() => handleQuickScore(t.id, -50)}
-                              title="Deduct -50 points"
+                              onClick={() => handleQuickScore(t.id, -10)}
+                              title="Deduct -10 points (2 Hints)"
                             >
-                              -50
+                              -10
                             </button>
                             <button
                               className="quick-pt-btn"

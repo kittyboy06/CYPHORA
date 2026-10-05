@@ -257,6 +257,35 @@ async def delete_team(
     await ws_manager.broadcast_leaderboard(db)
     return {"status": "success", "message": f"Team '{team_name}' removed."}
 
+@router.get("/teams/{team_id}/submissions")
+async def get_team_submissions(
+    team_id: int,
+    authorized: bool = Depends(verify_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Retrieve full audit trail of task submissions, points awarded, and hints used."""
+    import json
+    stmt = select(TaskSubmission).filter(TaskSubmission.team_id == team_id).order_by(TaskSubmission.submitted_at)
+    res = await db.execute(stmt)
+    subs = res.scalars().all()
+    out = []
+    for s in subs:
+        meta = {}
+        if s.metadata_json:
+            try:
+                meta = json.loads(s.metadata_json)
+            except Exception:
+                meta = {"raw": s.metadata_json}
+        out.append({
+            "id": s.id,
+            "stage": s.stage,
+            "task_key": s.task_key,
+            "points_awarded": s.points_awarded,
+            "metadata": meta,
+            "submitted_at": s.submitted_at.isoformat() if s.submitted_at else None
+        })
+    return {"team_id": team_id, "submissions": out, "total_submissions": len(out)}
+
 @router.post("/reset-leaderboard")
 async def reset_leaderboard(
     authorized: bool = Depends(verify_admin),

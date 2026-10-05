@@ -18,4 +18,12 @@ export default defineConfig({
       }
     }
   },
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve('index.html'),
+        round2: resolve('round2/index.html')
+      }
+    }
+  }
 })

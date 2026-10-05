@@ -15,11 +15,15 @@ import {
   Image,
   BarChart2,
   GitCompare,
-  CheckSquare,
   Maximize,
   Minimize,
-  LogOut,
-  Clock
+  Clock,
+  CheckSquare,
+  Eye,
+  Sparkles,
+  Zap,
+  Trophy,
+  BookOpen
 } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
 import { formatCountdown } from '../../round1/round1Engine.js';
@@ -36,13 +40,19 @@ export function Taskbar() {
     toggleMute,
     round1State,
     isFullscreen,
-    requestFullscreen,
-    onReturnToHub
+    requestFullscreen
   } = useOS();
 
   const getTaskIcon = (appId) => {
     switch (appId) {
       case 'tasks': return <CheckSquare size={15} />;
+      case 'round2': return <Compass size={15} />;
+      case 'image-navigation': return <Compass size={15} />;
+      case 'vision-target': return <Eye size={15} />;
+      case 'prompt-studio': return <Sparkles size={15} />;
+      case 'image-evaluator': return <Zap size={15} />;
+      case 'leaderboard': return <Trophy size={15} />;
+      case 'mission-prologue': return <BookOpen size={15} />;
       case 'terminal': return <Terminal size={15} />;
       case 'file-manager': return <Folder size={15} />;
       case 'text-editor': return <FileText size={15} />;
@@ -137,15 +147,6 @@ export function Taskbar() {
         <div className="tray-indicator online" title="Workstation Online">
           <Wifi size={14} />
         </div>
-
-        <button
-          className="tray-btn tray-return-btn"
-          onClick={onReturnToHub}
-          title="Return to Expedition Hub"
-        >
-          <LogOut size={14} />
-          <span className="tray-return-text">Hub</span>
-        </button>
       </div>
     </footer>
   );

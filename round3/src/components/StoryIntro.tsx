@@ -48,12 +48,12 @@ export const StoryIntro: React.FC<Props> = ({ onComplete }) => {
         <h1 className="text-3xl md:text-4xl font-cinzel text-[var(--accent-gold)] tracking-widest">
           THE TEMPLE TRIALS
         </h1>
-        
+
         {/* Scene Image */}
         <div className="w-full aspect-video bg-black/50 border border-[var(--border-gold)] rounded-sm flex items-center justify-center shadow-2xl relative overflow-hidden transition-all duration-700">
-          <img 
-            src={storyScenes[step].image} 
-            alt={`Scene ${step + 1}`} 
+          <img
+            src={storyScenes[step].image}
+            alt={`Scene ${step + 1}`}
             className="absolute inset-0 w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />

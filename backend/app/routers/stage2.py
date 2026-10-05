@@ -56,6 +56,71 @@ def compute_cosine_similarity(image_base64: str, target_image_path: str) -> floa
 
 router = APIRouter(prefix="/api/stage2", tags=["Stage 2 - Image Navigation"])
 
+async def resolve_team(
+    db: AsyncSession,
+    authorization: Optional[str] = None,
+    x_team_id: Optional[str] = None,
+    x_team_name: Optional[str] = None,
+    team_name: Optional[str] = None
+) -> Optional[Team]:
+    from sqlalchemy import func
+    # 1. Bearer token
+    if isinstance(authorization, str) and authorization.startswith("Bearer "):
+        token = authorization.split(" ")[1]
+        payload = decode_access_token(token)
+        if payload:
+            sub = str(payload.get("sub", ""))
+            if sub.isdigit():
+                res = await db.execute(select(Team).filter(Team.id == int(sub)))
+                t = res.scalar_one_or_none()
+                if t:
+                    return t
+            elif sub:
+                res = await db.execute(select(Team).filter(func.lower(Team.name) == sub.lower()))
+                t = res.scalar_one_or_none()
+                if t:
+                    return t
+            team_claim = payload.get("team")
+            if team_claim:
+                res = await db.execute(select(Team).filter(func.lower(Team.name) == str(team_claim).lower()))
+                t = res.scalar_one_or_none()
+                if t:
+                    return t
+
+    # 2. X-Team-Id header
+    if isinstance(x_team_id, (str, int)):
+        try:
+            res = await db.execute(select(Team).filter(Team.id == int(x_team_id)))
+            t = res.scalar_one_or_none()
+            if t:
+                return t
+        except Exception:
+            pass
+
+    # 3. X-Team-Name header
+    if isinstance(x_team_name, str) and x_team_name.strip():
+        clean = x_team_name.strip().lower()
+        res = await db.execute(select(Team).filter(func.lower(Team.name) == clean))
+        t = res.scalar_one_or_none()
+        if t:
+            return t
+
+    # 4. Request body team_name
+    if isinstance(team_name, str) and team_name.strip() and team_name.lower() != "wandering nomad":
+        clean = team_name.strip().lower()
+        res = await db.execute(select(Team).filter(func.lower(Team.name) == clean))
+        t = res.scalar_one_or_none()
+        if t:
+            return t
+
+    # 5. Fallback if single team exists in DB
+    res_all = await db.execute(select(Team))
+    all_teams = res_all.scalars().all()
+    if len(all_teams) == 1:
+        return all_teams[0]
+
+    return None
+
 class Stage2Image1Request(BaseModel):
     team_name: Optional[str] = "Wandering Nomad"
     prompt: str
@@ -66,22 +131,74 @@ class Stage2Image1Request(BaseModel):
 async def evaluate_stage2_image1(
     req: Stage2Image1Request,
     authorization: Optional[str] = Header(None),
+    x_team_id: Optional[str] = Header(None),
+    x_team_name: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db)
 ):
-    import random
     if "target1" in req.image1_filename.lower():
         similarity = 100.0
     else:
-        # Pass the path to target1.jpg. The server is run from c:\Coding\sympo
         similarity = compute_cosine_similarity(req.image1_base64, "public/assets/round2/targets/target1.jpg")
-    phase1_points = round(200 * (similarity / 100))
+    
+    # 50 points for 100% Accuracy, reduced proportionally by accuracy percentage
+    phase1_points = round(50 * (similarity / 100.0))
+
+    team = await resolve_team(db, authorization, x_team_id, x_team_name, req.team_name)
+
+    if team:
+        # Check if image 1 submission already exists for this team
+        stmt = select(TaskSubmission).filter(
+            TaskSubmission.team_id == team.id,
+            TaskSubmission.stage == 2,
+            TaskSubmission.task_key == "r2_image_1"
+        )
+        existing = (await db.execute(stmt)).scalar_one_or_none()
+
+        if not existing:
+            team.score += phase1_points
+            if team.current_stage < 2:
+                team.current_stage = 2
+            team.status = "active"
+
+            submission = TaskSubmission(
+                team_id=team.id,
+                stage=2,
+                task_key="r2_image_1",
+                points_awarded=phase1_points,
+                metadata_json=json.dumps({
+                    "prompt": req.prompt,
+                    "filename": req.image1_filename,
+                    "similarity": similarity,
+                    "accuracy": similarity,
+                    "points_awarded": phase1_points,
+                    "max_points": 50
+                })
+            )
+            db.add(submission)
+            await db.commit()
+            await db.refresh(team)
+
+            # Real-time leaderboard broadcast to Admin Portal and all workstations
+            await ws_manager.broadcast_leaderboard(db)
+
+        return {
+            "success": True,
+            "phase": 1,
+            "similarity": f"{similarity}%",
+            "accuracy": similarity,
+            "points": phase1_points,
+            "new_total_score": team.score,
+            "message": f"Image 1 evaluated! {similarity}% accuracy ({phase1_points}/50 PTS). Synced to database & admin."
+        }
 
     return {
         "success": True,
         "phase": 1,
         "similarity": f"{similarity}%",
+        "accuracy": similarity,
         "points": phase1_points,
-        "message": f"Image 1 evaluated! {similarity}% match achieved. Next slot (Image 2) unlocked."
+        "new_total_score": phase1_points,
+        "message": f"Image 1 evaluated! {similarity}% accuracy ({phase1_points}/50 PTS)."
     }
 
 class Stage2SubmitRequest(BaseModel):
@@ -98,78 +215,53 @@ class Stage2SubmitRequest(BaseModel):
 async def submit_stage2(
     req: Stage2SubmitRequest,
     authorization: Optional[str] = Header(None),
+    x_team_id: Optional[str] = Header(None),
+    x_team_name: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db)
 ):
-    team = None
-
-    # Attempt 1: Authenticate via Bearer token
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization.split(" ")[1]
-        payload = decode_access_token(token)
-        if payload and "sub" in payload:
-            sub = str(payload["sub"])
-            if sub.isdigit():
-                res = await db.execute(select(Team).filter(Team.id == int(sub)))
-            else:
-                res = await db.execute(select(Team).filter(Team.name == sub))
-            team = res.scalar_one_or_none()
-            if not team and "team" in payload:
-                res = await db.execute(select(Team).filter(Team.name == payload["team"]))
-                team = res.scalar_one_or_none()
-
-    # Attempt 2: Match by team_name if not authenticated
-    if not team and req.team_name:
-        res = await db.execute(select(Team).filter(Team.name == req.team_name))
-        team = res.scalar_one_or_none()
-
-    # Calculate speed-based evaluation points
-    ROUND_2_MAX_SECONDS = 900 # 15 minutes
-    BASE_POINTS = 400
-    MAX_BONUS = 600
-
-    remaining = max(0, min(ROUND_2_MAX_SECONDS, req.remaining_seconds))
-    speed_bonus = round((remaining / ROUND_2_MAX_SECONDS) * MAX_BONUS)
-    
-    import random
     if "target2" in req.slot3_filename.lower():
         image2_sim_value = 100.0
     else:
         image2_sim_value = compute_cosine_similarity(req.slot3_base64, "public/assets/round2/targets/target2.jpg")
+    
     image2_similarity_str = f"{image2_sim_value}%"
     
-    if req.calculated_points is not None:
-        points_awarded = req.calculated_points
-    else:
-        points_awarded = BASE_POINTS + speed_bonus
+    # 50 points for 100% Accuracy, reduced proportionally by accuracy percentage
+    image2_points = round(50 * (image2_sim_value / 100.0))
+
+    team = await resolve_team(db, authorization, x_team_id, x_team_name, req.team_name)
 
     if team:
-        # Check if stage 2 submission already exists for this team
+        # Check if stage 2 image 2 submission already exists for this team
         stmt = select(TaskSubmission).filter(
             TaskSubmission.team_id == team.id,
             TaskSubmission.stage == 2,
-            TaskSubmission.task_key == "r2_image_navigation"
+            TaskSubmission.task_key == "r2_image_2"
         )
         existing = (await db.execute(stmt)).scalar_one_or_none()
 
         if not existing:
-            team.score += points_awarded
+            team.score += image2_points
             if team.current_stage < 2:
                 team.current_stage = 2
             team.status = "active"
 
-            # Create TaskSubmission entry
+            # Create TaskSubmission entry for Image 2
             submission = TaskSubmission(
                 team_id=team.id,
                 stage=2,
-                task_key="r2_image_navigation",
-                points_awarded=points_awarded,
+                task_key="r2_image_2",
+                points_awarded=image2_points,
                 metadata_json=json.dumps({
                     "prompt": req.prompt,
                     "slot2_file": req.slot2_filename,
                     "slot3_file": req.slot3_filename,
                     "elapsed_seconds": req.elapsed_seconds,
                     "remaining_seconds": req.remaining_seconds,
-                    "speed_bonus": speed_bonus,
+                    "similarity": image2_sim_value,
+                    "accuracy": image2_sim_value,
+                    "points_awarded": image2_points,
+                    "max_points": 50
                 })
             )
             db.add(submission)
@@ -181,18 +273,20 @@ async def submit_stage2(
 
         return {
             "success": True,
-            "points_awarded": points_awarded,
-            "speed_bonus": speed_bonus,
+            "points_awarded": image2_points,
+            "image2_points": image2_points,
             "image2_similarity": image2_similarity_str,
+            "accuracy": image2_sim_value,
             "new_total_score": team.score,
-            "message": f"Round 2 submitted! {points_awarded} pts evaluated (Speed bonus: +{speed_bonus} pts)."
+            "message": f"Image 2 evaluated! {image2_similarity_str} accuracy ({image2_points}/50 PTS). Synced to database & admin."
         }
 
     return {
         "success": True,
-        "points_awarded": points_awarded,
-        "speed_bonus": speed_bonus,
+        "points_awarded": image2_points,
+        "image2_points": image2_points,
         "image2_similarity": image2_similarity_str,
-        "new_total_score": points_awarded,
-        "message": f"Round 2 submitted in standalone mode! Evaluated: {points_awarded} pts."
+        "accuracy": image2_sim_value,
+        "new_total_score": image2_points,
+        "message": f"Image 2 evaluated in standalone mode! Accuracy: {image2_similarity_str} ({image2_points}/50 PTS)."
     }

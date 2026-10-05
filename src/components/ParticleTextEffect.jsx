@@ -380,6 +380,7 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS, onClick }) {
 
   return (
     <div 
+        onClick={onClick}
         style={{ 
             display: 'flex',
             flexDirection: 'column',

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  CheckSquare,
   Terminal,
   Folder,
   FileText,
@@ -13,11 +12,18 @@ import {
   GitCompare,
   Volume2,
   Trophy,
-  Radio
+  Radio,
+  Clock,
+  CheckSquare,
+  Compass,
+  Eye,
+  Sparkles,
+  Zap,
+  BookOpen
 } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
 import { SET_PRESENTATIONS } from '../../round1/taskContent.js';
-import { ROUND_1_SETS, getSubsystemStatuses } from '../../round1/round1Engine.js';
+import { ROUND_1_SETS, getSubsystemStatuses, formatCountdown } from '../../round1/round1Engine.js';
 
 export function Desktop() {
   const {
@@ -60,6 +66,11 @@ export function Desktop() {
   const currentSetId = activeTask?.setId || (activeTask ? ROUND_1_SETS.find(s => s.tasks.includes(activeTask.id))?.id : null) || round1State?.activeSet || 'set1';
   const setPresentation = SET_PRESENTATIONS[currentSetId];
   const subsystems = getSubsystemStatuses(round1State);
+  const remainingTimeMs = round1State?.remainingTimeMs ?? 1200000;
+  const isCriticalTime = remainingTimeMs < 300000 && remainingTimeMs > 0;
+  const isTimeExpired = Boolean(round1State?.isExpired || remainingTimeMs <= 0);
+  const timerDisplay = formatCountdown(remainingTimeMs);
+  const isRunning = Boolean(round1State?.isTimerRunning);
 
   const loadDesktopItems = () => {
     try {
@@ -92,10 +103,34 @@ export function Desktop() {
 
   const systemApps = [
     {
-      id: 'tasks',
-      title: 'Tasks',
-      icon: <CheckSquare size={32} className="desktop-icon-svg settings-color" />,
-      action: () => openApp('tasks')
+      id: 'round2',
+      title: 'Stage 2: Image Navigation',
+      icon: <Compass size={32} className="desktop-icon-svg folder-color" />,
+      action: () => openApp('round2')
+    },
+    {
+      id: 'vision-target',
+      title: 'Vision Target',
+      icon: <Eye size={32} className="desktop-icon-svg terminal-color" />,
+      action: () => openApp('vision-target')
+    },
+    {
+      id: 'prompt-studio',
+      title: 'Prompt Studio',
+      icon: <Sparkles size={32} className="desktop-icon-svg file-color" />,
+      action: () => openApp('prompt-studio')
+    },
+    {
+      id: 'image-evaluator',
+      title: 'Similarity Evaluator',
+      icon: <Zap size={32} className="desktop-icon-svg editor-color" />,
+      action: () => openApp('image-evaluator')
+    },
+    {
+      id: 'leaderboard',
+      title: 'Standings',
+      icon: <Trophy size={32} className="desktop-icon-svg folder-color" />,
+      action: () => openApp('leaderboard')
     },
     {
       id: 'converter',
@@ -171,6 +206,22 @@ export function Desktop() {
       onClick={handleDesktopClick}
       onContextMenu={handleContextMenu}
     >
+      {/* Pinned Top-Center Expedition Timer HUD */}
+      <aside className="desktop-pinned-timer" aria-label="Expedition Countdown Timer">
+        <div
+          className={`pinned-timer-capsule ${isCriticalTime ? 'critical' : ''} ${isTimeExpired ? 'expired' : ''}`}
+          title="Expedition Mission Timer — Live Remaining Time"
+        >
+          <div className="pinned-timer-glow" />
+          <div className={`pinned-timer-dot ${isRunning ? 'running' : 'idle'}`} />
+          <Clock size={16} className="pinned-timer-icon" />
+          <div className="pinned-timer-content">
+            <span className="pinned-timer-label">MISSION TIMER</span>
+            <span className="pinned-timer-digits">{timerDisplay}</span>
+          </div>
+        </div>
+      </aside>
+
       {/* Icon Grid */}
       <div className="desktop-icon-grid">
         {/* Core App Icons */}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { OSProvider, useOS } from './state/OSContext.jsx';
 import { Desktop } from './shell/Desktop.jsx';
 import { WindowManager } from './windows/WindowManager.jsx';
@@ -7,11 +7,19 @@ import { StartMenu } from './shell/StartMenu.jsx';
 import { BlueScreenGate } from './shell/BlueScreenGate.jsx';
 import { BootScreen } from './boot/BootScreen.jsx';
 import { CompletionCelebration } from '../components/CompletionCelebration.jsx';
+import { TaskBoard } from '../components/TaskBoard.jsx';
 import './OSContainer.css';
 
-function OSContent({ stage, setStage, teamData, round1State }) {
+function OSContent({ stage, setStage, teamData, round1State, initialAppId }) {
   const { windows = [], openApp = () => {}, showExitBanner = false, exitReason = '', unlockGate = () => {} } = useOS();
+  const hasOpenedInitialAppRef = useRef(false);
 
+  useEffect(() => {
+    if (stage === 'os-desktop' && initialAppId && !hasOpenedInitialAppRef.current) {
+      hasOpenedInitialAppRef.current = true;
+      openApp(initialAppId);
+    }
+  }, [stage, initialAppId, openApp]);
 
   return (
     <div className="os-desktop-root">
@@ -22,6 +30,7 @@ function OSContent({ stage, setStage, teamData, round1State }) {
         />
       ) : (
         <>
+          <TaskBoard round1State={round1State} />
           {round1State?.finalMemoryVisible && <CompletionCelebration />}
           <main className="os-workspace-area">
             <Desktop />
@@ -50,7 +59,8 @@ export function OSContainer({
   setRound1State,
   liveExplorers = [],
   isWsConnected = false,
-  fetchLeaderboard = () => {}
+  fetchLeaderboard = () => {},
+  initialAppId = null
 }) {
   return (
     <OSProvider
@@ -62,7 +72,14 @@ export function OSContainer({
       isWsConnected={isWsConnected}
       fetchLeaderboard={fetchLeaderboard}
     >
-      <OSContent stage={stage} setStage={setStage} teamData={teamData} round1State={round1State} />
+      <OSContent
+        stage={stage}
+        setStage={setStage}
+        teamData={teamData}
+        round1State={round1State}
+        initialAppId={initialAppId}
+      />
     </OSProvider>
   );
 }
+export default OSContainer;

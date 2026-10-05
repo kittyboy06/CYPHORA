@@ -359,7 +359,9 @@ export const TASK_PRESENTATIONS = TASK_DEFINITIONS.reduce((acc, task) => {
     playerTitle: task.title,
     objective: task.question,
     story: task.story,
-    hints: task.hints
+    hints: task.hints,
+    points: 20,
+    basePoints: 20
   };
   return acc;
 }, {});

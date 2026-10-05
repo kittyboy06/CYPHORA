@@ -1,0 +1,14 @@
+# ==============================================================================
+# CYPHORA - Master Environment Requirements
+# ==============================================================================
+#
+# 1. Backend & AI Vision Engine (Python 3.10+):
+#    Install via: pip install -r backend/requirements.txt
+-r backend/requirements.txt
+
+# 2. Frontend Application (Node.js 18+ / React 18 / Vite):
+#    Frontend dependencies are managed via Node.js npm (package.json).
+#    See frontend/requirements.txt for detailed frontend package specifications.
+#    Install via: npm install
+#    Start via:   npm run dev
+# ==============================================================================
