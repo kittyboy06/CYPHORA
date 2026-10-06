@@ -20,7 +20,8 @@ import {
   Sparkles,
   Zap,
   Trophy,
-  BookOpen
+  BookOpen,
+  LogOut
 } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
 import { APP_REGISTRY } from '../apps/registry.js';
@@ -31,7 +32,9 @@ export function StartMenu() {
 
   if (!isStartMenuOpen) return null;
 
-  const appList = Object.values(APP_REGISTRY);
+  const appList = Object.values(APP_REGISTRY).filter(
+    app => !['vision-target', 'prompt-studio', 'image-evaluator', 'leaderboard'].includes(app.id)
+  );
   const filteredApps = appList.filter(app =>
     app.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     app.id.toLowerCase().includes(searchQuery.toLowerCase())
@@ -106,12 +109,23 @@ export function StartMenu() {
         </div>
       </div>
 
-      {/* Footer Profile */}
+      {/* Footer Profile & Station Sign Out */}
       <div className="start-menu-footer">
         <div className="start-user-badge">
           <Shield size={16} className="user-icon" />
-          <span className="user-name">{teamData.name || 'Navigator'}</span>
+          <span className="user-name">{teamData?.name || 'Navigator'}</span>
         </div>
+        <button
+          className="start-logout-btn"
+          onClick={() => {
+            closeStartMenu();
+            window.dispatchEvent(new CustomEvent('cyphora_request_signout'));
+          }}
+          title="Exit current workstation session for the next batch"
+        >
+          <LogOut size={13} />
+          <span>Exit Station</span>
+        </button>
       </div>
     </div>
   );

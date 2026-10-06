@@ -66,6 +66,10 @@ async def migrate_columns():
             await conn.execute(text("ALTER TABLE teams ADD COLUMN notes TEXT;"))
         if "started_at" not in existing_cols:
             await conn.execute(text("ALTER TABLE teams ADD COLUMN started_at TIMESTAMP;"))
+        if "round2_unlocked" not in existing_cols:
+            await conn.execute(text("ALTER TABLE teams ADD COLUMN round2_unlocked INTEGER DEFAULT 0;"))
+        if "raw_pin" not in existing_cols:
+            await conn.execute(text("ALTER TABLE teams ADD COLUMN raw_pin TEXT;"))
 
 async def init_db():
     """Initializes tables, confirms WAL mode, and migrates columns. Only stores real teams."""

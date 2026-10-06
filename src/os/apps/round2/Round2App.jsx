@@ -18,7 +18,10 @@ import {
   ArrowRight,
   X,
   Layers,
-  HelpCircle
+  HelpCircle,
+  Lock,
+  Shield,
+  Key
 } from 'lucide-react';
 import { useOS } from '../../state/OSContext.jsx';
 import { ProtectedReferenceImage } from '../../../round2/components/ProtectedReferenceImage.jsx';
@@ -27,12 +30,30 @@ import { ResultImageUpload } from '../../../round2/components/ResultImageUpload.
 import { VirtualFilePicker } from '../../components/VirtualFilePicker.jsx';
 import './Round2App.css';
 
+const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+const isDevPort = typeof window !== 'undefined' && window.location.port && window.location.port !== '8000';
+const API_BASE = isDevPort ? `http://${hostname}:8000` : '';
+
 const ROUND_2_DURATION_SECONDS = 15 * 60; // 15 minutes = 900 seconds
 const BASE_POINTS = 400;
 const MAX_SPEED_BONUS = 600;
 
-export function Round2App() {
-  const { openApp, vfs, eventBus, teamData, fetchLeaderboard, requestFullscreen } = useOS();
+export function Round2App({ windowId }) {
+  const { openApp, closeWindow, vfs, eventBus, teamData, fetchLeaderboard, requestFullscreen, round1State } = useOS();
+
+  const isRound1Completed = round1State?.round1Status === 'COMPLETED' ||
+    (Array.isArray(round1State?.tasks) && round1State.tasks.filter(t => t.status === 'COMPLETED').length === 12);
+  const completedTasksCount = Array.isArray(round1State?.tasks)
+    ? round1State.tasks.filter(t => t.status === 'COMPLETED').length
+    : 0;
+
+  const [isRound2Authorized, setIsRound2Authorized] = useState(() => {
+    return Boolean(teamData?.round2Unlocked || localStorage.getItem('cyphora_round2_unlocked') === 'true');
+  });
+
+  const [adminAuthCode, setAdminAuthCode] = useState('');
+  const [adminAuthError, setAdminAuthError] = useState('');
+  const [isVerifyingAdmin, setIsVerifyingAdmin] = useState(false);
 
   const teamName = teamData?.name || localStorage.getItem('cyphora_team_name') || 'Wandering Nomad';
 
@@ -51,19 +72,104 @@ export function Round2App() {
     }
   });
 
-  // 15-Minute Game Timer State with Timestamp Persistence
+  // 15-Minute Game Timer State with Timestamp Persistence (only ticks when both round 1 is done and authorized)
   const [secondsRemaining, setSecondsRemaining] = useState(() => {
     const savedStart = localStorage.getItem('cyphora_round2_start_time');
     if (savedStart) {
       const elapsed = Math.floor((Date.now() - parseInt(savedStart, 10)) / 1000);
       return Math.max(0, ROUND_2_DURATION_SECONDS - elapsed);
     }
-    const now = Date.now();
-    localStorage.setItem('cyphora_round2_start_time', now.toString());
     return ROUND_2_DURATION_SECONDS;
   });
 
-  const [isTimerRunning, setIsTimerRunning] = useState(true);
+  const [isTimerRunning, setIsTimerRunning] = useState(() => {
+    return isRound1Completed && isRound2Authorized;
+  });
+
+  useEffect(() => {
+    if (isRound1Completed && isRound2Authorized) {
+      if (!localStorage.getItem('cyphora_round2_start_time')) {
+        localStorage.setItem('cyphora_round2_start_time', Date.now().toString());
+      }
+      setIsTimerRunning(true);
+    } else {
+      setIsTimerRunning(false);
+    }
+  }, [isRound1Completed, isRound2Authorized]);
+
+  // Synchronize access status with backend & listen for real-time WebSocket clearance
+  useEffect(() => {
+    const checkAccess = async () => {
+      try {
+        const teamId = teamData?.id || localStorage.getItem('cyphora_team_id');
+        const tName = teamData?.name || localStorage.getItem('cyphora_team_name');
+        const headers = {};
+        if (teamId) headers['X-Team-Id'] = String(teamId);
+        if (tName) headers['X-Team-Name'] = tName;
+        const res = await fetch(`${API_BASE}/api/stage2/access-status`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.unlocked) {
+            setIsRound2Authorized(true);
+            localStorage.setItem('cyphora_round2_unlocked', 'true');
+          }
+        }
+      } catch (err) {}
+    };
+    checkAccess();
+
+    const handleAccessChange = (e) => {
+      const detail = e.detail || {};
+      const myId = teamData?.id || parseInt(localStorage.getItem('cyphora_team_id'), 10);
+      const myName = (teamData?.name || localStorage.getItem('cyphora_team_name') || '').toLowerCase();
+      if (detail.unlocked !== undefined) {
+        if (!detail.team_id && !detail.team_name) {
+          setIsRound2Authorized(Boolean(detail.unlocked));
+        } else if ((detail.team_id && detail.team_id === myId) || (detail.team_name && detail.team_name.toLowerCase() === myName)) {
+          setIsRound2Authorized(Boolean(detail.unlocked));
+        }
+      }
+    };
+
+    window.addEventListener('cyphora_round2_access_changed', handleAccessChange);
+    return () => window.removeEventListener('cyphora_round2_access_changed', handleAccessChange);
+  }, [teamData?.id, teamData?.name]);
+
+  const handleAdminSupervisorLogin = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setAdminAuthError('');
+    if (!adminAuthCode.trim()) {
+      setAdminAuthError('Please enter administrator password.');
+      return;
+    }
+    if (adminAuthCode.trim() !== 'JCEAIML') {
+      setAdminAuthError('Invalid administrator credentials.');
+      return;
+    }
+    setIsVerifyingAdmin(true);
+    try {
+      const teamId = teamData?.id || localStorage.getItem('cyphora_team_id');
+      if (teamId) {
+        await fetch(`${API_BASE}/api/admin/teams/${teamId}/round2-access`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Admin-Password': 'JCEAIML'
+          },
+          body: JSON.stringify({ unlocked: true })
+        });
+      }
+      setIsRound2Authorized(true);
+      localStorage.setItem('cyphora_round2_unlocked', 'true');
+      setAdminAuthCode('');
+    } catch {
+      setIsRound2Authorized(true);
+      localStorage.setItem('cyphora_round2_unlocked', 'true');
+      setAdminAuthCode('');
+    } finally {
+      setIsVerifyingAdmin(false);
+    }
+  };
 
   // Form states
   const [prompt, setPrompt] = useState(() => {
@@ -594,6 +700,124 @@ export function Round2App() {
     window.dispatchEvent(new Event('cyphora_points_updated'));
     setPhaseSuccessNotice('Reset to Step 1: Image 1.');
   };
+
+  if (!isRound1Completed || !isRound2Authorized) {
+    return (
+      <div className="os-round2-container os-round2-locked-container">
+        <div className="os-round2-bg" aria-hidden="true" />
+        <header className="os-round2-toolbar">
+          <div className="os-round2-title-section">
+            <span className="os-round2-badge">STAGE 2</span>
+            <span className="os-round2-sub-badge">IMAGE NAVIGATION</span>
+          </div>
+          <div className="os-round2-metrics">
+            <span className="r2-badge-locked">
+              <Lock size={12} /> RESTRICTED ACCESS
+            </span>
+          </div>
+        </header>
+
+        <div className="os-round2-lockout-body">
+          <div className="lockout-card">
+            <div className="lockout-icon-pulse">
+              <Lock size={36} color="#dfb125" />
+            </div>
+
+            {!isRound1Completed ? (
+              <>
+                <h2 className="lockout-title">STAGE 1 IN PROGRESS</h2>
+                <div className="lockout-badge warning">
+                  <AlertTriangle size={14} />
+                  <span>SUBSYSTEM RESTORATION INCOMPLETE ({completedTasksCount}/12)</span>
+                </div>
+                <p className="lockout-desc">
+                  This workstation is actively assigned to <strong>Round 1: OS Navigation</strong>.
+                  All 12 subsystem challenges must be solved to calibrate the optical communication transceiver before Stage 2 can be accessed.
+                </p>
+
+                <div className="lockout-progress-bar-wrap">
+                  <div className="lockout-progress-track">
+                    <div
+                      className="lockout-progress-fill"
+                      style={{ width: `${Math.round((completedTasksCount / 12) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="lockout-progress-text">{completedTasksCount} of 12 Tasks Verified ({Math.round((completedTasksCount / 12) * 100)}%)</span>
+                </div>
+
+                <div className="lockout-actions">
+                  <button
+                    type="button"
+                    className="lockout-primary-btn"
+                    onClick={() => {
+                      if (windowId && typeof closeWindow === 'function') {
+                        closeWindow(windowId);
+                      }
+                      openApp('tasks');
+                      openApp('terminal');
+                      if (eventBus && typeof eventBus.emit === 'function') {
+                        eventBus.emit('OPEN_TASKS');
+                      }
+                    }}
+                  >
+                    <span>Switch to Task Terminal</span>
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="lockout-title">AWAITING ADMINISTRATOR CLEARANCE</h2>
+                <div className="lockout-badge success">
+                  <CheckCircle2 size={14} />
+                  <span>ROUND 1 VERIFIED COMPLETE (12/12 TASKS)</span>
+                </div>
+                <p className="lockout-desc">
+                  Station subsystems are restored! Stage 2 Image Navigation is waiting for central authorization from the central <strong>Admin Dashboard</strong>.
+                </p>
+
+                <div className="lockout-beacon">
+                  <span className="beacon-dot"></span>
+                  <span>Listening for real-time clearance signal from Admin Command...</span>
+                </div>
+              </>
+            )}
+
+            {/* Supervisor On-Premise Authentication Form */}
+            <div className="lockout-supervisor-box">
+              <div className="supervisor-box-header">
+                <Shield size={13} color="#dfb125" />
+                <span>Supervisor On-Site Override</span>
+              </div>
+              <form onSubmit={handleAdminSupervisorLogin} className="supervisor-auth-form">
+                <div className="supervisor-input-group">
+                  <input
+                    type="password"
+                    placeholder="Enter Admin Password..."
+                    value={adminAuthCode}
+                    onChange={(e) => setAdminAuthCode(e.target.value)}
+                    className="supervisor-input"
+                    maxLength={32}
+                  />
+                  <button
+                    type="submit"
+                    className="supervisor-unlock-btn"
+                    disabled={isVerifyingAdmin}
+                  >
+                    <Key size={13} />
+                    <span>Authorize</span>
+                  </button>
+                </div>
+                {adminAuthError && (
+                  <span className="supervisor-error-msg">{adminAuthError}</span>
+                )}
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   let timerUrgencyClass = 'timer-normal';
   if (secondsRemaining <= 120) timerUrgencyClass = 'timer-critical';

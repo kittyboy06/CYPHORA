@@ -16,12 +16,14 @@ from ..database import get_db, AsyncSessionLocal
 from ..models import Team, TaskSubmission, EventConfig
 from ..config import DB_PATH, BACKUP_DIR, SECRET_KEY, ALGORITHM
 from ..websocket_manager import ws_manager
-from ..auth_utils import create_access_token
+from ..auth_utils import create_access_token, hash_pin
 from ..schemas import (
     AdminLoginRequest,
     AdminScoreUpdateRequest,
     AdminTeamUpdateRequest,
-    AdminNoteUpdateRequest
+    AdminNoteUpdateRequest,
+    AdminRound2AccessRequest,
+    AdminPinResetRequest
 )
 
 router = APIRouter(prefix="/api/admin", tags=["Event Administration"])
@@ -116,6 +118,8 @@ async def list_admin_teams(
             "score": t.score,
             "status": t.status,
             "current_stage": t.current_stage,
+            "round2_unlocked": bool(getattr(t, 'round2_unlocked', 0) or (t.current_stage and t.current_stage >= 2)),
+            "pin": getattr(t, 'raw_pin', None) or "—",
             "notes": t.notes,
             "last_ip": t.last_ip,
             "started_at": t.started_at.isoformat() if t.started_at else None,
@@ -256,6 +260,110 @@ async def delete_team(
 
     await ws_manager.broadcast_leaderboard(db)
     return {"status": "success", "message": f"Team '{team_name}' removed."}
+
+@router.post("/teams/{team_id}/round2-access")
+async def toggle_team_round2_access(
+    team_id: int,
+    req: AdminRound2AccessRequest,
+    authorized: bool = Depends(verify_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Authorize or revoke Round 2 access for a specific team."""
+    res = await db.execute(select(Team).filter(Team.id == team_id))
+    team = res.scalar_one_or_none()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found.")
+
+    team.round2_unlocked = 1 if req.unlocked else 0
+    if req.unlocked and team.current_stage < 2:
+        team.current_stage = 2
+    elif not req.unlocked and team.current_stage >= 2:
+        team.current_stage = 1
+
+    await db.commit()
+    await db.refresh(team)
+
+    await ws_manager.broadcast({
+        "event": "ROUND2_ACCESS_UPDATE",
+        "data": {
+            "team_id": team.id,
+            "team_name": team.name,
+            "unlocked": bool(team.round2_unlocked)
+        }
+    })
+    await ws_manager.broadcast_leaderboard(db)
+
+    return {
+        "status": "success",
+        "team_id": team.id,
+        "team_name": team.name,
+        "round2_unlocked": bool(team.round2_unlocked),
+        "current_stage": team.current_stage
+    }
+
+@router.post("/teams/{team_id}/pin")
+async def reset_team_pin(
+    team_id: int,
+    req: AdminPinResetRequest,
+    authorized: bool = Depends(verify_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Reset or update a team's secret PIN."""
+    res = await db.execute(select(Team).filter(Team.id == team_id))
+    team = res.scalar_one_or_none()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found.")
+
+    clean_pin = req.new_pin.strip()
+    if len(clean_pin) < 4:
+        raise HTTPException(status_code=400, detail="PIN must be at least 4 characters.")
+
+    team.raw_pin = clean_pin
+    team.pin_hash = hash_pin(clean_pin)
+    await db.commit()
+    await db.refresh(team)
+
+    await ws_manager.broadcast_leaderboard(db)
+    return {
+        "status": "success",
+        "team_id": team.id,
+        "team_name": team.name,
+        "new_pin": clean_pin
+    }
+
+
+@router.post("/round2/authorize-all")
+async def authorize_all_round2(
+    req: AdminRound2AccessRequest,
+    authorized: bool = Depends(verify_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Bulk authorize or revoke Round 2 access for all teams."""
+    res = await db.execute(select(Team))
+    teams = res.scalars().all()
+    for t in teams:
+        t.round2_unlocked = 1 if req.unlocked else 0
+        if req.unlocked and t.current_stage < 2:
+            t.current_stage = 2
+        elif not req.unlocked and t.current_stage >= 2:
+            t.current_stage = 1
+
+    await db.commit()
+
+    await ws_manager.broadcast({
+        "event": "ROUND2_ACCESS_UPDATE_ALL",
+        "data": {
+            "unlocked": req.unlocked
+        }
+    })
+    await ws_manager.broadcast_leaderboard(db)
+
+    return {
+        "status": "success",
+        "count": len(teams),
+        "unlocked": req.unlocked
+    }
+
 
 @router.get("/teams/{team_id}/submissions")
 async def get_team_submissions(

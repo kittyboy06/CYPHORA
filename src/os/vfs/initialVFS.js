@@ -216,25 +216,6 @@ EVALUATION RULES:
     content: '[IMAGE FILE: SECTOR 4 OUTPOST TARGET 2 (1920x1080)]',
     updatedAt: new Date().toISOString()
   },
-  '/Desktop/Stage 2 - Image Navigation.txt': {
-    id: 'file_desktop_stage2_guide',
-    name: 'Stage 2 - Image Navigation.txt',
-    type: 'file',
-    parentId: 'desktop',
-    path: '/Desktop/Stage 2 - Image Navigation.txt',
-    mimeType: 'text/plain',
-    size: 380,
-    content: `CYPHORA STAGE 2 // IMAGE NAVIGATION
-------------------------------------
-Stage 2 is fully integrated into the OS!
-- Launch 'Stage 2: Image Navigation' from Desktop or Start Menu.
-- Use 'Vision Target' to study organizer reference images.
-- Use 'Prompt Studio' to craft descriptive prompts.
-- Use 'Similarity Evaluator' to test cosine similarity.
-- Check 'Expedition Standings' for real-time team rankings.
-`,
-    updatedAt: new Date().toISOString()
-  },
   '/Archive/.hidden': {
     id: 'dir_archive_hidden',
     name: '.hidden',

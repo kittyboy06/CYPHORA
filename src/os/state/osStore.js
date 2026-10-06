@@ -75,6 +75,9 @@ export function osReducer(state, action) {
       if (appId === 'terminal') {
         initialX = 40;
         initialY = 70;
+      } else if (appId === 'tasks' || appId === 'task-terminal') {
+        initialX = 80;
+        initialY = 75;
       } else if (appId === 'file-manager') {
         initialX = 140;
         initialY = 95;

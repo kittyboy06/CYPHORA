@@ -5,13 +5,16 @@ from pydantic import BaseModel, Field
 # Authentication
 class TeamRegisterRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=32, description="Team name")
-    pin: Optional[str] = Field("0000", max_length=8, description="4-8 digit PIN (optional)")
+    pin: str = Field(..., min_length=4, max_length=16, description="4-16 digit/char secret PIN created by team")
     member1: Optional[str] = Field(None, max_length=64, description="Name of Member 1")
     member2: Optional[str] = Field(None, max_length=64, description="Name of Member 2")
 
 class TeamLoginRequest(BaseModel):
-    name: str
-    pin: str
+    name: str = Field(..., min_length=1, max_length=64, description="Team name")
+    pin: str = Field(..., min_length=1, max_length=16, description="Team PIN")
+
+class AdminPinResetRequest(BaseModel):
+    new_pin: str = Field(..., min_length=4, max_length=16, description="New secret PIN for team")
 
 class TeamOut(BaseModel):
     id: int
@@ -21,6 +24,7 @@ class TeamOut(BaseModel):
     standing: int
     score: int
     current_stage: int
+    round2_unlocked: Optional[int] = 0
     status: str
     notes: Optional[str] = None
     last_ip: Optional[str] = None
@@ -50,6 +54,7 @@ class LeaderboardItem(BaseModel):
     score: int
     status: str
     current_stage: int
+    round2_unlocked: Optional[bool] = False
     last_ip: Optional[str] = None
     notes: Optional[str] = None
     started_at: Optional[str] = None
@@ -96,3 +101,7 @@ class AdminNoteUpdateRequest(BaseModel):
 class EventConfigUpdate(BaseModel):
     key: str
     value: str
+
+class AdminRound2AccessRequest(BaseModel):
+    unlocked: bool
+
