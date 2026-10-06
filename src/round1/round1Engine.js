@@ -200,9 +200,20 @@ export function getTimeSnapshot(state) {
   };
 }
 
+export function clearRound1LocalData() {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (e) {}
+}
+
 export function persistRound1State(state) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {}
 }
 
 function hydrateTasks(tasks = []) {
@@ -224,7 +235,7 @@ export function loadRound1State() {
   }
 
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = sessionStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY);
     if (!raw) {
       return buildDefaultRound1State();
     }

@@ -22,7 +22,8 @@ import {
   Pause,
   RotateCcw,
   Tag,
-  ExternalLink
+  ExternalLink,
+  Key
 } from 'lucide-react';
 import './AdminPortal.css';
 
@@ -58,6 +59,7 @@ export function AdminPortal() {
   const [scoreModal, setScoreModal] = useState({ open: false, team: null, delta: 0, reason: '', exactScore: '' });
   const [editModal, setEditModal] = useState({ open: false, team: null, name: '', member1: '', member2: '', current_stage: 1, notes: '' });
   const [noteModal, setNoteModal] = useState({ open: false, team: null, notes: '' });
+  const [pinModal, setPinModal] = useState({ open: false, team: null, newPin: '' });
   const [timerModal, setTimerModal] = useState({ open: false, durationMinutes: 60 });
 
   // Live timer tick
@@ -366,6 +368,80 @@ export function AdminPortal() {
       fetchTeams();
     } catch (e) {
       alert('Error deleting team');
+    }
+  };
+
+  // Toggle Round 2 Access for single team
+  const handleToggleRound2Access = async (team, newStatus) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/teams/${team.id}/round2-access`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Password': HARDCODED_ADMIN_PASS
+        },
+        body: JSON.stringify({ unlocked: newStatus })
+      });
+      if (res.ok) {
+        fetchTeams();
+      } else {
+        alert('Failed to update Round 2 access');
+      }
+    } catch (e) {
+      alert('Network error updating Round 2 access');
+    }
+  };
+
+  // Bulk authorize or revoke Round 2 Access for all teams
+  const handleBulkRound2Access = async (unlocked) => {
+    const actionText = unlocked ? 'AUTHORIZE all teams for Round 2' : 'LOCK Round 2 for all teams';
+    if (!window.confirm(`Are you sure you want to ${actionText}?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/round2/authorize-all`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Password': HARDCODED_ADMIN_PASS
+        },
+        body: JSON.stringify({ unlocked })
+      });
+      if (res.ok) {
+        fetchTeams();
+      } else {
+        alert('Failed to execute bulk Round 2 access update');
+      }
+    } catch (e) {
+      alert('Network error updating bulk Round 2 access');
+    }
+  };
+
+  // Reset or update team secret PIN
+  const handleSaveModalPin = async () => {
+    if (!pinModal.team) return;
+    const cleanPin = (pinModal.newPin || '').trim();
+    if (!cleanPin || cleanPin.length < 4) {
+      alert('PIN must be at least 4 digits/characters.');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/teams/${pinModal.team.id}/pin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken || HARDCODED_ADMIN_PASS}`,
+          'X-Admin-Password': HARDCODED_ADMIN_PASS
+        },
+        body: JSON.stringify({ new_pin: cleanPin })
+      });
+      if (res.ok) {
+        setPinModal({ open: false, team: null, newPin: '' });
+        fetchTeams();
+      } else {
+        const err = await res.json();
+        alert(err.detail || 'Failed to update team PIN');
+      }
+    } catch (err) {
+      alert('Network error updating team PIN');
     }
   };
 
@@ -703,6 +779,23 @@ export function AdminPortal() {
             <span style={{ fontSize: '0.8rem', color: '#8c8268' }}>
               Showing {sortedTeams.length} of {teams.length} teams
             </span>
+            <button
+              className="admin-btn r2-bulk-btn"
+              onClick={() => handleBulkRound2Access(true)}
+              title="Authorize all connected workstations to enter Stage 2"
+            >
+              <CheckCircle2 size={13} color="#2ed573" />
+              <span>Authorize All R2</span>
+            </button>
+            <button
+              className="admin-btn"
+              style={{ borderColor: 'rgba(235, 77, 75, 0.4)', color: '#ff7979' }}
+              onClick={() => handleBulkRound2Access(false)}
+              title="Lock Stage 2 for all teams"
+            >
+              <Lock size={13} color="#ff7979" />
+              <span>Lock All R2</span>
+            </button>
             <button className="admin-btn" onClick={handleExportJSON}>
               <Download size={14} />
               <span>JSON Dump</span>
@@ -728,6 +821,12 @@ export function AdminPortal() {
                   </th>
                   <th className="sortable" onClick={() => handleSortClick('stage')}>
                     Stage {sortField === 'stage' ? (sortAsc ? '▲' : '▼') : ''}
+                  </th>
+                  <th style={{ textAlign: 'center', width: '135px' }}>
+                    Round 2 Access
+                  </th>
+                  <th style={{ textAlign: 'center', width: '105px' }}>
+                    PIN
                   </th>
                   <th className="sortable" onClick={() => handleSortClick('updated_at')}>
                     Live Timers {sortField === 'updated_at' ? (sortAsc ? '▲' : '▼') : ''}
@@ -837,6 +936,66 @@ export function AdminPortal() {
                         </span>
                       </td>
 
+                      {/* Round 2 Access Authorization */}
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem' }}>
+                          {t.round2_unlocked || t.current_stage >= 2 ? (
+                            <>
+                              <span className="r2-status-badge authorized" title="Team is authorized for Stage 2">
+                                <CheckCircle2 size={11} /> AUTHORIZED
+                              </span>
+                              <button
+                                className="r2-toggle-btn revoke"
+                                onClick={() => handleToggleRound2Access(t, false)}
+                                title="Revoke Stage 2 access"
+                              >
+                                Revoke
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <span className="r2-status-badge locked" title="Team is locked out of Stage 2">
+                                <Lock size={11} /> LOCKED
+                              </span>
+                              <button
+                                className="r2-toggle-btn grant"
+                                onClick={() => handleToggleRound2Access(t, true)}
+                                title="Authorize Stage 2 access"
+                              >
+                                Authorize
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Team Secret PIN */}
+                      <td style={{ textAlign: 'center' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span style={{
+                            fontFamily: 'monospace',
+                            background: 'rgba(223, 177, 37, 0.12)',
+                            border: '1px solid rgba(223, 177, 37, 0.35)',
+                            padding: '0.2rem 0.45rem',
+                            borderRadius: '3px',
+                            fontSize: '0.82rem',
+                            fontWeight: 'bold',
+                            color: '#dfb125',
+                            letterSpacing: '1px'
+                          }}>
+                            {t.pin || '—'}
+                          </span>
+                          <button
+                            className="icon-btn"
+                            title="Reset / Update Team PIN"
+                            onClick={() => setPinModal({ open: true, team: t, newPin: t.pin && t.pin !== '—' ? t.pin : '' })}
+                            style={{ padding: '0.2rem', color: '#8c8268' }}
+                          >
+                            <Key size={12} />
+                          </button>
+                        </div>
+                      </td>
+
                       {/* Live Timers */}
                       <td>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
@@ -906,7 +1065,7 @@ export function AdminPortal() {
 
                 {sortedTeams.length === 0 && (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: 'center', padding: '3rem', color: '#777' }}>
+                    <td colSpan={9} style={{ textAlign: 'center', padding: '3rem', color: '#777' }}>
                       No teams match current search or filters.
                     </td>
                   </tr>
@@ -980,6 +1139,53 @@ export function AdminPortal() {
               </button>
               <button className="admin-btn" style={{ background: '#dfb125', color: '#000', fontWeight: 'bold' }} onClick={handleSaveModalScore}>
                 Confirm Points
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: Reset / Update Team PIN ── */}
+      {pinModal.open && (
+        <div className="admin-modal-backdrop" onClick={() => setPinModal({ open: false, team: null, newPin: '' })}>
+          <div className="admin-modal" onClick={e => e.stopPropagation()}>
+            <div className="admin-modal-header">
+              <h3>Team Secret PIN — {pinModal.team?.name}</h3>
+            </div>
+            <div className="admin-field">
+              <label>Current Registered PIN</label>
+              <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#dfb125', fontFamily: 'monospace', letterSpacing: '2px', background: 'rgba(0,0,0,0.5)', padding: '0.4rem 0.8rem', borderRadius: '4px' }}>
+                {pinModal.team?.pin || 'None recorded'}
+              </div>
+            </div>
+            <div className="admin-field">
+              <label>Set New PIN (4-16 digits/characters)</label>
+              <input
+                type="text"
+                value={pinModal.newPin}
+                onChange={e => setPinModal(prev => ({ ...prev, newPin: e.target.value }))}
+                placeholder="Enter new 4-digit PIN..."
+                maxLength={16}
+                autoFocus
+              />
+              <span style={{ fontSize: '0.75rem', color: '#8c8268', marginTop: '0.3rem', display: 'block' }}>
+                Participants use this PIN to resume their session or log in when returning for Round 2.
+              </span>
+            </div>
+            <div className="modal-btns">
+              <button
+                className="admin-btn"
+                style={{ background: 'transparent' }}
+                onClick={() => setPinModal({ open: false, team: null, newPin: '' })}
+              >
+                Cancel
+              </button>
+              <button
+                className="admin-btn"
+                style={{ background: '#dfb125', color: '#000', fontWeight: 'bold' }}
+                onClick={handleSaveModalPin}
+              >
+                Save New PIN
               </button>
             </div>
           </div>

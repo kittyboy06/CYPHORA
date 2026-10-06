@@ -109,30 +109,6 @@ export function Desktop() {
       action: () => openApp('round2')
     },
     {
-      id: 'vision-target',
-      title: 'Vision Target',
-      icon: <Eye size={32} className="desktop-icon-svg terminal-color" />,
-      action: () => openApp('vision-target')
-    },
-    {
-      id: 'prompt-studio',
-      title: 'Prompt Studio',
-      icon: <Sparkles size={32} className="desktop-icon-svg file-color" />,
-      action: () => openApp('prompt-studio')
-    },
-    {
-      id: 'image-evaluator',
-      title: 'Similarity Evaluator',
-      icon: <Zap size={32} className="desktop-icon-svg editor-color" />,
-      action: () => openApp('image-evaluator')
-    },
-    {
-      id: 'leaderboard',
-      title: 'Standings',
-      icon: <Trophy size={32} className="desktop-icon-svg folder-color" />,
-      action: () => openApp('leaderboard')
-    },
-    {
       id: 'converter',
       title: 'Universal Converter',
       icon: <RefreshCw size={32} className="desktop-icon-svg file-color" />,
@@ -179,6 +155,12 @@ export function Desktop() {
       title: 'File Manager',
       icon: <Folder size={32} className="desktop-icon-svg folder-color" />,
       action: () => openApp('file-manager')
+    },
+    {
+      id: 'tasks',
+      title: 'Task Terminal',
+      icon: <CheckSquare size={32} className="desktop-icon-svg settings-color" />,
+      action: () => openApp('tasks')
     },
     {
       id: 'terminal',

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Terminal, Users, X, ChevronRight, Shield, Compass } from 'lucide-react';
+import { Terminal, Users, X, ChevronRight, Shield, Compass, LogOut, Key, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { BootScreen } from './os/boot/BootScreen.jsx';
 import { OSContainer } from './os/OSContainer.jsx';
 import { Prologue } from './components/Story/Prologue.jsx';
@@ -14,6 +14,7 @@ import {
   updateRound1TimerFromNow,
   formatCountdown,
   recalculateRound1State,
+  clearRound1LocalData,
 } from './round1/round1Engine.js';
 import './App.css';
 
@@ -57,26 +58,39 @@ function App({ initialStage = null, defaultAppId = null }) {
   });
   const [panelOpen, setPanelOpen] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
-  const [teamInput, setTeamInput] = useState('');
+  const [modalMode, setModalMode] = useState('register'); // 'register' | 'resume'
+  const [registerTeamInput, setRegisterTeamInput] = useState('');
+  const [registerPinInput, setRegisterPinInput] = useState('');
+  const [showRegisterPin, setShowRegisterPin] = useState(false);
   const [member1Input, setMember1Input] = useState('');
   const [member2Input, setMember2Input] = useState('');
-  const [authError, setAuthError] = useState('');
+  const [registerError, setRegisterError] = useState('');
+
+  const [resumeTeamInput, setResumeTeamInput] = useState('');
+  const [resumePinInput, setResumePinInput] = useState('');
+  const [showResumePin, setShowResumePin] = useState(false);
+  const [resumeError, setResumeError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [liveExplorers, setLiveExplorers] = useState([]);
   const [isWsConnected, setIsWsConnected] = useState(false);
   const [teamData, setTeamData] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlTeam = params.get('team');
-      const savedName = localStorage.getItem('cyphora_team_name') || urlTeam;
-      if (savedName) {
+      const savedName = sessionStorage.getItem('cyphora_team_name') || localStorage.getItem('cyphora_team_name') || urlTeam;
+      const initialStageRequested = params.get('stage') || initialStage;
+      const isCleanStart = (!initialStageRequested || initialStageRequested === 'initial') && !urlTeam && !sessionStorage.getItem('cyphora_team_name');
+
+      if (savedName && !isCleanStart) {
         return {
-          id: parseInt(localStorage.getItem('cyphora_team_id'), 10) || null,
+          id: parseInt(sessionStorage.getItem('cyphora_team_id') || localStorage.getItem('cyphora_team_id'), 10) || null,
           name: savedName,
-          member1: localStorage.getItem('cyphora_member1') || '',
-          member2: localStorage.getItem('cyphora_member2') || '',
+          member1: sessionStorage.getItem('cyphora_member1') || localStorage.getItem('cyphora_member1') || '',
+          member2: sessionStorage.getItem('cyphora_member2') || localStorage.getItem('cyphora_member2') || '',
           standing: '1st',
           score: 0,
           isSelected: true,
+          round2Unlocked: (sessionStorage.getItem('cyphora_round2_unlocked') || localStorage.getItem('cyphora_round2_unlocked')) === 'true',
         };
       }
     }
@@ -88,9 +102,16 @@ function App({ initialStage = null, defaultAppId = null }) {
       standing: 'Unranked',
       score: 0,
       isSelected: false,
+      round2Unlocked: false,
     };
   });
-  const [round1State, setRound1State] = useState(() => loadRound1State());
+  const [round1State, setRound1State] = useState(() => {
+    const loaded = loadRound1State();
+    if (stage !== 'os-desktop') {
+      return { ...loaded, isTimerRunning: false };
+    }
+    return loaded;
+  });
   const wakeTimerRef = useRef(null);
   const socketRef = useRef(null);
   const teamDataRef = useRef(teamData);
@@ -164,11 +185,13 @@ function App({ initialStage = null, defaultAppId = null }) {
   };
 
   // Sync all verified task completions from backend on load/refresh
-  const syncCompletedTasksFromBackend = useCallback(async () => {
+  const syncCompletedTasksFromBackend = useCallback(async (explicitId = null, explicitName = null, explicitToken = null) => {
     try {
-      const token = localStorage.getItem('cyphora_token');
-      const teamId = teamDataRef.current?.id || localStorage.getItem('cyphora_team_id');
-      const teamName = teamDataRef.current?.name || localStorage.getItem('cyphora_team_name');
+      const token = explicitToken || sessionStorage.getItem('cyphora_token') || localStorage.getItem('cyphora_token');
+      const teamId = explicitId || teamDataRef.current?.id || sessionStorage.getItem('cyphora_team_id') || localStorage.getItem('cyphora_team_id');
+      const teamName = explicitName || teamDataRef.current?.name || sessionStorage.getItem('cyphora_team_name') || localStorage.getItem('cyphora_team_name');
+      if (!teamName && !teamId) return null;
+
       const headers = {};
       if (token) headers['Authorization'] = `Bearer ${token}`;
       if (teamId) headers['X-Team-Id'] = String(teamId);
@@ -177,44 +200,49 @@ function App({ initialStage = null, defaultAppId = null }) {
       const res = await fetch(`${API_BASE}/api/stage1/tasks`, { headers });
       if (res.ok) {
         const data = await res.json();
+        if (data.team_score !== undefined) {
+          setTeamData(prev => ({ ...prev, score: data.team_score }));
+        }
         if (Array.isArray(data.tasks)) {
           const completedKeys = new Set(data.tasks.filter(t => t.is_completed).map(t => t.key));
-          if (completedKeys.size > 0) {
-            setRound1State(prev => {
-              const updatedTasks = prev.tasks.map(t => {
-                if (completedKeys.has(t.id)) {
-                  return { ...t, status: 'COMPLETED' };
-                }
-                return t;
-              });
-              return recalculateRound1State({
-                ...prev,
-                round1StartedAt: prev.round1StartedAt || new Date().toISOString(),
-                round1Status: completedKeys.size === 12 ? 'COMPLETED' : 'IN_PROGRESS',
-                isExpired: false,
-                isTimerRunning: true,
-                tasks: updatedTasks
-              });
+          setRound1State(prev => {
+            const updatedTasks = prev.tasks.map(t => {
+              if (completedKeys.has(t.id)) {
+                return { ...t, status: 'COMPLETED' };
+              }
+              return t;
             });
-          }
+            const isDesktop = stageRef.current === 'os-desktop';
+            return recalculateRound1State({
+              ...prev,
+              round1StartedAt: prev.round1StartedAt || (isDesktop ? new Date().toISOString() : null),
+              round1Status: completedKeys.size === 12 ? 'COMPLETED' : 'IN_PROGRESS',
+              isExpired: false,
+              isTimerRunning: isDesktop && completedKeys.size < 12,
+              tasks: updatedTasks
+            });
+          });
+          return { completedCount: completedKeys.size, totalTasks: data.tasks.length };
         }
       }
     } catch (err) {
       console.warn('[CYPHORA] Error fetching stage1 tasks from backend:', err);
     }
+    return null;
   }, []);
 
   // Synchronize global event countdown timer from backend
   const applyGlobalTimer = useCallback((timer) => {
     if (!timer) return;
+    const isDesktop = stageRef.current === 'os-desktop';
     if (timer.action === 'start' && timer.ends_at) {
       const remainingMs = Math.max(0, new Date(timer.ends_at).getTime() - Date.now());
       setRound1State(prev => ({
         ...prev,
-        isTimerRunning: remainingMs > 0,
+        isTimerRunning: isDesktop && remainingMs > 0,
         isExpired: remainingMs <= 0,
         remainingTimeMs: remainingMs,
-        round1StartedAt: prev.round1StartedAt || timer.started_at,
+        round1StartedAt: prev.round1StartedAt || (isDesktop ? timer.started_at : null),
         round1Status: remainingMs <= 0 ? 'TIME_EXPIRED' : 'IN_PROGRESS'
       }));
     } else if (timer.action === 'pause') {
@@ -228,7 +256,7 @@ function App({ initialStage = null, defaultAppId = null }) {
       const remainingMs = Math.max(0, new Date(timer.ends_at).getTime() - Date.now());
       setRound1State(prev => ({
         ...prev,
-        isTimerRunning: remainingMs > 0,
+        isTimerRunning: isDesktop && remainingMs > 0,
         remainingTimeMs: remainingMs,
         round1Status: 'IN_PROGRESS'
       }));
@@ -262,7 +290,38 @@ function App({ initialStage = null, defaultAppId = null }) {
     return unsubscribe;
   }, []);
 
+  // Automatically start Round 1 and start countdown timer ONLY when entering the OS desktop
   useEffect(() => {
+    if (stage === 'os-desktop') {
+      setRound1State(prev => {
+        if (prev.round1Status === 'NOT_STARTED' || !prev.round1StartedAt) {
+          return beginRound1(prev, {
+            teamId: normalizeTeamName(teamData.name),
+            sessionId: `session-${Date.now()}`,
+            teamName: teamData.name
+          });
+        }
+        if (!prev.isExpired && prev.round1Status !== 'COMPLETED' && !prev.isTimerRunning) {
+          return {
+            ...prev,
+            isTimerRunning: true
+          };
+        }
+        return prev;
+      });
+    } else {
+      // While in storyplay (initial, waking, prologue) or os-boot, timer must remain off
+      setRound1State(prev => {
+        if (prev.isTimerRunning) {
+          return { ...prev, isTimerRunning: false };
+        }
+        return prev;
+      });
+    }
+  }, [stage, teamData.name]);
+
+  useEffect(() => {
+    if (stage !== 'os-desktop') return;
     if (!round1State.isTimerRunning || round1State.isExpired || round1State.round1Status === 'COMPLETED') {
       return;
     }
@@ -274,7 +333,7 @@ function App({ initialStage = null, defaultAppId = null }) {
     tick();
     const intervalId = setInterval(tick, 1000);
     return () => clearInterval(intervalId);
-  }, [round1State.isTimerRunning, round1State.isExpired, round1State.round1Status]);
+  }, [stage, round1State.isTimerRunning, round1State.isExpired, round1State.round1Status]);
 
   useEffect(() => {
     return () => { if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current); };
@@ -619,7 +678,7 @@ function App({ initialStage = null, defaultAppId = null }) {
       isSelected: params.get('selected') === 'true' || prev.isSelected,
     }));
     if (paramTeam || savedTeam) {
-      setTeamInput(paramTeam || savedTeam);
+      setResumeTeamInput(paramTeam || savedTeam);
     }
     if (savedMember1) setMember1Input(savedMember1);
     if (savedMember2) setMember2Input(savedMember2);
@@ -680,6 +739,8 @@ function App({ initialStage = null, defaultAppId = null }) {
 
                 const self = payload.data.find(e => (savedId && e.id === savedId) || (searchName && e.name.toLowerCase() === searchName));
                 if (self) {
+                  const isR2Auth = Boolean(self.round2_unlocked || (self.current_stage && self.current_stage >= 2));
+                  localStorage.setItem('cyphora_round2_unlocked', String(isR2Auth));
                   setTeamData(prev => {
                     if (self.name && self.name !== prev.name) {
                       localStorage.setItem('cyphora_team_name', self.name);
@@ -691,7 +752,8 @@ function App({ initialStage = null, defaultAppId = null }) {
                       member1: self.member1 || prev.member1,
                       member2: self.member2 || prev.member2,
                       standing: formatOrdinal(self.rank),
-                      score: self.score
+                      score: self.score,
+                      round2Unlocked: isR2Auth
                     };
                   });
                 }
@@ -701,6 +763,24 @@ function App({ initialStage = null, defaultAppId = null }) {
               }
             } else if (payload.event === 'EVENT_TIMER_SYNC') {
               applyGlobalTimer(payload.data);
+            } else if (payload.event === 'ROUND2_ACCESS_UPDATE') {
+              const cur = teamDataRef.current;
+              const savedId = parseInt(localStorage.getItem('cyphora_team_id'), 10) || cur.id;
+              const searchName = (localStorage.getItem('cyphora_team_name') || cur.name || '').toLowerCase();
+              const updateData = payload.data || {};
+              if ((updateData.team_id && updateData.team_id === savedId) ||
+                  (updateData.team_name && updateData.team_name.toLowerCase() === searchName)) {
+                const isR2Auth = Boolean(updateData.unlocked);
+                localStorage.setItem('cyphora_round2_unlocked', String(isR2Auth));
+                setTeamData(prev => ({ ...prev, round2Unlocked: isR2Auth }));
+                window.dispatchEvent(new CustomEvent('cyphora_round2_access_changed', { detail: updateData }));
+              }
+            } else if (payload.event === 'ROUND2_ACCESS_UPDATE_ALL') {
+              const updateData = payload.data || {};
+              const isR2Auth = Boolean(updateData.unlocked);
+              localStorage.setItem('cyphora_round2_unlocked', String(isR2Auth));
+              setTeamData(prev => ({ ...prev, round2Unlocked: isR2Auth }));
+              window.dispatchEvent(new CustomEvent('cyphora_round2_access_changed', { detail: updateData }));
             }
           } catch (e) {
             console.error('Failed to parse WS payload', e);
@@ -734,17 +814,34 @@ function App({ initialStage = null, defaultAppId = null }) {
     if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
     }
+    setModalMode('register');
+    setRegisterError('');
+    setResumeError('');
     setShowTeamModal(true);
   };
 
-  const completeRegistration = (finalName, finalMember1, finalMember2, teamId = null, currentScore = 0, currentStanding = 'Unranked') => {
+  const completeRegistration = (finalName, finalMember1, finalMember2, teamId = null, currentScore = 0, currentStanding = 'Unranked', token = '') => {
     if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
     }
-    if (teamId) localStorage.setItem('cyphora_team_id', String(teamId));
+    if (token) {
+      sessionStorage.setItem('cyphora_token', token);
+      localStorage.setItem('cyphora_token', token);
+    }
+    if (teamId) {
+      sessionStorage.setItem('cyphora_team_id', String(teamId));
+      localStorage.setItem('cyphora_team_id', String(teamId));
+    }
+    sessionStorage.setItem('cyphora_team_name', finalName);
     localStorage.setItem('cyphora_team_name', finalName);
-    if (finalMember1) localStorage.setItem('cyphora_member1', finalMember1);
-    if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
+    if (finalMember1) {
+      sessionStorage.setItem('cyphora_member1', finalMember1);
+      localStorage.setItem('cyphora_member1', finalMember1);
+    }
+    if (finalMember2) {
+      sessionStorage.setItem('cyphora_member2', finalMember2);
+      localStorage.setItem('cyphora_member2', finalMember2);
+    }
 
     // Clear previous OS session and lock states to prevent cross-team bleed
     try {
@@ -753,14 +850,7 @@ function App({ initialStage = null, defaultAppId = null }) {
       localStorage.removeItem('cyphora_vfs_data');
     } catch (e) {}
 
-    setRound1State(previousState => {
-      const savedTeamId = normalizeTeamName(previousState?.teamId);
-      const currentTeamName = normalizeTeamName(finalName);
-      const sameTeam = !savedTeamId
-        || savedTeamId === currentTeamName
-        || savedTeamId.startsWith(`${currentTeamName}-`);
-      return sameTeam ? previousState : buildDefaultRound1State(finalName);
-    });
+    setRound1State(buildDefaultRound1State(finalName));
 
     setTeamData(prev => ({
       ...prev,
@@ -769,7 +859,9 @@ function App({ initialStage = null, defaultAppId = null }) {
       member1: finalMember1,
       member2: finalMember2,
       standing: currentStanding !== 'Unranked' ? currentStanding : prev.standing,
-      score: currentScore !== undefined ? currentScore : prev.score
+      score: currentScore !== undefined ? currentScore : prev.score,
+      isSelected: true,
+      round2Unlocked: false
     }));
 
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -782,41 +874,237 @@ function App({ initialStage = null, defaultAppId = null }) {
     wakeTimerRef.current = setTimeout(() => setStage('prologue'), 6200);
   };
 
-  const handleTeamSubmit = async (e) => {
+  const completeResume = async (team, token) => {
+    if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+
+    if (token) {
+      sessionStorage.setItem('cyphora_token', token);
+      localStorage.setItem('cyphora_token', token);
+    }
+    sessionStorage.setItem('cyphora_team_id', String(team.id));
+    sessionStorage.setItem('cyphora_team_name', team.name);
+    localStorage.setItem('cyphora_team_id', String(team.id));
+    localStorage.setItem('cyphora_team_name', team.name);
+
+    if (team.member1) {
+      sessionStorage.setItem('cyphora_member1', team.member1);
+      localStorage.setItem('cyphora_member1', team.member1);
+    }
+    if (team.member2) {
+      sessionStorage.setItem('cyphora_member2', team.member2);
+      localStorage.setItem('cyphora_member2', team.member2);
+    }
+
+    const isR2Auth = Boolean(team.round2_unlocked || (team.current_stage && team.current_stage >= 2));
+    sessionStorage.setItem('cyphora_round2_unlocked', String(isR2Auth));
+    localStorage.setItem('cyphora_round2_unlocked', String(isR2Auth));
+
+    setTeamData({
+      id: team.id,
+      name: team.name,
+      member1: team.member1 || '',
+      member2: team.member2 || '',
+      standing: team.standing ? formatOrdinal(team.standing) : 'Unranked',
+      score: team.score || 0,
+      isSelected: true,
+      round2Unlocked: isR2Auth
+    });
+
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ action: 'identify', team: team.name, team_id: team.id }));
+    }
+
+    setShowTeamModal(false);
+
+    // Rehydrate complete task completion record directly from central database
+    const syncResult = await syncCompletedTasksFromBackend(team.id, team.name, token);
+
+    // If returning for Round 2, or completed Round 1, open Hub directly (or OS with Round 2 access)
+    if (isR2Auth || (syncResult && syncResult.completedCount >= 12)) {
+      setStage('main');
+    } else {
+      // Mid-Round 1 recovery: jump directly into OS without replaying prologue!
+      setStage('os-boot');
+    }
+  };
+
+  const handleExitWorkstation = useCallback(() => {
+    const confirmed = window.confirm(
+      "Exit workstation session?\n\nThis resets this computer for the next batch of participants.\nAll team progress, scores, and completed tasks remain permanently preserved on the central server and can be resumed at any time using your Team Name and PIN."
+    );
+    if (!confirmed) return;
+
+    clearRound1LocalData();
+    try {
+      sessionStorage.clear();
+      localStorage.removeItem('cyphora_token');
+      localStorage.removeItem('cyphora_team_id');
+      localStorage.removeItem('cyphora_team_name');
+      localStorage.removeItem('cyphora_member1');
+      localStorage.removeItem('cyphora_member2');
+      localStorage.removeItem('cyphora_round2_unlocked');
+      localStorage.removeItem('cyphora_vfs_data');
+      localStorage.removeItem('cyphora_os_session');
+      localStorage.removeItem('cyphora_os_locked');
+      localStorage.removeItem('cyphora_round2_phase');
+      localStorage.removeItem('cyphora_round2_image1_data');
+      localStorage.removeItem('cyphora_round2_prompt');
+      localStorage.removeItem('cyphora_round2_start_time');
+    } catch (e) {}
+
+    setTeamData({
+      id: null,
+      name: '',
+      member1: '',
+      member2: '',
+      standing: 'Unranked',
+      score: 0,
+      isSelected: false,
+      round2Unlocked: false
+    });
+    setRound1State(buildDefaultRound1State());
+    setRegisterTeamInput('');
+    setRegisterPinInput('');
+    setMember1Input('');
+    setMember2Input('');
+    setRegisterError('');
+    setResumeTeamInput('');
+    setResumePinInput('');
+    setResumeError('');
+    setModalMode('register');
+    setShowTeamModal(false);
+    setStage('initial');
+
+    if (socketRef.current) {
+      socketRef.current.close();
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleSignOutEvent = () => handleExitWorkstation();
+    window.addEventListener('cyphora_request_signout', handleSignOutEvent);
+    return () => window.removeEventListener('cyphora_request_signout', handleSignOutEvent);
+  }, [handleExitWorkstation]);
+
+  const handleRegisterSubmit = async (e) => {
     if (e) e.preventDefault();
-    setAuthError('');
-    const finalName = teamInput.trim();
+    setRegisterError('');
+    const finalName = registerTeamInput.trim();
     if (!finalName) {
-      setAuthError('Please enter your team name.');
+      setRegisterError('Please enter your team name.');
       return;
     }
+    const cleanPin = registerPinInput.trim();
+    if (!cleanPin) {
+      setRegisterError('Please create a secret PIN.');
+      return;
+    }
+    if (cleanPin.length < 4) {
+      setRegisterError('Please create a secret PIN of at least 4 digits/characters.');
+      return;
+    }
+
     const finalMember1 = member1Input.trim();
     const finalMember2 = member2Input.trim();
+    if (!finalMember1) {
+      setRegisterError('Please enter Member 1 name.');
+      return;
+    }
 
+    setIsSubmitting(true);
     try {
+      const url = `${API_BASE}/api/auth/register`;
+      const bodyData = { name: finalName, pin: cleanPin, member1: finalMember1, member2: finalMember2 };
+
       let res;
       try {
-        res = await fetch(`${API_BASE}/api/auth/quick-join`, {
+        res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: finalName,
-            pin: '0000',
-            member1: finalMember1,
-            member2: finalMember2
-          })
+          body: JSON.stringify(bodyData)
         });
       } catch {
-        // Fallback to relative Vite proxy
-        res = await fetch('/api/auth/quick-join', {
+        res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: finalName,
-            pin: '0000',
-            member1: finalMember1,
-            member2: finalMember2
-          })
+          body: JSON.stringify(bodyData)
+        });
+      }
+
+      if (!res.ok) {
+        let message = 'Registration failed';
+        try {
+          const err = await res.json();
+          if (typeof err.detail === 'string') {
+            message = err.detail;
+          } else if (Array.isArray(err.detail) && err.detail.length > 0) {
+            message = err.detail[0].msg || message;
+          }
+        } catch {
+          try {
+            const text = await res.text();
+            if (text) message = text;
+          } catch {}
+        }
+        setRegisterError(message);
+        if (message.toLowerCase().includes('already taken') || message.toLowerCase().includes('already registered')) {
+          setResumeTeamInput(finalName);
+        }
+        setIsSubmitting(false);
+        return;
+      }
+
+      const data = await res.json();
+      setIsSubmitting(false);
+      completeRegistration(
+        data.team.name,
+        data.team.member1 || finalMember1,
+        data.team.member2 || finalMember2,
+        data.team.id,
+        data.team.score,
+        data.team.standing ? formatOrdinal(data.team.standing) : 'Unranked',
+        data.token
+      );
+    } catch (err) {
+      setIsSubmitting(false);
+      console.warn('Backend server unavailable or network error:', err);
+      setRegisterError('Central server is unreachable. Please verify network connection or proctor setup.');
+    }
+  };
+
+  const handleResumeSubmit = async (e) => {
+    if (e) e.preventDefault();
+    setResumeError('');
+    const finalName = resumeTeamInput.trim();
+    if (!finalName) {
+      setResumeError('Please enter your team name.');
+      return;
+    }
+    const cleanPin = resumePinInput.trim();
+    if (!cleanPin) {
+      setResumeError('Please enter your team PIN.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const url = `${API_BASE}/api/auth/login`;
+      const bodyData = { name: finalName, pin: cleanPin };
+
+      let res;
+      try {
+        res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyData)
+        });
+      } catch {
+        res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(bodyData)
         });
       }
 
@@ -835,55 +1123,24 @@ function App({ initialStage = null, defaultAppId = null }) {
             if (text) message = text;
           } catch {}
         }
-        setAuthError(message);
+        setResumeError(message);
+        setIsSubmitting(false);
         return;
       }
 
       const data = await res.json();
-      localStorage.setItem('cyphora_token', data.token);
-      localStorage.setItem('cyphora_team_id', String(data.team.id));
-      localStorage.setItem('cyphora_team_name', data.team.name);
-      if (finalMember1) localStorage.setItem('cyphora_member1', finalMember1);
-      if (finalMember2) localStorage.setItem('cyphora_member2', finalMember2);
-
-      completeRegistration(
-        data.team.name,
-        data.team.member1 || finalMember1,
-        data.team.member2 || finalMember2,
-        data.team.id,
-        data.team.score,
-        data.team.standing ? formatOrdinal(data.team.standing) : 'Unranked'
-      );
+      setIsSubmitting(false);
+      await completeResume(data.team, data.token);
     } catch (err) {
-      console.warn('Backend server unavailable or network error, proceeding in offline mode:', err);
-      // Fallback: Proceed in standalone workstation mode so expedition is never blocked
-      completeRegistration(
-        finalName,
-        finalMember1,
-        finalMember2,
-        1,
-        0,
-        'Standalone'
-      );
+      setIsSubmitting(false);
+      console.warn('Backend server unavailable or network error:', err);
+      setResumeError('Central server is unreachable. Please verify network connection or proctor setup.');
     }
   };
 
   const handleBeginExpedition = async () => {
-    let started;
-    try {
-      started = beginRound1(round1State, {
-        teamId: normalizeTeamName(teamData.name),
-        sessionId: `session-${Date.now()}`,
-        teamName: teamData.name
-      });
-      setRound1State(started);
-      setStage('os-boot');
-    } catch (error) {
-      console.error('[Round1] Failed to begin expedition', error);
-      setRound1State(loadRound1State());
-      setAuthError('The expedition state was repaired. Press BEGIN EXPEDITION again.');
-      return;
-    }
+    // Transition to OS boot sequence - timer only starts when player lands on OS desktop
+    setStage('os-boot');
 
     if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
       try {
@@ -908,6 +1165,15 @@ function App({ initialStage = null, defaultAppId = null }) {
       return;
     }
     if (level === 2) {
+      const isR2Auth = Boolean(
+        teamData?.round2Unlocked ||
+        sessionStorage.getItem('cyphora_round2_unlocked') === 'true' ||
+        localStorage.getItem('cyphora_round2_unlocked') === 'true'
+      );
+      if (!isR2Auth) {
+        alert('Stage 2 is locked! Your team must receive administrator clearance to enter Round 2.');
+        return;
+      }
       try {
         sessionStorage.removeItem('cyphora_os_locked');
       } catch (e) {}
@@ -920,6 +1186,12 @@ function App({ initialStage = null, defaultAppId = null }) {
     }
     window.location.href = `/round${level}/index.html`;
   };
+
+  const isStage2Unlocked = Boolean(
+    teamData?.round2Unlocked ||
+    sessionStorage.getItem('cyphora_round2_unlocked') === 'true' ||
+    localStorage.getItem('cyphora_round2_unlocked') === 'true'
+  );
 
   const explorerList = Array.isArray(liveExplorers)
     ? liveExplorers.map(e => ({
@@ -953,83 +1225,292 @@ function App({ initialStage = null, defaultAppId = null }) {
         <ParticleTextEffect onClick={handleBeginClick} />
       )}
 
-      {/* Team & 2 Members Identification Modal */}
+      {/* Team Registration & Session Recovery Modal */}
       {showTeamModal && (
-        <div className="team-modal-backdrop">
+        <div className="team-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowTeamModal(false); }}>
           <div className="team-modal">
-            <h2>Identify Your Team</h2>
-            <p>Declare your expedition team name and crew members.</p>
-            <form onSubmit={handleTeamSubmit} autoComplete="off" data-lpignore="true" data-form-type="other">
-              {/* Team Name */}
-              <div className="team-input-wrapper">
-                <label htmlFor="cyphora_team_identity" className="team-input-label">
-                  Team Name
-                </label>
-                <input
-                  type="text"
-                  name="cyphora_team_identity"
-                  id="cyphora_team_identity"
-                  className="team-input"
-                  value={teamInput}
-                  onChange={(e) => setTeamInput(e.target.value)}
-                  autoFocus
-                  maxLength={30}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck="false"
-                  data-lpignore="true"
-                  required
-                />
-              </div>
+            <button
+              type="button"
+              className="team-modal-close"
+              onClick={() => setShowTeamModal(false)}
+              title="Close Modal"
+            >
+              <X size={18} />
+            </button>
 
-              {/* Two Team Members */}
-              <div className="team-members-grid">
-                <div className="team-input-wrapper">
-                  <label htmlFor="cyphora_crew_alpha" className="team-input-label">
-                    Member 1 Name
-                  </label>
-                  <input
-                    type="text"
-                    name="cyphora_crew_alpha"
-                    id="cyphora_crew_alpha"
-                    className="team-input"
-                    value={member1Input}
-                    onChange={(e) => setMember1Input(e.target.value)}
-                    maxLength={30}
-                    autoComplete="off"
-                    spellCheck="false"
-                    data-lpignore="true"
-                  />
-                </div>
-                <div className="team-input-wrapper">
-                  <label htmlFor="cyphora_crew_beta" className="team-input-label">
-                    Member 2 Name
-                  </label>
-                  <input
-                    type="text"
-                    name="cyphora_crew_beta"
-                    id="cyphora_crew_beta"
-                    className="team-input"
-                    value={member2Input}
-                    onChange={(e) => setMember2Input(e.target.value)}
-                    maxLength={30}
-                    autoComplete="off"
-                    spellCheck="false"
-                    data-lpignore="true"
-                  />
-                </div>
-              </div>
+            <h2>{modalMode === 'register' ? 'Expedition Access' : 'Resume Expedition'}</h2>
+            <p className="team-modal-subtitle">
+              {modalMode === 'register'
+                ? 'Register a new squad to begin the expedition.'
+                : 'Enter your registered credentials to restore progress or access Round 2.'}
+            </p>
 
-              {authError && (
-                <p style={{ color: '#e06c75', fontSize: '0.85rem', marginTop: '0.5rem' }}>{authError}</p>
-              )}
-              <div className="modal-actions">
-                <button type="submit" className="modal-submit-btn">
-                  Proceed
+            {modalMode === 'register' ? (
+              /* Register Box */
+              <div className="team-modal-section register-section">
+                <div className="section-header">
+                  <span className="section-title">Register New Team</span>
+                  <span className="section-badge">New Batch</span>
+                </div>
+
+                <form onSubmit={handleRegisterSubmit} autoComplete="off" data-lpignore="true" data-form-type="other">
+                  {/* Team Name */}
+                  <div className="team-input-wrapper">
+                    <label htmlFor="reg_team_name" className="team-input-label">
+                      <span>Team Name</span>
+                      <span className="label-hint">Must be globally unique</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="reg_team_name"
+                      id="reg_team_name"
+                      className="team-input"
+                      value={registerTeamInput}
+                      onChange={(e) => setRegisterTeamInput(e.target.value)}
+                      placeholder="e.g. CyberVanguard"
+                      maxLength={30}
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck="false"
+                      data-lpignore="true"
+                      autoFocus
+                      required
+                    />
+                  </div>
+
+                  {/* Secret PIN */}
+                  <div className="team-input-wrapper">
+                    <label htmlFor="reg_team_pin" className="team-input-label">
+                      <span>Create Team PIN</span>
+                      <span className="label-hint">4+ chars — required to resume</span>
+                    </label>
+                    <div className="pin-input-container">
+                      <input
+                        type={showRegisterPin ? 'text' : 'password'}
+                        name="reg_team_pin"
+                        id="reg_team_pin"
+                        className="team-input"
+                        value={registerPinInput}
+                        onChange={(e) => setRegisterPinInput(e.target.value)}
+                        placeholder="Create 4-digit PIN"
+                        maxLength={16}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck="false"
+                        data-lpignore="true"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="pin-toggle-btn"
+                        onClick={() => setShowRegisterPin(!showRegisterPin)}
+                        title={showRegisterPin ? 'Hide PIN' : 'Show PIN'}
+                        tabIndex={-1}
+                      >
+                        {showRegisterPin ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Two Team Members */}
+                  <div className="team-members-grid">
+                    <div className="team-input-wrapper">
+                      <label htmlFor="reg_member_1" className="team-input-label">
+                        <span>Member 1</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="reg_member_1"
+                        id="reg_member_1"
+                        className="team-input"
+                        value={member1Input}
+                        onChange={(e) => setMember1Input(e.target.value)}
+                        placeholder="First Explorer"
+                        maxLength={30}
+                        autoComplete="off"
+                        spellCheck="false"
+                        data-lpignore="true"
+                        required
+                      />
+                    </div>
+                    <div className="team-input-wrapper">
+                      <label htmlFor="reg_member_2" className="team-input-label">
+                        <span>Member 2 (Optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="reg_member_2"
+                        id="reg_member_2"
+                        className="team-input"
+                        value={member2Input}
+                        onChange={(e) => setMember2Input(e.target.value)}
+                        placeholder="Second Explorer"
+                        maxLength={30}
+                        autoComplete="off"
+                        spellCheck="false"
+                        data-lpignore="true"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Register Error Banner */}
+                  {registerError && (
+                    <div className="auth-error-alert">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <AlertCircle size={15} color="#eb4d4b" style={{ flexShrink: 0 }} />
+                        <span className="auth-error-text">{registerError}</span>
+                      </div>
+                      {(registerError.toLowerCase().includes('already taken') || registerError.toLowerCase().includes('already registered')) && (
+                        <button
+                          type="button"
+                          className="auth-switch-link"
+                          onClick={() => {
+                            setResumeTeamInput(registerTeamInput);
+                            setModalMode('resume');
+                            setRegisterError('');
+                            setResumeError('');
+                          }}
+                        >
+                          Team already registered? Click to switch to Returning Player →
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="modal-actions">
+                    <button type="submit" className="modal-submit-btn" disabled={isSubmitting}>
+                      {isSubmitting ? 'Registering...' : 'Register & Begin Expedition'}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Returning Player Switcher Button Below Register */}
+                <div className="modal-switch-divider">
+                  <span className="divider-line" />
+                  <span className="divider-text">RETURNING SQUAD?</span>
+                  <span className="divider-line" />
+                </div>
+                <button
+                  type="button"
+                  className="returning-player-toggle-btn"
+                  onClick={() => {
+                    if (registerTeamInput.trim() && !resumeTeamInput.trim()) {
+                      setResumeTeamInput(registerTeamInput.trim());
+                    }
+                    setModalMode('resume');
+                    setRegisterError('');
+                    setResumeError('');
+                  }}
+                >
+                  <Key size={15} />
+                  <span>Returning Player? Resume Expedition / Round 2 Login →</span>
                 </button>
               </div>
-            </form>
+            ) : (
+              /* Returning Player Box */
+              <div className="team-modal-section resume-section-container">
+                <div className="section-header">
+                  <span className="section-title">Resume / Round 2 Login</span>
+                  <span className="section-badge">Returning Squad</span>
+                </div>
+
+                <form onSubmit={handleResumeSubmit} autoComplete="off" data-lpignore="true" data-form-type="other">
+                  {/* Returning Team Name */}
+                  <div className="team-input-wrapper">
+                    <label htmlFor="resume_team_name" className="team-input-label">
+                      <span>Registered Team Name</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="resume_team_name"
+                      id="resume_team_name"
+                      className="team-input"
+                      value={resumeTeamInput}
+                      onChange={(e) => setResumeTeamInput(e.target.value)}
+                      placeholder="Enter registered team name"
+                      maxLength={30}
+                      autoComplete="off"
+                      spellCheck="false"
+                      data-lpignore="true"
+                      autoFocus
+                      required
+                    />
+                  </div>
+
+                  {/* Returning PIN */}
+                  <div className="team-input-wrapper">
+                    <label htmlFor="resume_team_pin" className="team-input-label">
+                      <span>Team Secret PIN</span>
+                      <span className="label-hint">PIN created at registration</span>
+                    </label>
+                    <div className="pin-input-container">
+                      <input
+                        type={showResumePin ? 'text' : 'password'}
+                        name="resume_team_pin"
+                        id="resume_team_pin"
+                        className="team-input"
+                        value={resumePinInput}
+                        onChange={(e) => setResumePinInput(e.target.value)}
+                        placeholder="Enter 4-digit PIN"
+                        maxLength={16}
+                        autoComplete="off"
+                        spellCheck="false"
+                        data-lpignore="true"
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="pin-toggle-btn"
+                        onClick={() => setShowResumePin(!showResumePin)}
+                        title={showResumePin ? 'Hide PIN' : 'Show PIN'}
+                        tabIndex={-1}
+                      >
+                        {showResumePin ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Resume Error Banner */}
+                  {resumeError && (
+                    <div className="auth-error-alert">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        <AlertCircle size={15} color="#eb4d4b" style={{ flexShrink: 0 }} />
+                        <span className="auth-error-text">{resumeError}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="modal-actions">
+                    <button type="submit" className="modal-submit-btn resume-submit-btn" disabled={isSubmitting}>
+                      {isSubmitting ? 'Verifying...' : 'Verify PIN & Resume Expedition'}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Back to Register Button */}
+                <div className="modal-switch-divider">
+                  <span className="divider-line" />
+                  <span className="divider-text">NEW EXPEDITION SQUAD?</span>
+                  <span className="divider-line" />
+                </div>
+                <button
+                  type="button"
+                  className="returning-player-toggle-btn back-btn"
+                  onClick={() => {
+                    if (resumeTeamInput.trim() && !registerTeamInput.trim()) {
+                      setRegisterTeamInput(resumeTeamInput.trim());
+                    }
+                    setModalMode('register');
+                    setRegisterError('');
+                    setResumeError('');
+                  }}
+                >
+                  <span>← Register a New Team</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1101,6 +1582,16 @@ function App({ initialStage = null, defaultAppId = null }) {
             <div className="panel-backdrop" onClick={() => setPanelOpen(false)} />
           )}
 
+          {/* Workstation Exit / Next Batch Button */}
+          <button
+            className="hub-signout-btn"
+            onClick={handleExitWorkstation}
+            title="Exit workstation and reset terminal for next batch"
+          >
+            <LogOut size={13} />
+            <span>Exit Station</span>
+          </button>
+
           {/* ── Main content ── */}
           <div className="main-ui">
             <div className="header-panel">
@@ -1133,7 +1624,7 @@ function App({ initialStage = null, defaultAppId = null }) {
               </div>
 
               {/* Stage 2 — Image Navigation */}
-              <div className="level-card unlocked" onClick={() => handleLevelClick(2, true)}>
+              <div className={`level-card ${isStage2Unlocked ? 'unlocked' : 'locked'}`} onClick={() => handleLevelClick(2, isStage2Unlocked)}>
                 <div className="icon-container"><Compass size={48} /></div>
                 <h2>Image Navigation</h2>
                 <p>Stage 2</p>
@@ -1141,10 +1632,10 @@ function App({ initialStage = null, defaultAppId = null }) {
                   className="enter-os-btn"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleLevelClick(2, true);
+                    handleLevelClick(2, isStage2Unlocked);
                   }}
                 >
-                  <span>Enter Stage 2</span>
+                  <span>{isStage2Unlocked ? 'Enter Stage 2' : 'Locked (Admin Req)'}</span>
                   <ChevronRight size={16} />
                 </button>
               </div>

@@ -78,6 +78,7 @@ class WebSocketManager:
                 "score": team.score,
                 "status": team.status,
                 "current_stage": team.current_stage,
+                "round2_unlocked": bool(getattr(team, 'round2_unlocked', 0) or (team.current_stage and team.current_stage >= 2)),
                 "notes": team.notes,
                 "last_ip": team.last_ip,
                 "started_at": team.started_at.isoformat() if team.started_at else None,
