@@ -24,6 +24,7 @@ export function ProtectedReferenceImage({
   teamName = 'CYPHORA Explorer',
   initialTimerSeconds = 15,
   enableTimer = false,
+  compact = false,
 }) {
   const [warningMessage, setWarningMessage] = useState('');
   const [isRevealed, setIsRevealed] = useState(!enableTimer);
@@ -112,42 +113,46 @@ export function ProtectedReferenceImage({
 
   return (
     <section 
-      className="protected-image-card"
+      className={`protected-image-card ${compact ? 'is-compact' : ''}`}
       aria-label="Protected Reference Image Section"
     >
-      <div className="card-header">
-        <div className="header-title-group">
-          <ShieldAlert className="header-icon" size={20} />
-          <h3>Target Reference Image</h3>
-        </div>
-        
-        {enableTimer && (
-          <div className={`timer-badge ${timeLeft > 0 && timerRunning ? 'active' : 'expired'}`}>
-            <Clock size={14} />
-            <span>{timerRunning ? `${timeLeft}s left` : (timeLeft === 0 ? 'Expired' : 'Standby')}</span>
+      {!compact && (
+        <>
+          <div className="card-header">
+            <div className="header-title-group">
+              <ShieldAlert className="header-icon" size={20} />
+              <h3>Target Reference Image</h3>
+            </div>
+            
+            {enableTimer && (
+              <div className={`timer-badge ${timeLeft > 0 && timerRunning ? 'active' : 'expired'}`}>
+                <Clock size={14} />
+                <span>{timerRunning ? `${timeLeft}s left` : (timeLeft === 0 ? 'Expired' : 'Standby')}</span>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      <p className="card-instruction">
-        Observe this target image carefully. Generate your recreated prompt and upload your resulting image below.
-      </p>
+          <p className="card-instruction">
+            Observe this target image carefully. Generate your recreated prompt and upload your resulting image below.
+          </p>
+        </>
+      )}
 
       {targetImages.length > 1 && (
-        <div className="image-slider-controls">
+        <div className={`image-slider-controls ${compact ? 'compact-slider' : ''}`}>
           <button type="button" onClick={prevImage} className="slider-btn">
-            <ChevronLeft size={16} /> Previous Image
+            <ChevronLeft size={14} /> Prev
           </button>
           <span className="slider-indicator">Image {currentImageIndex + 1} of {targetImages.length}</span>
           <button type="button" onClick={nextImage} className="slider-btn">
-            Next Image <ChevronRight size={16} />
+            Next <ChevronRight size={14} />
           </button>
         </div>
       )}
 
       {/* Main Image Viewport */}
       <div 
-        className="image-viewport-wrapper"
+        className={`image-viewport-wrapper ${compact ? 'compact-viewport' : ''}`}
         onContextMenu={handleContextMenu}
         onDragStart={handleDragStart}
       >
@@ -191,7 +196,7 @@ export function ProtectedReferenceImage({
         {/* Timed Peek Expired / Hidden Overlay */}
         {enableTimer && !isRevealed && (
           <div className="peek-expired-shield">
-            <EyeOff size={34} className="lock-icon" />
+            <EyeOff size={compact ? 24 : 34} className="lock-icon" />
             <h4>Reference Observation Closed</h4>
             <p>Initial {initialTimerSeconds}s preview has elapsed. Recreate from memory or request a peek.</p>
             <button 
@@ -199,7 +204,7 @@ export function ProtectedReferenceImage({
               className="peek-reopen-btn"
               onClick={handleStartTimer}
             >
-              <Eye size={16} /> Re-open Peek ({initialTimerSeconds}s)
+              <Eye size={14} /> Re-open Peek ({initialTimerSeconds}s)
             </button>
           </div>
         )}
@@ -207,24 +212,39 @@ export function ProtectedReferenceImage({
         {/* Active Warning Notification Toast */}
         {warningMessage && (
           <div className="protection-warning-toast" role="alert">
-            <AlertTriangle size={16} />
+            <AlertTriangle size={14} />
             <span>{warningMessage}</span>
           </div>
         )}
       </div>
 
-      {/* Security Advisory Warning Notice */}
-      <div className="security-notice-box">
-        <div className="notice-icon-col">
-          <ShieldAlert size={16} />
+      {compact ? (
+        <div className="compact-security-strip">
+          <div className="compact-sec-left">
+            <ShieldAlert size={12} color="#dfb125" />
+            <span>Watermarked • Copy/Drag Disabled</span>
+          </div>
+          {enableTimer && (
+            <div className="compact-sec-right">
+              <Clock size={12} color={timeLeft > 0 && timerRunning ? '#7ee787' : '#e06c75'} />
+              <span>{timerRunning ? `${timeLeft}s peek` : (timeLeft === 0 ? 'Peek closed' : 'Standby')}</span>
+            </div>
+          )}
         </div>
-        <div className="notice-content">
-          <strong>WARNING</strong>
-          <p>
-            Right-click, dragging, and printing are disabled. Dynamic forensic watermark is embedded.
-          </p>
+      ) : (
+        /* Security Advisory Warning Notice */
+        <div className="security-notice-box">
+          <div className="notice-icon-col">
+            <ShieldAlert size={16} />
+          </div>
+          <div className="notice-content">
+            <strong>WARNING</strong>
+            <p>
+              Right-click, dragging, and printing are disabled. Dynamic forensic watermark is embedded.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }

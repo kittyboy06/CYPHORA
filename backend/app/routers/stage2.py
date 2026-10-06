@@ -12,18 +12,19 @@ from ..models import Team, TaskSubmission
 from ..websocket_manager import ws_manager
 from ..auth_utils import decode_access_token
 
-import torch
-from transformers import CLIPProcessor, CLIPModel
-from PIL import Image
 import os
 
 _clip_model = None
 _clip_processor = None
-_device = "cuda" if torch.cuda.is_available() else "cpu"
+_device = None
 
 def get_clip_model():
-    global _clip_model, _clip_processor
+    global _clip_model, _clip_processor, _device
     if _clip_model is None:
+        import torch
+        from transformers import CLIPProcessor, CLIPModel
+        if _device is None:
+            _device = "cuda" if torch.cuda.is_available() else "cpu"
         model_id = "openai/clip-vit-base-patch32"
         _clip_processor = CLIPProcessor.from_pretrained(model_id)
         _clip_model = CLIPModel.from_pretrained(model_id).to(_device)
@@ -34,6 +35,11 @@ def compute_cosine_similarity(image_base64: str, target_image_path: str) -> floa
         import random
         return round(random.uniform(82.0, 94.5), 1)
     try:
+        import torch
+        from PIL import Image
+        global _device
+        if _device is None:
+            _device = "cuda" if torch.cuda.is_available() else "cpu"
         model, processor = get_clip_model()
         if "," in image_base64:
             image_base64 = image_base64.split(",")[1]
