@@ -32,7 +32,7 @@ const BASE_POINTS = 400;
 const MAX_SPEED_BONUS = 600;
 
 export function Round2App() {
-  const { openApp, vfs, eventBus, teamData, fetchLeaderboard } = useOS();
+  const { openApp, vfs, eventBus, teamData, fetchLeaderboard, requestFullscreen } = useOS();
 
   const teamName = teamData?.name || localStorage.getItem('cyphora_team_name') || 'Wandering Nomad';
 
@@ -542,7 +542,14 @@ export function Round2App() {
       {/* Header Toolbar */}
       <header className="os-round2-toolbar">
         <div className="os-round2-title-section">
-          <div className="os-round2-badge">
+          <div 
+            className="os-round2-badge"
+            onClick={() => {
+              if (requestFullscreen) requestFullscreen();
+              openApp('mission-prologue', { meta: { isMaximized: true } });
+            }}
+            style={{ cursor: 'pointer' }}
+          >
             <Compass size={13} />
             <span>STAGE 2</span>
           </div>
@@ -584,41 +591,11 @@ export function Round2App() {
           <button
             type="button"
             className="os-tool-btn"
-            onClick={() => openApp('vision-target')}
-            title="Open Vision Target Viewer in separate window"
-          >
-            <Eye size={12} color="#79c0ff" />
-            <span>Vision</span>
-          </button>
-
-          <button
-            type="button"
-            className="os-tool-btn"
-            onClick={() => openApp('prompt-studio')}
-            title="Open Prompt Studio in separate window"
-          >
-            <Sparkles size={12} color="#dfb125" />
-            <span>Studio</span>
-          </button>
-
-          <button
-            type="button"
-            className="os-tool-btn"
-            onClick={() => openApp('image-evaluator')}
-            title="Open Similarity Evaluator in separate window"
-          >
-            <Zap size={12} color="#f59e0b" />
-            <span>Evaluator</span>
-          </button>
-
-          <button
-            type="button"
-            className="os-tool-btn"
             onClick={() => openApp('leaderboard')}
             title="View Live Expedition Standings"
           >
             <Trophy size={12} color="#dfb125" />
-            <span>Standings</span>
+            <span>Leaderboard</span>
           </button>
 
           <button
@@ -629,19 +606,6 @@ export function Round2App() {
           >
             <BookOpen size={12} color="#a8a08d" />
             <span>Briefing</span>
-          </button>
-
-          <button
-            type="button"
-            className="os-tool-btn"
-            onClick={() => {
-              setActiveSlotForVfs(round2Phase);
-              setShowVfsPicker(true);
-            }}
-            title="Select Image File from OS Virtual Disk"
-          >
-            <Folder size={12} color="#58a6ff" />
-            <span>OS Files</span>
           </button>
         </nav>
       </header>
@@ -674,14 +638,6 @@ export function Round2App() {
                   <h3>Sector 4 Reference Target</h3>
                 </div>
                 <div className="os-card-actions">
-                  <button
-                    type="button"
-                    className="os-tool-btn"
-                    onClick={() => openApp('vision-target')}
-                    title="Pop out in Vision Target Viewer"
-                  >
-                    <span>Inspect Target</span>
-                  </button>
                 </div>
               </div>
 
@@ -705,23 +661,6 @@ export function Round2App() {
                   <h3>Recreation Prompt</h3>
                 </div>
                 <div className="os-card-actions">
-                  <button
-                    type="button"
-                    className="os-tool-btn"
-                    onClick={handleSavePromptToVfs}
-                    title="Save current prompt to OS Drive"
-                  >
-                    <Save size={12} />
-                    <span>Save to VFS</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="os-tool-btn"
-                    onClick={() => openApp('prompt-studio')}
-                    title="Open full studio with keyword builder"
-                  >
-                    <span>Studio</span>
-                  </button>
                 </div>
               </div>
 
@@ -743,26 +682,6 @@ export function Round2App() {
                   <h3>Reconstruction Submission</h3>
                 </div>
                 <div className="os-card-actions">
-                  <button
-                    type="button"
-                    className="os-tool-btn"
-                    onClick={() => {
-                      setActiveSlotForVfs(round2Phase);
-                      setShowVfsPicker(true);
-                    }}
-                    title="Pick an image from OS files"
-                  >
-                    <Folder size={12} />
-                    <span>Select from OS</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="os-tool-btn"
-                    onClick={() => openApp('image-evaluator')}
-                    title="Open similarity evaluator"
-                  >
-                    <span>Evaluator</span>
-                  </button>
                 </div>
               </div>
 
