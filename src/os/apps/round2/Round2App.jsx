@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Compass,
   Award,
@@ -206,6 +206,17 @@ export function Round2App({ windowId }) {
   const [showVfsPicker, setShowVfsPicker] = useState(false);
   const [activeSlotForVfs, setActiveSlotForVfs] = useState(1);
 
+  // --- Temple Background Layer State ---
+  const [bgLayerSrc, setBgLayerSrc] = useState(null);
+  const [cutsceneSrc, setCutsceneSrc] = useState(null);
+  const [isRumbling, setIsRumbling] = useState(false);
+
+  // --- Temple Fragment Modals ---
+  const [showFirstFragmentModal, setShowFirstFragmentModal] = useState(false);
+  const [showFinalFragmentModal, setShowFinalFragmentModal] = useState(false);
+  const [fragment1Score, setFragment1Score] = useState(0);
+  const [fragment2Score, setFragment2Score] = useState(0);
+
   // Live points tracking for current team playing
   const [teamPoints, setTeamPoints] = useState(() => {
     const saved = localStorage.getItem('cyphora_round2_score');
@@ -386,6 +397,53 @@ export function Round2App({ windowId }) {
     }
   };
 
+  // =========================================================================
+  // TEMPLE EFFECT FUNCTIONS
+  // =========================================================================
+
+  const triggerFirstFragmentEffect = useCallback((score) => {
+    // 1. Start rumble & trigger cutscene overlay
+    setIsRumbling(true);
+    setCutsceneSrc('/assets/background/round3image1.png');
+
+    // 2. Stop rumble
+    setTimeout(() => setIsRumbling(false), 800);
+
+    // 3. Start fading in the blended background behind UI shortly after
+    setTimeout(() => {
+      setBgLayerSrc('/assets/background/round3image1.png');
+    }, 1000);
+
+    // 4. Show modal after cutscene finishes (2.5s)
+    setTimeout(() => {
+      setFragment1Score(score);
+      setShowFirstFragmentModal(true);
+      setCutsceneSrc(null);
+    }, 2800);
+  }, []);
+
+  const triggerFinalFragmentEffect = useCallback((score1, score2) => {
+    setIsRumbling(true);
+    setCutsceneSrc('/assets/background/round3image2.png');
+
+    setTimeout(() => setIsRumbling(false), 800);
+
+    setTimeout(() => {
+      setBgLayerSrc('/assets/background/round3image2.png');
+    }, 1000);
+
+    setTimeout(() => {
+      setFragment1Score(score1);
+      setFragment2Score(score2);
+      setShowFinalFragmentModal(true);
+      setCutsceneSrc(null);
+    }, 2800);
+  }, []);
+
+  const dismissFirstModal = useCallback(() => {
+    setShowFirstFragmentModal(false);
+  }, []);
+
   // STEP 1 SUBMIT
   const handleSubmitImage1 = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -479,8 +537,10 @@ export function Round2App({ windowId }) {
       setTeamPoints(phase1Points);
       setPointsDelta(phase1Points);
       window.dispatchEvent(new Event('cyphora_points_updated'));
-      setShowImage1Modal(true);
       setRound2Phase(2);
+
+      // --- Temple Effect: First Fragment ---
+      triggerFirstFragmentEffect(phase1Points);
 
       // Record evaluation evidence in VFS
       try {
@@ -605,7 +665,8 @@ export function Round2App({ windowId }) {
         speed: formattedSpeed
       });
 
-      setShowImage2Modal(true);
+      // --- Temple Effect: Final Fragment ---
+      triggerFinalFragmentEffect(image1Points, image2Points);
       if (typeof fetchLeaderboard === 'function') fetchLeaderboard();
     } finally {
       setIsSubmitting(false);
@@ -617,7 +678,10 @@ export function Round2App({ windowId }) {
     const allowedCodes = ['HORIZON', 'SPECTRA', 'NEXUS', 'CYPHORA', 'AEGIS', 'CHRONOS'];
     if (allowedCodes.includes(unlockCode.trim().toUpperCase())) {
       setIsCodeModalOpen(false);
-      setPhaseSuccessNotice('Stage 3 clearance authorized. Access credentials verified.');
+      setPhaseSuccessNotice('Stage 3 clearance authorized. Redirecting to Temple...');
+      setTimeout(() => {
+        window.location.href = '/round3/index.html';
+      }, 1500);
     } else {
       setUnlockError('Invalid authorization code.');
     }
@@ -760,8 +824,25 @@ export function Round2App({ windowId }) {
   else if (secondsRemaining <= 300) timerUrgencyClass = 'timer-warning';
 
   return (
-    <div className="os-round2-container">
+    <div className={`os-round2-container${isRumbling ? ' screen-rumble' : ''}`}>
       <div className="os-round2-bg" aria-hidden="true" />
+
+      {/* ===== PROGRESSIVE BACKGROUND LAYER ===== */}
+      <div
+        id="bg-layer"
+        aria-hidden="true"
+        className={bgLayerSrc ? 'bg-layer-active' : ''}
+        style={bgLayerSrc ? { backgroundImage: `url(${bgLayerSrc})` } : {}}
+      />
+
+      {/* ===== CUTSCENE OVERLAY ===== */}
+      {cutsceneSrc && (
+        <div
+          className="temple-cutscene-overlay"
+          style={{ backgroundImage: `url(${cutsceneSrc})` }}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Header Toolbar */}
       <header className="os-round2-toolbar">
@@ -822,15 +903,7 @@ export function Round2App({ windowId }) {
             <span>Leaderboard</span>
           </button>
 
-          <button
-            type="button"
-            className="os-tool-btn"
-            onClick={() => openApp('mission-prologue')}
-            title="Review Recovered Mission Briefing & Story"
-          >
-            <BookOpen size={12} color="#a8a08d" />
-            <span>Briefing</span>
-          </button>
+
         </nav>
       </header>
 
@@ -940,14 +1013,7 @@ export function Round2App({ windowId }) {
                   </button>
                 )}
 
-                <button
-                  type="button"
-                  className="os-sub-action-btn"
-                  onClick={() => setIsCodeModalOpen(true)}
-                  title="Enter authorization unlock code"
-                >
-                  <span>Authorize Code</span>
-                </button>
+
 
                 <button
                   type="button"
@@ -975,78 +1041,91 @@ export function Round2App({ windowId }) {
         </div>
       </div>
 
-      {/* Modal: Phase 1 Evaluated */}
-      {showImage1Modal && (
-        <div className="os-modal-overlay" onClick={() => setShowImage1Modal(false)}>
-          <div className="os-modal-card" onClick={e => e.stopPropagation()}>
-            <div className="os-modal-header">
-              <h3>PHASE 1 EVALUATION COMPLETE</h3>
-              <button className="os-modal-close-btn" onClick={() => setShowImage1Modal(false)}>
-                <X size={16} />
-              </button>
-            </div>
-            <div className="os-modal-content">
-              <p style={{ color: '#d1c7b7', margin: 0, fontSize: '0.88rem' }}>
-                Cosine similarity evaluation on Image 1 has been validated:
-              </p>
-              <div style={{ background: 'rgba(223, 177, 37, 0.1)', border: '1px solid rgba(223, 177, 37, 0.3)', padding: '1rem', borderRadius: '6px', textAlign: 'center' }}>
-                <span style={{ fontSize: '0.75rem', color: '#a8a08d' }}>SIMILARITY MATCH</span>
-                <div style={{ fontFamily: 'Fira Code', fontSize: '2rem', fontWeight: 700, color: '#dfb125' }}>
-                  {image1EvaluatedData?.similarity || '88.5%'}
-                </div>
-                <div style={{ color: '#7ee787', fontWeight: 600, marginTop: '0.25rem' }}>
-                  +{image1EvaluatedData?.score || 200} EXPEDITION POINTS
-                </div>
+      {/* ================= FIRST FRAGMENT MODAL (Ancient Temple) ================= */}
+      {showFirstFragmentModal && (
+        <div
+          className="temple-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="first-fragment-modal-title"
+        >
+          <div className="temple-modal-slab" onClick={e => e.stopPropagation()}>
+            <div className="temple-modal-rune-border" aria-hidden="true" />
+            <div className="temple-modal-inner">
+              <div className="temple-modal-glyph" aria-hidden="true">𓂀</div>
+              <span className="temple-modal-tag">STAGE 2 ✦ FIRST RUNE ALIGNED</span>
+              <h3 id="first-fragment-modal-title" className="temple-modal-title">
+                First Rune Aligned —<br />The Temple Gateway Shifts!
+              </h3>
+              <div className="temple-modal-score-stone">
+                <span className="temple-score-label">FRAGMENT I MATCH SCORE</span>
+                <span className="temple-score-value">{fragment1Score}<span className="temple-score-unit"> / 200 PTS</span></span>
               </div>
-              <p style={{ color: '#889280', fontSize: '0.8rem', margin: 0 }}>
-                Phase 2 is now unlocked. Study Target 2 and submit your final recreation to claim your speed evaluation bonus.
+              <p className="temple-modal-desc">
+                The ancient runes stir. Stone grinds against stone as the gateway
+                begins to reveal itself from centuries of overgrowth.
+                The second fragment awaits alignment.
               </p>
-            </div>
-            <div className="os-modal-actions">
-              <button className="os-submit-btn" onClick={() => setShowImage1Modal(false)}>
-                <span>Proceed to Phase 2</span>
+              <button
+                type="button"
+                id="first-fragment-proceed-btn"
+                className="temple-modal-btn"
+                onClick={dismissFirstModal}
+              >
+                ✦ Proceed to Final Fragment ✦
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal: Phase 2 Finalized */}
-      {showImage2Modal && (
-        <div className="os-modal-overlay" onClick={() => setShowImage2Modal(false)}>
-          <div className="os-modal-card" onClick={e => e.stopPropagation()}>
-            <div className="os-modal-header">
-              <h3>STAGE 2 RECONSTRUCTION COMPLETE</h3>
-              <button className="os-modal-close-btn" onClick={() => setShowImage2Modal(false)}>
-                <X size={16} />
-              </button>
-            </div>
-            <div className="os-modal-content">
-              <p style={{ color: '#d1c7b7', margin: 0, fontSize: '0.88rem' }}>
-                Both visual targets have been reconstructed and evaluated.
-              </p>
-              <div style={{ background: 'rgba(223, 177, 37, 0.12)', border: '1px solid #dfb125', padding: '1.25rem', borderRadius: '6px', textAlign: 'center' }}>
-                <span style={{ fontSize: '0.75rem', color: '#a8a08d' }}>FINAL STAGE 2 SCORE</span>
-                <div style={{ fontFamily: 'Fira Code', fontSize: '2.4rem', fontWeight: 700, color: '#ffe680' }}>
-                  {evaluatedScore || teamPoints} PTS
+      {/* ================= FINAL FRAGMENT MODAL (Ancient Temple) ================= */}
+      {showFinalFragmentModal && (
+        <div
+          className="temple-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="final-fragment-modal-title"
+        >
+          <div className="temple-modal-slab temple-modal-slab--final" onClick={e => e.stopPropagation()}>
+            <div className="temple-modal-rune-border" aria-hidden="true" />
+            <div className="temple-modal-inner">
+              <div className="temple-modal-glyph temple-modal-glyph--final" aria-hidden="true">𓆣</div>
+              <span className="temple-modal-tag temple-modal-tag--final">STAGE 2 ✦ GATEWAY UNSEALED</span>
+              <h3 id="final-fragment-modal-title" className="temple-modal-title temple-modal-title--final">
+                Gateway Unsealed!<br />The Path to the Inner Temple is Open.
+              </h3>
+              <div className="temple-modal-score-row">
+                <div className="temple-modal-score-stone">
+                  <span className="temple-score-label">FRAGMENT I</span>
+                  <span className="temple-score-value">{fragment1Score}<span className="temple-score-unit"> PTS</span></span>
                 </div>
-                <div style={{ fontSize: '0.82rem', color: '#dfb125', marginTop: '0.4rem' }}>
-                  Speed Bonus Included &bull; Transmitted to Expedition Network
+                <div className="temple-score-divider" aria-hidden="true">+</div>
+                <div className="temple-modal-score-stone">
+                  <span className="temple-score-label">FRAGMENT II</span>
+                  <span className="temple-score-value">{fragment2Score}<span className="temple-score-unit"> PTS</span></span>
+                </div>
+                <div className="temple-score-divider" aria-hidden="true">=</div>
+                <div className="temple-modal-score-stone temple-modal-score-stone--total">
+                  <span className="temple-score-label">ACCURACY TOTAL</span>
+                  <span className="temple-score-value">{fragment1Score + fragment2Score}<span className="temple-score-unit"> / 400</span></span>
                 </div>
               </div>
-            </div>
-            <div className="os-modal-actions">
+              <p className="temple-modal-desc">
+                Both runes are aligned. The carved stone gate groans open, vines
+                parting to reveal the amber-lit corridor of the Inner Temple.
+                Present this seal to your expedition guide.
+              </p>
               <button
-                className="os-sub-action-btn"
+                type="button"
+                id="final-fragment-proceed-btn"
+                className="temple-modal-btn temple-modal-btn--final"
                 onClick={() => {
-                  setShowImage2Modal(false);
-                  openApp('leaderboard');
+                  setShowFinalFragmentModal(false);
+                  setIsCodeModalOpen(true);
                 }}
               >
-                <span>View Standings</span>
-              </button>
-              <button className="os-submit-btn" onClick={() => setShowImage2Modal(false)}>
-                <span>Close</span>
+                🏛 Enter Temple: Proceed to Round 3
               </button>
             </div>
           </div>

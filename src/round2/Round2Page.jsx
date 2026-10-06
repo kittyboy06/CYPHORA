@@ -470,7 +470,18 @@ export function Round2Page({ onReturnToHub }) {
 
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
-  
+
+  // --- Temple Background Layer State ---
+  // null = default jungle/dark bg, 'half' = round3image1, 'full' = round3image2
+  const [bgLayerSrc, setBgLayerSrc] = useState(null);
+  const [isRumbling, setIsRumbling] = useState(false);
+
+  // --- Temple Fragment Modals ---
+  const [showFirstFragmentModal, setShowFirstFragmentModal] = useState(false);
+  const [showFinalFragmentModal, setShowFinalFragmentModal] = useState(false);
+  const [fragment1Score, setFragment1Score] = useState(0);
+  const [fragment2Score, setFragment2Score] = useState(0);
+
   // Final Round Unlock Code State
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
   const [unlockCode, setUnlockCode] = useState('');
@@ -874,6 +885,9 @@ export function Round2Page({ onReturnToHub }) {
       window.dispatchEvent(new Event('cyphora_points_updated'));
       setShowImage1Modal(true);
       setRound2Phase(2);
+
+      // --- Temple Effect: First Fragment ---
+      triggerFirstFragmentEffect(phase1Points);
       
       setPrompt('');
       setPromptTouched(false);
@@ -1011,12 +1025,70 @@ export function Round2Page({ onReturnToHub }) {
       setSubmittedData(payload);
       setShowImage2Modal(true);
       setIsTimerRunning(false);
+
+      // --- Temple Effect: Final Fragment ---
+      triggerFinalFragmentEffect(image1Points, image2Points);
       
       setPrompt('');
       setPromptTouched(false);
       localStorage.removeItem('cyphora_round2_prompt');
     }
   };
+
+  // =========================================================================
+  // TEMPLE EFFECT FUNCTIONS
+  // =========================================================================
+
+  /**
+   * triggerFirstFragmentEffect(score)
+   * Rumbles the screen, swaps background to the half-visible temple image,
+   * and reveals the First Fragment Modal after a 1-second delay.
+   */
+  const triggerFirstFragmentEffect = useCallback((score) => {
+    // 1. Screen rumble
+    setIsRumbling(true);
+    setTimeout(() => setIsRumbling(false), 600);
+
+    // 2. Swap bg to half-visible temple (round3image1)
+    setBgLayerSrc('/assets/background/round3image1.png');
+
+    // 3. Show First Fragment Modal after 1 second
+    setFragment1Score(score);
+    setTimeout(() => {
+      setShowFirstFragmentModal(true);
+    }, 1000);
+  }, []);
+
+  /**
+   * triggerFinalFragmentEffect(score1, score2)
+   * Rumbles the screen, swaps background to the fully-visible temple image,
+   * and reveals the Final Fragment Modal after a 1.5-second delay.
+   */
+  const triggerFinalFragmentEffect = useCallback((score1, score2) => {
+    // 1. Screen rumble
+    setIsRumbling(true);
+    setTimeout(() => setIsRumbling(false), 600);
+
+    // 2. Swap bg to fully-visible temple (round3image2)
+    setBgLayerSrc('/assets/background/round3image2.png');
+
+    // 3. Show Final Fragment Modal after 1.5 seconds
+    setFragment1Score(score1);
+    setFragment2Score(score2);
+    setTimeout(() => {
+      setShowFinalFragmentModal(true);
+    }, 1500);
+  }, []);
+
+  /**
+   * dismissFirstModal()
+   * Hides the First Fragment Modal and transitions the UI to Phase 2.
+   */
+  const dismissFirstModal = useCallback(() => {
+    setShowFirstFragmentModal(false);
+    // setRound2Phase(2) is already called in handleSubmitImage1;
+    // this dismiss simply closes the modal so the user sees the Phase 2 form.
+  }, []);
 
   const handleResetToStep1 = () => {
     if (window.confirm('Reset Round 2 back to Image 1? Current Image 1 evaluation will be cleared.')) {
@@ -1056,8 +1128,16 @@ export function Round2Page({ onReturnToHub }) {
   else if (secondsRemaining <= 300) timerUrgencyClass = 'timer-warning';
 
   return (
-    <div className="round2-wrapper">
+    <div className={`round2-wrapper${isRumbling ? ' screen-rumble' : ''}`}>
       <div className="round2-ambient-bg" aria-hidden="true" />
+
+      {/* ===== PROGRESSIVE BACKGROUND LAYER ===== */}
+      <div
+        id="bg-layer"
+        aria-hidden="true"
+        className={bgLayerSrc ? 'bg-layer-active' : ''}
+        style={bgLayerSrc ? { backgroundImage: `url(${bgLayerSrc})` } : {}}
+      />
 
       {/* Screen Reader Skip Link */}
       <a href="#round2-main-content" className="sr-skip-link">
@@ -1543,6 +1623,97 @@ export function Round2Page({ onReturnToHub }) {
                 style={{ flex: 1, padding: '10px 0' }}
               >
                 Verify & Unlock
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= FIRST FRAGMENT MODAL (Ancient Temple) ================= */}
+      {showFirstFragmentModal && (
+        <div
+          className="temple-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="first-fragment-modal-title"
+        >
+          <div className="temple-modal-slab">
+            <div className="temple-modal-rune-border" aria-hidden="true" />
+            <div className="temple-modal-inner">
+              <div className="temple-modal-glyph" aria-hidden="true">𓂀</div>
+              <span className="temple-modal-tag">STAGE 2 ✦ FIRST RUNE ALIGNED</span>
+              <h3 id="first-fragment-modal-title" className="temple-modal-title">
+                First Rune Aligned —<br />The Temple Gateway Shifts!
+              </h3>
+              <div className="temple-modal-score-stone">
+                <span className="temple-score-label">FRAGMENT I MATCH SCORE</span>
+                <span className="temple-score-value">{fragment1Score}<span className="temple-score-unit"> / 50 PTS</span></span>
+              </div>
+              <p className="temple-modal-desc">
+                The ancient runes stir. Stone grinds against stone as the gateway
+                begins to reveal itself from centuries of overgrowth.
+                The second fragment awaits alignment.
+              </p>
+              <button
+                type="button"
+                id="first-fragment-proceed-btn"
+                className="temple-modal-btn"
+                onClick={dismissFirstModal}
+              >
+                ✦ Proceed to Final Fragment ✦
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= FINAL FRAGMENT MODAL (Ancient Temple) ================= */}
+      {showFinalFragmentModal && (
+        <div
+          className="temple-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="final-fragment-modal-title"
+        >
+          <div className="temple-modal-slab temple-modal-slab--final">
+            <div className="temple-modal-rune-border" aria-hidden="true" />
+            <div className="temple-modal-inner">
+              <div className="temple-modal-glyph temple-modal-glyph--final" aria-hidden="true">𓆣</div>
+              <span className="temple-modal-tag temple-modal-tag--final">STAGE 2 ✦ GATEWAY UNSEALED</span>
+              <h3 id="final-fragment-modal-title" className="temple-modal-title temple-modal-title--final">
+                Gateway Unsealed!<br />The Path to the Inner Temple is Open.
+              </h3>
+              <div className="temple-modal-score-row">
+                <div className="temple-modal-score-stone">
+                  <span className="temple-score-label">FRAGMENT I</span>
+                  <span className="temple-score-value">{fragment1Score}<span className="temple-score-unit"> PTS</span></span>
+                </div>
+                <div className="temple-score-divider" aria-hidden="true">+</div>
+                <div className="temple-modal-score-stone">
+                  <span className="temple-score-label">FRAGMENT II</span>
+                  <span className="temple-score-value">{fragment2Score}<span className="temple-score-unit"> PTS</span></span>
+                </div>
+                <div className="temple-score-divider" aria-hidden="true">=</div>
+                <div className="temple-modal-score-stone temple-modal-score-stone--total">
+                  <span className="temple-score-label">TOTAL</span>
+                  <span className="temple-score-value">{fragment1Score + fragment2Score}<span className="temple-score-unit"> / 100</span></span>
+                </div>
+              </div>
+              <p className="temple-modal-desc">
+                Both runes are aligned. The carved stone gate groans open, vines
+                parting to reveal the amber-lit corridor of the Inner Temple.
+                Present this seal to your expedition guide.
+              </p>
+              <button
+                type="button"
+                id="final-fragment-proceed-btn"
+                className="temple-modal-btn temple-modal-btn--final"
+                onClick={() => {
+                  setShowFinalFragmentModal(false);
+                  setIsCodeModalOpen(true);
+                }}
+              >
+                🏛 Enter Temple: Proceed to Round 3
               </button>
             </div>
           </div>

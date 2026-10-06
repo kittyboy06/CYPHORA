@@ -22,7 +22,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve('index.html'),
-        round2: resolve('round2/index.html')
+        round2: resolve('round2/index.html'),
+        round3: resolve('round3/index.html')
       }
     }
   }

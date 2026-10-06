@@ -2294,8 +2294,8 @@
 
 .objective-widget {
   position: fixed;
-  left: 1.25rem;
-  right: auto;
+  right: 1.25rem;
+  left: auto;
   bottom: calc(42px + 12px);
   width: min(360px, calc(100vw - 2rem));
   padding: 0.85rem;
@@ -2305,7 +2305,7 @@
   color: var(--objective-ink);
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.55), 0 0 16px rgba(216, 184, 98, 0.15);
   pointer-events: auto;
-  animation: objective-dock-in-left 0.28s ease-out both;
+  animation: objective-dock-in 0.28s ease-out both;
   z-index: 8500;
 }
 
@@ -2379,8 +2379,8 @@
 
 .objective-tab {
   position: fixed;
-  left: 1.25rem;
-  right: auto;
+  right: 1.25rem;
+  left: auto;
   bottom: calc(42px + 12px);
   display: inline-flex;
   align-items: center;
@@ -2398,7 +2398,7 @@
   letter-spacing: 0.06rem;
   pointer-events: auto;
   z-index: 8500;
-  animation: objective-dock-in-left 0.28s ease-out both;
+  animation: objective-dock-in 0.28s ease-out both;
   transition: all 0.2s ease;
 }
 
