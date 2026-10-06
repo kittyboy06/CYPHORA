@@ -195,8 +195,11 @@ export function Desktop() {
           title="Expedition Mission Timer — Live Remaining Time"
         >
           <div className="pinned-timer-glow" />
-          <div className={`pinned-timer-dot ${isRunning ? 'running' : 'idle'}`} />
-          <Clock size={16} className="pinned-timer-icon" />
+          <div className="pinned-timer-badge">
+            <div className={`pinned-timer-dot ${isRunning ? 'running' : 'idle'}`} />
+            <Clock size={16} className="pinned-timer-icon" />
+          </div>
+          <div className="pinned-timer-divider" />
           <div className="pinned-timer-content">
             <span className="pinned-timer-label">MISSION TIMER</span>
             <span className="pinned-timer-digits">{timerDisplay}</span>
