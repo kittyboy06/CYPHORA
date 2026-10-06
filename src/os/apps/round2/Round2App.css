@@ -996,3 +996,325 @@
   background: rgba(223, 177, 37, 0.3) !important;
   border-color: #dfb125 !important;
 }
+
+
+/* ===== PROGRESSIVE BACKGROUND LAYER ===== */
+#bg-layer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 2s ease-in-out, filter 2s ease-in-out;
+  pointer-events: none;
+  filter: saturate(0.8) contrast(1.1) brightness(0.6);
+  background-blend-mode: multiply;
+}
+
+.bg-layer-active {
+  opacity: 0.85 !important;
+}
+
+/* ── Screen Rumble (Keyframe + Class) ── */
+@keyframes screenRumble {
+  0%   { transform: translate(0, 0); }
+  10%  { transform: translate(-4px, -3px); }
+  20%  { transform: translate(4px, 2px); }
+  30%  { transform: translate(-3px, 4px); }
+  40%  { transform: translate(5px, -2px); }
+  50%  { transform: translate(-5px, 3px); }
+  60%  { transform: translate(3px, -4px); }
+  70%  { transform: translate(-2px, 5px); }
+  80%  { transform: translate(4px, -3px); }
+  90%  { transform: translate(-3px, 2px); }
+  100% { transform: translate(0, 0); }
+}
+
+.screen-rumble {
+  animation: screenRumble 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* ── Temple Modal Backdrop ── */
+.temple-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(3, 6, 2, 0.82);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: templeBackdropIn 0.4s ease-out both;
+}
+
+@keyframes templeBackdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Temple Slab (the modal card) ── */
+.temple-modal-slab {
+  position: relative;
+  max-width: 560px;
+  width: 100%;
+  background: linear-gradient(160deg, #1a1208 0%, #0e0c06 60%, #0a0d06 100%);
+  border: 2px solid #4a3a18;
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 1px rgba(201, 166, 83, 0.12),
+    0 0 0 4px rgba(40, 30, 10, 0.9),
+    0 0 0 5px rgba(100, 80, 30, 0.25),
+    inset 0 0 30px rgba(0, 0, 0, 0.6),
+    0 24px 60px rgba(0, 0, 0, 0.9),
+    0 0 40px rgba(160, 110, 20, 0.15);
+  overflow: hidden;
+  animation: templeSlabIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.temple-modal-slab--final {
+  border-color: #7a5c1e;
+  box-shadow:
+    0 0 0 1px rgba(255, 200, 80, 0.22),
+    0 0 0 4px rgba(50, 35, 5, 0.95),
+    0 0 0 5px rgba(150, 110, 30, 0.3),
+    inset 0 0 40px rgba(0, 0, 0, 0.5),
+    0 24px 60px rgba(0, 0, 0, 0.95),
+    0 0 60px rgba(200, 140, 20, 0.25);
+}
+
+@keyframes templeSlabIn {
+  from { opacity: 0; transform: scale(0.88) translateY(24px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.temple-modal-rune-border {
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(180, 130, 30, 0.4) 20%,
+    rgba(223, 177, 37, 0.8) 50%,
+    rgba(180, 130, 30, 0.4) 80%,
+    transparent 100%
+  );
+  animation: runeGlow 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes runeGlow {
+  from { opacity: 0.5; }
+  to   { opacity: 1; }
+}
+
+.temple-modal-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem 2.5rem 2.5rem;
+  text-align: center;
+}
+
+.temple-modal-glyph {
+  font-size: 2.8rem;
+  filter: drop-shadow(0 0 10px rgba(223, 177, 37, 0.7));
+  animation: glyphFloat 3s ease-in-out infinite;
+}
+
+.temple-modal-glyph--final {
+  font-size: 3.4rem;
+  filter: drop-shadow(0 0 18px rgba(255, 200, 60, 0.9));
+}
+
+@keyframes glyphFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+.temple-modal-tag {
+  font-family: 'Cinzel', 'Playfair Display', serif;
+  font-size: 0.7rem;
+  letter-spacing: 3px;
+  color: #8a6f2e;
+  text-transform: uppercase;
+}
+
+.temple-modal-tag--final {
+  color: #c9a653;
+  letter-spacing: 4px;
+}
+
+.temple-modal-title {
+  font-family: 'Cinzel', 'Playfair Display', serif;
+  font-size: clamp(1.2rem, 3vw, 1.65rem);
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #d6b265;
+  line-height: 1.35;
+  margin: 0;
+  text-shadow: 0 0 20px rgba(223, 177, 37, 0.35);
+}
+
+.temple-modal-title--final {
+  color: #f0c94a;
+  text-shadow: 0 0 30px rgba(255, 200, 50, 0.5);
+}
+
+.temple-modal-score-stone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.9rem 1.5rem;
+  background: rgba(8, 6, 2, 0.7);
+  border: 1px solid rgba(180, 130, 30, 0.4);
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 12px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(180, 130, 30, 0.12);
+}
+
+.temple-modal-score-stone--total {
+  border-color: rgba(255, 200, 60, 0.55);
+  box-shadow:
+    inset 0 0 16px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(255, 200, 60, 0.22);
+}
+
+.temple-modal-score-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.temple-score-divider {
+  font-family: 'Cinzel', serif;
+  font-size: 1.3rem;
+  color: rgba(201, 166, 83, 0.55);
+  flex-shrink: 0;
+}
+
+.temple-score-label {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #8a6f2e;
+}
+
+.temple-score-value {
+  font-family: 'Cinzel', serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #dfb125;
+  text-shadow: 0 0 12px rgba(223, 177, 37, 0.5);
+}
+
+.temple-score-unit {
+  font-size: 0.85rem;
+  color: #9a7c38;
+  font-weight: 400;
+}
+
+.temple-modal-desc {
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: #b8a890;
+  max-width: 380px;
+  margin: 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.temple-modal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 2.2rem;
+  margin-top: 0.5rem;
+  font-family: 'Cinzel', 'Playfair Display', serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #1a1208;
+  background: linear-gradient(135deg, #c9a653 0%, #dfb125 50%, #b8883a 100%);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(255, 200, 60, 0.3),
+    0 4px 16px rgba(180, 130, 30, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.temple-modal-btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(255, 210, 80, 0.5),
+    0 8px 24px rgba(180, 130, 30, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  filter: brightness(1.08);
+}
+
+.temple-modal-btn--final {
+  background: linear-gradient(135deg, #e8b830 0%, #ffcc40 45%, #c88c20 100%);
+  color: #0e0900;
+  font-size: 0.95rem;
+  padding: 1rem 2.5rem;
+  box-shadow:
+    0 0 0 1px rgba(255, 220, 60, 0.45),
+    0 0 25px rgba(255, 200, 40, 0.35),
+    0 6px 20px rgba(180, 130, 20, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  animation: amberPulse 2.2s ease-in-out infinite;
+}
+
+.temple-modal-btn--final:hover {
+  filter: brightness(1.12) saturate(1.1);
+}
+
+@keyframes amberPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 220, 60, 0.45),
+      0 0 25px rgba(255, 200, 40, 0.35),
+      0 6px 20px rgba(180, 130, 20, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(255, 220, 60, 0.6),
+      0 0 45px rgba(255, 200, 40, 0.55),
+      0 6px 20px rgba(180, 130, 20, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+}
+
+
+/* ===== CUTSCENE OVERLAY ===== */
+.temple-cutscene-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10000;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  animation: cutsceneFlash 2.8s ease-in-out forwards;
+  pointer-events: none;
+}
+
+@keyframes cutsceneFlash {
+  0%   { opacity: 0; transform: scale(1.05); filter: brightness(2) saturate(0.5); }
+  15%  { opacity: 1; transform: scale(1.02); filter: brightness(1.2) saturate(1.2); }
+  60%  { opacity: 1; transform: scale(1.02); filter: brightness(1) saturate(1.1); }
+  100% { opacity: 0; transform: scale(1); filter: brightness(0.6) saturate(0.8); }
+}

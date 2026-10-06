@@ -146,7 +146,10 @@ export function PrologueApp() {
 
         <button
           type="button"
-          onClick={() => openApp('round2')}
+          onClick={() => {
+            localStorage.setItem('cyphora_round2_os_started', 'true');
+            openApp('round2');
+          }}
           style={{
             background: 'linear-gradient(135deg, #dfb125, #b89114)',
             color: '#060905',
@@ -338,6 +341,7 @@ export function PrologueApp() {
               if (currentSlide < slides.length - 1) {
                 setCurrentSlide(c => c + 1);
               } else {
+                localStorage.setItem('cyphora_round2_os_started', 'true');
                 openApp('round2');
               }
             }}

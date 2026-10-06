@@ -32,7 +32,17 @@ export const OS_ACTIONS = {
 export function osReducer(state, action) {
   switch (action.type) {
     case OS_ACTIONS.OPEN_WINDOW: {
-      const { appId, title, icon, meta = {}, defaultBounds } = action.payload;
+      let { appId, title, icon, meta = {}, defaultBounds } = action.payload;
+
+      // Intercept Stage 2 launch to show prologue first
+      if ((appId === 'round2' || appId === 'image-navigation') && typeof window !== 'undefined') {
+        if (localStorage.getItem('cyphora_round2_os_started') !== 'true') {
+          appId = 'mission-prologue';
+          title = 'Sector 4 Briefing';
+          icon = 'BookOpen';
+          defaultBounds = { width: 880, height: 620 };
+        }
+      }
 
       // If single-instance app already exists (and no specific file meta), just focus it
       if (!meta.filePath) {
