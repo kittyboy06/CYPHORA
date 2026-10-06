@@ -996,3 +996,262 @@
   background: rgba(223, 177, 37, 0.3) !important;
   border-color: #dfb125 !important;
 }
+
+/* ==========================================================================
+   STAGE 2 ACCESS BARRIER & LOCKOUT STYLES
+   ========================================================================== */
+.os-round2-lockout-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: radial-gradient(circle at center, rgba(223, 177, 37, 0.05) 0%, rgba(6, 9, 5, 0.98) 75%);
+  position: relative;
+  z-index: 10;
+  overflow: auto;
+}
+
+.lockout-card {
+  max-width: 520px;
+  width: 100%;
+  background: rgba(14, 20, 14, 0.95);
+  border: 1px solid rgba(223, 177, 37, 0.3);
+  border-radius: 8px;
+  padding: 2rem 2.2rem;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 30px rgba(223, 177, 37, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  backdrop-filter: blur(16px);
+}
+
+.lockout-icon-pulse {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(223, 177, 37, 0.1);
+  border: 1px solid rgba(223, 177, 37, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.2rem;
+  animation: lockoutPulse 2.5s infinite ease-in-out;
+}
+
+@keyframes lockoutPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(223, 177, 37, 0.2);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 25px rgba(223, 177, 37, 0.45);
+  }
+}
+
+.lockout-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #dfb125;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.6rem 0;
+}
+
+.lockout-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 1rem;
+}
+
+.lockout-badge.warning {
+  background: rgba(223, 177, 37, 0.12);
+  border: 1px solid rgba(223, 177, 37, 0.35);
+  color: #dfb125;
+}
+
+.lockout-badge.success {
+  background: rgba(46, 213, 115, 0.12);
+  border: 1px solid rgba(46, 213, 115, 0.35);
+  color: #2ed573;
+}
+
+.lockout-desc {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #b8b09d;
+  margin: 0 0 1.2rem 0;
+}
+
+.lockout-progress-bar-wrap {
+  width: 100%;
+  margin-bottom: 1.2rem;
+}
+
+.lockout-progress-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.4rem;
+}
+
+.lockout-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #dfb125, #f5d061);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.lockout-progress-text {
+  font-size: 0.72rem;
+  color: #8c8268;
+}
+
+.lockout-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.lockout-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(223, 177, 37, 0.2);
+  border: 1px solid #dfb125;
+  color: #ffe680;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.55rem 1.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lockout-primary-btn:hover {
+  background: #dfb125;
+  color: #060905;
+  box-shadow: 0 0 15px rgba(223, 177, 37, 0.4);
+}
+
+.lockout-beacon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: #2ed573;
+  margin-bottom: 1.5rem;
+  background: rgba(46, 213, 115, 0.08);
+  border: 1px solid rgba(46, 213, 115, 0.25);
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+}
+
+.beacon-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2ed573;
+  box-shadow: 0 0 8px #2ed573;
+  animation: beaconPulse 1.5s infinite;
+}
+
+@keyframes beaconPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.lockout-supervisor-box {
+  width: 100%;
+  border-top: 1px solid rgba(223, 177, 37, 0.15);
+  padding-top: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.supervisor-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8c8268;
+}
+
+.supervisor-auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.supervisor-input-group {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.supervisor-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(223, 177, 37, 0.25);
+  color: #eae0c8;
+  font-size: 0.8rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 4px;
+  outline: none;
+}
+
+.supervisor-input:focus {
+  border-color: #dfb125;
+}
+
+.supervisor-unlock-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(223, 177, 37, 0.15);
+  border: 1px solid rgba(223, 177, 37, 0.35);
+  color: #dfb125;
+  font-size: 0.75rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.supervisor-unlock-btn:hover {
+  background: #dfb125;
+  color: #060905;
+}
+
+.supervisor-error-msg {
+  font-size: 0.72rem;
+  color: #ff6b81;
+}
+
+.r2-badge-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(255, 107, 129, 0.12);
+  border: 1px solid rgba(255, 107, 129, 0.3);
+  color: #ff6b81;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+}
+

@@ -9,9 +9,11 @@ class Team(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(64), unique=True, index=True, nullable=False)
     pin_hash = Column(String(128), nullable=False)
+    raw_pin = Column(String(32), nullable=True)
     standing = Column(Integer, default=0)
     score = Column(Integer, default=0, index=True)
     current_stage = Column(Integer, default=1)
+    round2_unlocked = Column(Integer, default=0)
     status = Column(String(20), default="active")  # 'active' | 'idle'
     last_ip = Column(String(45), nullable=True)
     member1 = Column(String(64), nullable=True)

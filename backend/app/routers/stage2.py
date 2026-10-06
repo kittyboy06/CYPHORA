@@ -127,6 +127,27 @@ async def resolve_team(
 
     return None
 
+@router.get("/access-status")
+async def get_stage2_access_status(
+    authorization: Optional[str] = Header(None),
+    x_team_id: Optional[str] = Header(None),
+    x_team_name: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_db)
+):
+    team = await resolve_team(db, authorization, x_team_id, x_team_name)
+    if not team:
+        return {"unlocked": False, "authenticated": False, "message": "No registered team session found."}
+
+    is_unlocked = bool(getattr(team, "round2_unlocked", 0) or (team.current_stage and team.current_stage >= 2))
+    return {
+        "unlocked": is_unlocked,
+        "authenticated": True,
+        "team_id": team.id,
+        "team_name": team.name,
+        "current_stage": team.current_stage,
+        "message": "Round 2 access authorized by administrator." if is_unlocked else "Awaiting administrator clearance for Round 2."
+    }
+
 class Stage2Image1Request(BaseModel):
     team_name: Optional[str] = "Wandering Nomad"
     prompt: str

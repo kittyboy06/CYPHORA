@@ -695,3 +695,68 @@
   gap: 0.75rem;
   margin-top: 1.5rem;
 }
+
+/* Round 2 Clearance Badges & Buttons */
+.r2-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.18rem 0.45rem;
+  border-radius: 3px;
+}
+
+.r2-status-badge.authorized {
+  background: rgba(46, 213, 115, 0.15);
+  border: 1px solid rgba(46, 213, 115, 0.4);
+  color: #2ed573;
+}
+
+.r2-status-badge.locked {
+  background: rgba(255, 71, 87, 0.12);
+  border: 1px solid rgba(255, 71, 87, 0.35);
+  color: #ff6b81;
+}
+
+.r2-toggle-btn {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.18rem 0.45rem;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.r2-toggle-btn.grant {
+  background: rgba(223, 177, 37, 0.15);
+  border: 1px solid rgba(223, 177, 37, 0.4);
+  color: #dfb125;
+}
+
+.r2-toggle-btn.grant:hover {
+  background: #dfb125;
+  color: #000;
+}
+
+.r2-toggle-btn.revoke {
+  background: rgba(235, 77, 75, 0.12);
+  border: 1px solid rgba(235, 77, 75, 0.35);
+  color: #ff7979;
+}
+
+.r2-toggle-btn.revoke:hover {
+  background: #eb4d4b;
+  color: #fff;
+}
+
+.r2-bulk-btn {
+  border-color: rgba(46, 213, 115, 0.4) !important;
+  color: #2ed573 !important;
+}
+
+.r2-bulk-btn:hover {
+  background: rgba(46, 213, 115, 0.15) !important;
+}
+

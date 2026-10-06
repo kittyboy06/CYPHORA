@@ -44,6 +44,7 @@ async def get_leaderboard(db: AsyncSession = Depends(get_db)):
             score=t.score,
             status=t.status,
             current_stage=t.current_stage,
+            round2_unlocked=bool(getattr(t, 'round2_unlocked', 0) or (t.current_stage and t.current_stage >= 2)),
             notes=t.notes,
             last_ip=t.last_ip,
             started_at=t.started_at.isoformat() if t.started_at else None,
