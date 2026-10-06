@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import PhaserGame from './game/PhaserGame';
 import BlocklyEditor from './components/BlocklyEditor';
 import { GameOverlay } from './components/GameOverlay';
@@ -120,14 +120,13 @@ function App() {
 
   if (showTutorial) {
     return <TutorialScreen onComplete={() => setShowTutorial(false)} />;
-    return <StoryIntro onComplete={() => setShowStory(false)} />;
   }
 
   return (
     <div className="w-screen h-screen flex flex-col relative bg-[var(--bg-dark)] overflow-hidden">
       <GameOverlay onRetry={handleReset} onNextLevel={handleNextLevel} />
 
-      {/* â•â•â• TOP HALF: Game Canvas â•â•â• */}
+      {/* === TOP HALF: Game Canvas === */}
       <div className="h-[40%] min-h-[200px] relative bg-[#050804] border-b border-[var(--border-gold)]">
         <PhaserGame ref={gameRef} levelIndex={level} />
         
@@ -137,9 +136,23 @@ function App() {
             {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
           </span>
         </div>
+
+        {/* TEAM INFO PANEL */}
+        <div className="absolute top-3 right-3 z-50 pointer-events-none">
+          <div className="bg-[rgba(8,12,6,0.85)] border border-[var(--border-gold)] px-3 py-2 rounded-sm text-right" style={{ minWidth: '140px' }}>
+            <p className="text-[10px] text-[var(--accent-gold)] font-mono uppercase tracking-widest mb-1">Team</p>
+            <p className="text-sm text-[var(--text-primary)] font-bold font-mono truncate" style={{ maxWidth: '160px' }}>
+              {typeof window !== 'undefined' ? (localStorage.getItem('cyphora_team_name') || 'Explorer') : 'Explorer'}
+            </p>
+            <div className="mt-1.5 pt-1.5 border-t border-[var(--border-gold)]/30">
+              <p className="text-[10px] text-[var(--text-muted)] font-mono uppercase tracking-wider">Stage {level} Score</p>
+              <p className="text-lg text-[var(--accent-gold)] font-cinzel font-bold">{useGameStore.getState().score || '\u2014'}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* â•â•â• TASK STRIP â•â•â• */}
+      {/* === TASK STRIP === */}
       <div className="px-6 py-3 bg-[rgba(14,18,12,0.95)] border-b border-[var(--border-gold)] flex items-center justify-between">
         <div>
           {level === 1 && (
@@ -148,7 +161,7 @@ function App() {
                 Current Task: The Broken Bridge
               </h3>
               <p className="text-sm leading-relaxed text-[var(--text-primary)]">
-                The bridge gaps are expanding! First you must jump, then run 1 tile and jump, then run 2 tiles and jump, then 3 tiles, and so on... (a triangular number progression). <strong className="text-red-400">âš ï¸ Low-hanging branches block jumping on solid ground â€” you can only jump over gaps!</strong> Use variables and nested loops with <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">run()</code> and <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code> to reach the other side!
+                The bridge gaps are expanding! First you must jump, then run 1 tile and jump, then run 2 tiles and jump, then 3 tiles, and so on... (a triangular number progression). <strong className="text-red-400">⚠️ Low-hanging branches block jumping on solid ground — you can only jump over gaps!</strong> Use variables and nested loops with <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">run()</code> and <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code> to reach the other side!
               </p>
             </>
           )}
@@ -231,7 +244,7 @@ function App() {
               }}
               className="px-3 py-2 bg-black/30 border border-gray-800 text-gray-500 hover:text-gray-300 text-xs font-mono uppercase tracking-widest rounded-sm cursor-pointer transition-all"
             >
-              ðŸ”’ Admin
+              🔒 Admin
             </button>
           )}
 
@@ -270,7 +283,7 @@ function App() {
         </div>
       </div>
 
-      {/* â•â•â• BOTTOM HALF: Blockly Workspace (toolbox on left, workspace spanning full width) â•â•â• */}
+      {/* === BOTTOM HALF: Blockly Workspace (toolbox on left, workspace spanning full width) === */}
       <div className="flex-1 relative">
         <BlocklyEditor ref={blocklyRef} level={level} />
       </div>

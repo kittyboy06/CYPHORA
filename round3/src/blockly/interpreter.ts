@@ -114,19 +114,28 @@ export const executeCode = async (code: string, gameRef: any, blocklyRef: any, b
       const state = useGameStore.getState();
       state.setStatus('success');
       
-      // Calculate Score and Efficiency based on blockCount
+      // Per-level par block counts (optimal solution size)
+      const PAR_BLOCKS: Record<number, number> = {
+        1: 8,   // variables + while-loop + nested repeat + run + jump
+        2: 10,  // sequential run/equip with if/else beast check
+        3: 5,   // repeat with if/elseif/else color checks
+        4: 12,  // repeat(3) with for-loop, if/elseif/else, mod checks, totem
+      };
+      
+      const level = state.level;
+      const par = PAR_BLOCKS[level] || 10;
+      
+      // Score: Full 1000 if at/under par, -50 per excess block, min 200
+      const excessBlocks = Math.max(0, blockCount - par);
+      const calculatedScore = Math.max(200, 1000 - (excessBlocks * 50));
+      
+      // Efficiency label
       let efficiencyLabel = 'Acceptable';
-      // Assume a generic par score for simplicity, or we can base it roughly on blocks
-      // A typical good solution uses around 5-15 blocks depending on level
-      if (blockCount <= 8) {
+      if (blockCount <= par) {
         efficiencyLabel = 'Excellent';
-      } else if (blockCount <= 15) {
+      } else if (blockCount <= par + 4) {
         efficiencyLabel = 'Good';
       }
-      
-      const maxScore = 1000;
-      // Deduct 25 points for every block used
-      const calculatedScore = Math.max(100, maxScore - (blockCount * 25));
       
       state.setEfficiency(efficiencyLabel);
       state.setScore(calculatedScore);
