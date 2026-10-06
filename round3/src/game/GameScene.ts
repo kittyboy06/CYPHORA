@@ -333,10 +333,10 @@ export default class GameScene extends Phaser.Scene {
           else if (tile === TileType.COLOR_GOLD) texture = 'platform_yellow'; // COLOR_GOLD
           else if (tile === TileType.GOAL) texture = 'platform_yellow'; // GOAL
         } else if (this.levelData.id === 'level_04') {
-          if (tile === TileType.FIRE || tile === TileType.TOTEM_FIRE) {
+          if (tile === TileType.FIRE) {
             i++;
-            continue; // Leave a gap for fire pits
-          }
+            continue;
+            }
           texture = 'platform_red'; // Everything else in Level 4 is red blocks
         }
         
@@ -744,8 +744,7 @@ export default class GameScene extends Phaser.Scene {
       this.pIndex = nextIndex;
 
       await this.updatePlayerVisuals(true, false);
-      if (nextTile === TileType.FIRE || nextTile === TileType.GOBLIN ||
-          nextTile === TileType.TOTEM_FIRE || nextTile === TileType.TOTEM_GOBLIN) {
+      if (nextTile === TileType.FIRE || nextTile === TileType.GOBLIN) {
         await this.playerFallDeath();
         return 'FAILED';
       }
@@ -1148,3 +1147,4 @@ export default class GameScene extends Phaser.Scene {
     return 'OK';
   }
 }
+

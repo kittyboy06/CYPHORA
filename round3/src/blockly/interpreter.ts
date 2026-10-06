@@ -1,10 +1,9 @@
 import { useGameStore } from '../state/gameStore';
 
-export const executeCode = async (code: string, gameRef: any, blocklyRef: any) => {
-  useGameStore.getState().resetCommands(0); // We don't know total commands in advance for JS
+export const executeCode = async (code: string, gameRef: any, blocklyRef: any, blockCount: number) => {
+  useGameStore.getState().resetCommands(blockCount); // Set total blocks used
   
   // Wrap code in an async IIFE to allow await
-  // We provide `game` object that interacts with the phaser scene
   const wrappedCode = `
     return (async function(game) {
       ${code}
@@ -112,8 +111,25 @@ export const executeCode = async (code: string, gameRef: any, blocklyRef: any) =
   } catch (e: any) {
     blocklyRef.highlightBlock(null);
     if (e.message === 'LEVEL_COMPLETE') {
-      useGameStore.getState().setStatus('success');
-      useGameStore.getState().setScore(100);
+      const state = useGameStore.getState();
+      state.setStatus('success');
+      
+      // Calculate Score and Efficiency based on blockCount
+      let efficiencyLabel = 'Acceptable';
+      // Assume a generic par score for simplicity, or we can base it roughly on blocks
+      // A typical good solution uses around 5-15 blocks depending on level
+      if (blockCount <= 8) {
+        efficiencyLabel = 'Excellent';
+      } else if (blockCount <= 15) {
+        efficiencyLabel = 'Good';
+      }
+      
+      const maxScore = 1000;
+      // Deduct 25 points for every block used
+      const calculatedScore = Math.max(100, maxScore - (blockCount * 25));
+      
+      state.setEfficiency(efficiencyLabel);
+      state.setScore(calculatedScore);
       return;
     } else {
       throw e;

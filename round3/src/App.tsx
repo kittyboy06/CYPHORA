@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import PhaserGame from './game/PhaserGame';
 import BlocklyEditor from './components/BlocklyEditor';
 import { GameOverlay } from './components/GameOverlay';
@@ -82,7 +82,7 @@ function App() {
     
     try {
       setStatus('running');
-      await executeCode(code, gameRef.current, blocklyRef.current);
+      await executeCode(code, gameRef.current, blocklyRef.current, blocklyRef.current.getBlockCount());
     } catch (e: any) {
       console.error(e);
       setStatus('failed');
@@ -127,7 +127,7 @@ function App() {
     <div className="w-screen h-screen flex flex-col relative bg-[var(--bg-dark)] overflow-hidden">
       <GameOverlay onRetry={handleReset} onNextLevel={handleNextLevel} />
 
-      {/* ═══ TOP HALF: Game Canvas ═══ */}
+      {/* â•â•â• TOP HALF: Game Canvas â•â•â• */}
       <div className="h-[40%] min-h-[200px] relative bg-[#050804] border-b border-[var(--border-gold)]">
         <PhaserGame ref={gameRef} levelIndex={level} />
         
@@ -139,7 +139,7 @@ function App() {
         </div>
       </div>
 
-      {/* ═══ TASK STRIP ═══ */}
+      {/* â•â•â• TASK STRIP â•â•â• */}
       <div className="px-6 py-3 bg-[rgba(14,18,12,0.95)] border-b border-[var(--border-gold)] flex items-center justify-between">
         <div>
           {level === 1 && (
@@ -148,7 +148,7 @@ function App() {
                 Current Task: The Broken Bridge
               </h3>
               <p className="text-sm leading-relaxed text-[var(--text-primary)]">
-                The bridge gaps are expanding! First you must jump, then run 1 tile and jump, then run 2 tiles and jump, then 3 tiles, and so on... (a triangular number progression). <strong className="text-red-400">⚠️ Low-hanging branches block jumping on solid ground — you can only jump over gaps!</strong> Use variables and nested loops with <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">run()</code> and <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code> to reach the other side!
+                The bridge gaps are expanding! First you must jump, then run 1 tile and jump, then run 2 tiles and jump, then 3 tiles, and so on... (a triangular number progression). <strong className="text-red-400">âš ï¸ Low-hanging branches block jumping on solid ground â€” you can only jump over gaps!</strong> Use variables and nested loops with <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">run()</code> and <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code> to reach the other side!
               </p>
             </>
           )}
@@ -231,7 +231,7 @@ function App() {
               }}
               className="px-3 py-2 bg-black/30 border border-gray-800 text-gray-500 hover:text-gray-300 text-xs font-mono uppercase tracking-widest rounded-sm cursor-pointer transition-all"
             >
-              🔒 Admin
+              ðŸ”’ Admin
             </button>
           )}
 
@@ -270,7 +270,7 @@ function App() {
         </div>
       </div>
 
-      {/* ═══ BOTTOM HALF: Blockly Workspace (toolbox on left, workspace spanning full width) ═══ */}
+      {/* â•â•â• BOTTOM HALF: Blockly Workspace (toolbox on left, workspace spanning full width) â•â•â• */}
       <div className="flex-1 relative">
         <BlocklyEditor ref={blocklyRef} level={level} />
       </div>
@@ -299,6 +299,8 @@ function App() {
 }
 
 export default App;
+
+
 
 
 

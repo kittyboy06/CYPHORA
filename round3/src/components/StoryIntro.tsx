@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Play } from 'lucide-react';
 
 interface Props {
   onComplete: () => void;
@@ -7,6 +6,7 @@ interface Props {
 
 export const StoryIntro: React.FC<Props> = ({ onComplete }) => {
   const [step, setStep] = useState(0);
+  const [canAdvance, setCanAdvance] = useState(false);
 
   const storyScenes = [
     {
@@ -28,8 +28,16 @@ export const StoryIntro: React.FC<Props> = ({ onComplete }) => {
   ];
 
   useEffect(() => {
+    setCanAdvance(false);
+    const timer = setTimeout(() => {
+      setCanAdvance(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [step]);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && canAdvance) {
         if (step < storyScenes.length - 1) {
           setStep(s => s + 1);
         } else {
@@ -40,7 +48,7 @@ export const StoryIntro: React.FC<Props> = ({ onComplete }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [step, onComplete, storyScenes.length]);
+  }, [step, canAdvance, onComplete, storyScenes.length]);
 
   return (
     <div className="absolute inset-0 bg-[var(--bg-dark)] flex flex-col items-center justify-center p-4 md:p-8 z-50">
@@ -66,7 +74,7 @@ export const StoryIntro: React.FC<Props> = ({ onComplete }) => {
           </p>
         </div>
 
-        <p className="text-[var(--accent-gold)] font-mono text-xs md:text-sm uppercase tracking-widest animate-pulse pt-2 md:pt-4">
+        <p className={`text-[var(--accent-gold)] font-mono text-xs md:text-sm uppercase tracking-widest pt-2 md:pt-4 transition-opacity duration-300 ${canAdvance ? 'animate-pulse opacity-100' : 'opacity-0'}`}>
           [ Press Enter to {step < storyScenes.length - 1 ? 'continue' : 'begin trial'} ]
         </p>
       </div>

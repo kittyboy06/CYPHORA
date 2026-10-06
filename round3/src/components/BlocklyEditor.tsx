@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
+﻿import React, { forwardRef, useImperativeHandle, useRef, useEffect } from 'react';
 import * as Blockly from 'blockly';
 import 'blockly/javascript';
 import { setupBlocks } from '../blockly/customBlocks';
@@ -29,6 +29,10 @@ const BlocklyEditor = forwardRef<any, BlocklyEditorProps>(({ level }, ref) => {
       workspaceRef.current.clear();
       const dom = Blockly.utils.xml.textToDom(xmlString);
       Blockly.Xml.domToWorkspace(dom, workspaceRef.current);
+    },
+    getBlockCount: () => {
+      if (!workspaceRef.current) return 0;
+      return workspaceRef.current.getAllBlocks(false).length;
     }
   }));
 
@@ -63,3 +67,4 @@ const BlocklyEditor = forwardRef<any, BlocklyEditorProps>(({ level }, ref) => {
 });
 
 export default BlocklyEditor;
+
