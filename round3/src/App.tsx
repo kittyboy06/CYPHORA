@@ -171,32 +171,19 @@ function App() {
                 Current Task: The Beast's Lair
               </h3>
               <p className="text-sm leading-relaxed text-[var(--text-primary)]">
-                The Guardian blocks the path! Run forward on the continuous bridge. 
-                Use <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">equip()</code> at the 3rd tile to pick up the Sword (required to attack), and again at the 5th tile to pick up the Shield (required to defend). 
-                Stop exactly 3 blocks before the beast.
+                Run right to collect the Sword at the 3rd tile and the Shield at the 5th tile with <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">equip()</code>. Keep moving right until the guardian is revealed, then stop exactly 3 blocks before it.
                 Then check its shield: if <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">is_beast_vulnerable()</code>, use <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">attack()</code>. 
-                Otherwise, <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">defend()</code>.
+                Otherwise, <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">defend()</code>. Repeat the check until the guardian is defeated.
               </p>
             </>
           )}
           {level === 3 && (
             <>
               <h3 className="text-[11px] text-[var(--accent-gold)] tracking-[3px] uppercase mb-1 font-bold font-mono">
-                Current Task: The Ancient Colour Cipher
-              </h3>
-              <p className="text-sm leading-relaxed text-[var(--text-primary)]">
-                Decode the Guardian's clue: "Where blood burns, dodge. Where the sky flows, slide. Where the sun rests, awaken."
-                Use <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">tile_color()</code> to check the floor, then choose the correct action!
-              </p>
-            </>
-          )}
-          {level === 4 && (
-            <>
-              <h3 className="text-[11px] text-[var(--accent-gold)] tracking-[3px] uppercase mb-1 font-bold font-mono">
                 Current Task: The Path of Trials (FizzBuzz)
               </h3>
               <p className="text-sm leading-relaxed text-[var(--text-primary)]">
-                Traverse 3 zones. Each zone has a 14-tile track followed by a Totem. In the track, tiles are 1-indexed. If index is divisible by 3, it's FIRE (jump). If divisible by 5, GOBLIN (attack). If both, well there's no 15! Rest are GROUND (run). After 14 tiles, use{' '}
+                Traverse 3 zones. Each zone has a 17-tile path that takes 14 action steps, followed by a Totem. In the path, tiles are 1-indexed. If index is divisible by 3, it's FIRE (jump). If divisible by 5, GOBLIN (attack). If both, well there's no 15! Rest are GROUND (run). After 14 action steps, use{' '}
                 <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">activate_totem()</code>.
               </p>
             </>
@@ -219,8 +206,7 @@ function App() {
             >
               <option value={1}>Level 1: Bridge</option>
               <option value={2}>Level 2: Beast</option>
-              <option value={3}>Level 3: Colour Cipher</option>
-              <option value={4}>Level 4: The Final Trial</option>
+              <option value={3}>Level 3: The Path of Trials</option>
             </select>
           ) : (
             <button 

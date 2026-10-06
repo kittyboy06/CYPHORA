@@ -117,9 +117,29 @@
   gap: 0.6rem;
 }
 
-.hud-round1-timer { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.55rem; border-right: 1px solid rgba(223,177,37,0.25); color: #dfb125; }
-.hud-round1-label { color: #9b9d88; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.08rem; }
-.hud-round1-value { min-width: 3.25rem; color: #f0d98b; font-family: 'Fira Code', monospace; font-size: 0.82rem; font-weight: 700; }
+.hud-round1-timer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.55rem;
+  border-right: 1px solid rgba(223, 177, 37, 0.25);
+  color: #dfb125;
+}
+
+.hud-round1-label {
+  color: #9b9d88;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08rem;
+}
+
+.hud-round1-value {
+  min-width: 3.25rem;
+  color: #f0d98b;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
 
 .hud-clock {
   display: flex;
@@ -177,8 +197,15 @@
 }
 
 @keyframes bannerSlideDown {
-  from { transform: translate(-50%, -20px); opacity: 0; }
-  to { transform: translate(-50%, 0); opacity: 1; }
+  from {
+    transform: translate(-50%, -20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
 }
 
 .banner-content {
@@ -247,14 +274,14 @@
 }
 
 /* ========================================================
-   PINNED TOP-CENTER EXPEDITION TIMER HUD
+   PINNED TOP-CENTER EXPEDITION TIMER HUD (APPLE GLASS)
    ======================================================== */
 .desktop-pinned-timer {
   position: fixed;
-  top: 0.85rem;
+  top: 1.1rem;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 5;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -267,31 +294,86 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.35rem 1.25rem;
-  background: rgba(12, 17, 13, 0.92);
-  border: 1px solid rgba(223, 177, 37, 0.45);
+  gap: 0.85rem;
+  padding: 0.42rem 1.25rem 0.45rem 1.15rem;
+
+  /* Apple Glass Material: Layered frosted translucency with saturation */
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(255, 255, 255, 0.04) 45%,
+      rgba(255, 255, 255, 0.07) 100%), rgba(67, 73, 77, 0.62);
+  backdrop-filter: blur(15px) saturate(190%) contrast(105%);
+  -webkit-backdrop-filter: blur(15px) saturate(190%) contrast(105%);
+
+  /* Apple Specular Bevel & Shadows */
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 9999px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.75), 0 0 15px rgba(223, 177, 37, 0.15);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  transition: all 0.25s ease;
+  box-shadow:
+    0 12px 32px -4px rgba(0, 0, 0, 0.5),
+    0 4px 12px 0 rgba(0, 0, 0, 0.25),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.35);
+
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: default;
+  overflow: hidden;
+}
+
+/* Top specular glass sheen reflection */
+.pinned-timer-capsule::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0.03) 50%,
+      transparent 100%);
+  border-radius: 9999px 9999px 0 0;
+  pointer-events: none;
+  z-index: 1;
 }
 
 .pinned-timer-capsule:hover {
-  border-color: #dfb125;
-  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.85), 0 0 22px rgba(223, 177, 37, 0.35);
-  background: rgba(16, 23, 17, 0.96);
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0.06) 45%,
+      rgba(255, 255, 255, 0.1) 100%), rgba(18, 26, 30, 0.72);
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow:
+    0 16px 40px -4px rgba(0, 0, 0, 0.6),
+    0 6px 16px 0 rgba(0, 0, 0, 0.3),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.35);
   transform: translateY(-1px);
+}
+
+.pinned-timer-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 120%, rgba(223, 177, 37, 0.18), transparent 70%);
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 0;
+}
+
+.pinned-timer-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
 }
 
 .pinned-timer-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #7ee787;
-  box-shadow: 0 0 8px #7ee787;
+  background: #34d399;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.9);
   flex-shrink: 0;
 }
 
@@ -300,86 +382,130 @@
 }
 
 .pinned-timer-dot.idle {
-  background: #dfb125;
-  box-shadow: 0 0 6px #dfb125;
+  background: #fbbf24;
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.9);
 }
 
 .pinned-timer-icon {
-  color: #dfb125;
+  color: #fbbf24;
   flex-shrink: 0;
-  filter: drop-shadow(0 0 6px rgba(223, 177, 37, 0.5));
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.5));
+  display: flex;
+  align-items: center;
+}
+
+.pinned-timer-divider {
+  width: 1px;
+  height: 22px;
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.25) 50%,
+      rgba(255, 255, 255, 0.05) 100%);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
 }
 
 .pinned-timer-content {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   line-height: 1;
+  position: relative;
+  z-index: 2;
 }
 
 .pinned-timer-label {
-  font-family: 'Cinzel', 'Montserrat', serif;
-  font-size: 0.52rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Montserrat', sans-serif;
+  font-size: 0.53rem;
   font-weight: 700;
-  letter-spacing: 1.2px;
-  color: #a0b299;
+  letter-spacing: 1.3px;
+  color: rgba(220, 235, 225, 0.75);
   text-transform: uppercase;
-  margin-bottom: 0.15rem;
+  margin-bottom: 0.2rem;
+  white-space: nowrap;
 }
 
 .pinned-timer-digits {
-  font-family: 'Fira Code', 'Cascadia Code', 'Courier New', monospace;
-  font-size: 1.2rem;
+  font-family: 'SF Pro Display', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 1.18rem;
   font-weight: 800;
-  color: #dfb125;
-  letter-spacing: 2px;
-  text-shadow: 0 0 10px rgba(223, 177, 37, 0.5);
+  color: #fbbf24;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.45);
   font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 /* Critical warning state (< 5 mins) */
 .pinned-timer-capsule.critical {
-  border-color: rgba(224, 108, 117, 0.7);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.75), 0 0 20px rgba(224, 108, 117, 0.35);
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.14) 0%,
+      rgba(239, 68, 68, 0.16) 45%,
+      rgba(255, 255, 255, 0.07) 100%), rgba(28, 16, 20, 0.72);
+  border-color: rgba(248, 113, 113, 0.45);
+  box-shadow:
+    0 12px 32px -4px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(239, 68, 68, 0.25),
+    inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.pinned-timer-capsule.critical .pinned-timer-glow {
+  background: radial-gradient(ellipse at 50% 120%, rgba(239, 68, 68, 0.25), transparent 70%);
 }
 
 .pinned-timer-capsule.critical .pinned-timer-dot {
-  background: #e06c75;
-  box-shadow: 0 0 10px #e06c75;
+  background: #ef4444;
+  box-shadow: 0 0 10px #ef4444;
   animation: timerDotPulse 0.7s infinite ease-in-out;
 }
 
 .pinned-timer-capsule.critical .pinned-timer-icon {
-  color: #e06c75;
+  color: #ef4444;
+  filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.6));
 }
 
 .pinned-timer-capsule.critical .pinned-timer-digits {
-  color: #e06c75;
-  text-shadow: 0 0 12px rgba(224, 108, 117, 0.7);
+  color: #ef4444;
+  text-shadow: 0 0 12px rgba(239, 68, 68, 0.6);
 }
 
 /* Expired state (00:00) */
 .pinned-timer-capsule.expired {
-  border-color: rgba(139, 148, 158, 0.4);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(18, 22, 25, 0.65);
+}
+
+.pinned-timer-capsule.expired .pinned-timer-glow {
+  display: none;
 }
 
 .pinned-timer-capsule.expired .pinned-timer-dot {
-  background: #8b949e;
+  background: #9ca3af;
   box-shadow: none;
   animation: none;
 }
 
+.pinned-timer-capsule.expired .pinned-timer-icon {
+  color: #9ca3af;
+  filter: none;
+}
+
 .pinned-timer-capsule.expired .pinned-timer-digits {
-  color: #8b949e;
+  color: #9ca3af;
   text-shadow: none;
 }
 
 @keyframes timerDotPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
+
   50% {
     opacity: 0.35;
     transform: scale(0.85);
@@ -433,7 +559,8 @@
   border-color: rgba(255, 85, 85, 0.35);
 }
 
-.hud-sub-badge.off, .hud-sub-badge.lock {
+.hud-sub-badge.off,
+.hud-sub-badge.lock {
   color: #8c8268;
   background: rgba(20, 25, 20, 0.6);
   border-color: rgba(140, 130, 104, 0.2);
@@ -506,7 +633,8 @@
   border: 1px solid rgba(255, 85, 85, 0.25);
 }
 
-.sub-pill.off, .sub-pill.lock {
+.sub-pill.off,
+.sub-pill.lock {
   color: #7b7868;
   background: rgba(10, 15, 12, 0.6);
   border: 1px solid rgba(123, 120, 104, 0.2);
@@ -586,8 +714,15 @@
 }
 
 @keyframes beaconPulse {
-  0% { transform: scale(calc(0.75 + var(--light-intensity, 0.15) * 1.2)); opacity: calc(0.25 + var(--light-intensity, 0.15) * 0.6); }
-  100% { transform: scale(calc(0.9 + var(--light-intensity, 0.15) * 1.8)); opacity: calc(0.4 + var(--light-intensity, 0.15) * 0.8); }
+  0% {
+    transform: scale(calc(0.75 + var(--light-intensity, 0.15) * 1.2));
+    opacity: calc(0.25 + var(--light-intensity, 0.15) * 0.6);
+  }
+
+  100% {
+    transform: scale(calc(0.9 + var(--light-intensity, 0.15) * 1.8));
+    opacity: calc(0.4 + var(--light-intensity, 0.15) * 0.8);
+  }
 }
 
 .monolith-signal-waves {
@@ -602,8 +737,15 @@
 }
 
 @keyframes signalWaveExpand {
-  0% { transform: scale(0.3); opacity: 0.9; }
-  100% { transform: scale(2.8); opacity: 0; }
+  0% {
+    transform: scale(0.3);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
 }
 
 .monolith-target-reticle {
@@ -635,7 +777,7 @@
 .monolith-viewport-scanline {
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.15), rgba(0,0,0,0.15) 1px, transparent 1px, transparent 3px);
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.15) 1px, transparent 1px, transparent 3px);
   pointer-events: none;
   z-index: 4;
 }
@@ -647,7 +789,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.25rem 0.45rem;
-  background: linear-gradient(180deg, rgba(6,10,8,0.85) 0%, transparent 100%);
+  background: linear-gradient(180deg, rgba(6, 10, 8, 0.85) 0%, transparent 100%);
 }
 
 .telemetry-tag {
@@ -751,8 +893,17 @@
 }
 
 @keyframes pulseGreenDot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.45; transform: scale(0.85); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
 }
 
 .desktop-leaderboard-body {
@@ -903,8 +1054,17 @@
 }
 
 @keyframes pulseRadio {
-  0%, 100% { opacity: 0.75; transform: scale(1); }
-  50% { opacity: 0.35; transform: scale(0.9); }
+
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
 }
 
 .empty-title {
@@ -979,11 +1139,25 @@
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.6));
 }
 
-.terminal-color { color: #98c379; }
-.folder-color { color: #dfb125; }
-.editor-color { color: #61afef; }
-.settings-color { color: #77a487; }
-.file-color { color: #e5c07b; }
+.terminal-color {
+  color: #98c379;
+}
+
+.folder-color {
+  color: #dfb125;
+}
+
+.editor-color {
+  color: #61afef;
+}
+
+.settings-color {
+  color: #77a487;
+}
+
+.file-color {
+  color: #e5c07b;
+}
 
 .desktop-icon-label {
   font-size: 0.72rem;
@@ -1194,8 +1368,15 @@
 }
 
 @keyframes startMenuAppear {
-  from { opacity: 0; transform: translateY(10px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .start-menu-search {
@@ -1288,10 +1469,21 @@
   justify-content: center;
 }
 
-.start-app-icon { color: #98c379; }
-.start-app-icon.folder { color: #dfb125; }
-.start-app-icon.text { color: #61afef; }
-.start-app-icon.settings { color: #77a487; }
+.start-app-icon {
+  color: #98c379;
+}
+
+.start-app-icon.folder {
+  color: #dfb125;
+}
+
+.start-app-icon.text {
+  color: #61afef;
+}
+
+.start-app-icon.settings {
+  color: #77a487;
+}
 
 .start-app-info {
   display: flex;

@@ -13,13 +13,6 @@ export function getToolboxXml(level: number): string {
   }
   if (level === 3) {
     actions += `
-      <block type="action_dodge"></block>
-      <block type="action_slide"></block>
-      <block type="action_activate_tile"></block>
-    `;
-  }
-  if (level === 4) {
-    actions += `
       <block type="action_attack"></block>
       <block type="action_activate_totem"></block>
     `;
@@ -29,11 +22,6 @@ export function getToolboxXml(level: number): string {
   if (level === 2) {
     sensors = `<category name="Sensors" colour="#a5935b">
       <block type="sensor_beast_vulnerable"></block>
-    </category>`;
-  } else if (level === 3) {
-    sensors = `<category name="Sensors" colour="#a5935b">
-      <block type="sensor_tile_color"></block>
-      <block type="color_value"></block>
     </category>`;
   }
 
