@@ -1231,8 +1231,8 @@ export function AdminPortal() {
                 value={editModal.current_stage}
                 onChange={e => setEditModal(prev => ({ ...prev, current_stage: parseInt(e.target.value, 10) }))}
               >
-                <option value={1}>Stage 1 — Virtual OS Navigation</option>
-                <option value={2}>Stage 2 — Image Reconstruction</option>
+                <option value={1}>Round 1 — Virtual OS Navigation</option>
+                <option value={2}>Round 2 — Image Reconstruction</option>
               </select>
             </div>
             <div className="admin-field">

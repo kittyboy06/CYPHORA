@@ -36,7 +36,7 @@ export const APP_REGISTRY = {
   },
   'round2': {
     id: 'round2',
-    title: 'Stage 2: Image Navigation',
+    title: 'Round 2: Image Navigation',
     icon: 'Compass',
     category: 'Expedition',
     defaultBounds: { width: 1060, height: 690 },
@@ -44,7 +44,7 @@ export const APP_REGISTRY = {
   },
   'image-navigation': {
     id: 'image-navigation',
-    title: 'Stage 2: Image Navigation',
+    title: 'Round 2: Image Navigation',
     icon: 'Compass',
     category: 'Expedition',
     defaultBounds: { width: 1060, height: 690 },

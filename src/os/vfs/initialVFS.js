@@ -161,13 +161,13 @@ export const INITIAL_VFS = {
     mimeType: 'text/plain',
     size: 680,
     content: `================================================
-CYPHORA EXPEDITION // STAGE 2: IMAGE NAVIGATION
+CYPHORA EXPEDITION // ROUND 2: IMAGE NAVIGATION
 ================================================
 MISSION OBJECTIVE:
 Reconstruct the lost visual records of the Sector 4 expedition through prompt engineering and AI cosine similarity evaluation.
 
 INTEGRATED OS SUITE:
-1. Stage 2: Image Navigation — Central expedition hub for Phase 1 & Phase 2 submissions.
+1. Round 2: Image Navigation — Central expedition hub for Phase 1 & Phase 2 submissions.
 2. Vision Target Viewer — Protected optical inspector for Target 1 & Target 2 with 15s peek countdown.
 3. Prompt Studio — Advanced prompter with keyword chips, character counter, and VFS file sync.
 4. Similarity Evaluator — Independent cosine similarity tester for testing images against reference targets.
@@ -175,9 +175,9 @@ INTEGRATED OS SUITE:
 6. Mission Briefing — Recovered expedition story logs and audio transcript records.
 
 EVALUATION RULES:
-- Target 1 Cosine Similarity: Up to 200 Points
-- Target 2 Cosine Similarity: Up to 200 Points
-- Speed Bonus (15-min clock): Up to 600 Bonus Points
+- Target 1 Accuracy Match: Up to 50 Points (proportional to % accuracy)
+- Target 2 Accuracy Match: Up to 50 Points (proportional to % accuracy)
+- Total Round 2 Score: Up to 100 Points (Max)
 - Total Possible Points: 1,000 Points
 `,
     updatedAt: new Date().toISOString()

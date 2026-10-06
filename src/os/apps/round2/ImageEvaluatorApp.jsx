@@ -242,7 +242,7 @@ export function ImageEvaluatorApp() {
             }}
           >
             <Compass size={13} />
-            <span>Open Stage 2 Hub</span>
+            <span>Open Round 2 Hub</span>
           </button>
         </div>
       </div>
@@ -485,7 +485,7 @@ export function ImageEvaluatorApp() {
                   gap: '0.4rem'
                 }}
               >
-                <span>Commit to Stage 2 Hub</span>
+                <span>Commit to Round 2 Hub</span>
                 <ArrowRight size={14} />
               </button>
             </>

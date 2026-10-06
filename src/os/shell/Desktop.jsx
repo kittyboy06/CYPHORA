@@ -104,7 +104,7 @@ export function Desktop() {
   const systemApps = [
     {
       id: 'round2',
-      title: 'Stage 2: Image Navigation',
+      title: 'Round 2',
       icon: <Compass size={32} className="desktop-icon-svg folder-color" />,
       action: () => openApp('round2')
     },

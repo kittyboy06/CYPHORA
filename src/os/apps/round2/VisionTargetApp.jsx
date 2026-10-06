@@ -462,7 +462,7 @@ export function VisionTargetApp() {
               }}
             >
               <Compass size={14} color="#dfb125" />
-              <span>Open Stage 2 Hub</span>
+              <span>Open Round 2 Hub</span>
             </button>
           </div>
         </div>

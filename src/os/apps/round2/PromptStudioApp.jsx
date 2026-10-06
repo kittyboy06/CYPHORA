@@ -133,7 +133,7 @@ export function PromptStudioApp() {
     }
     localStorage.setItem('cyphora_round2_prompt', prompt);
     window.dispatchEvent(new Event('cyphora_round2_prompt_updated'));
-    setStatusNotice('✓ Prompt synchronized with Stage 2 Expedition Hub.');
+    setStatusNotice('✓ Prompt synchronized with Round 2 Expedition Hub.');
     openApp('round2');
   };
 
@@ -278,7 +278,7 @@ export function PromptStudioApp() {
             }}
           >
             <Send size={12} />
-            <span>Inject to Stage 2</span>
+            <span>Inject to Round 2</span>
           </button>
         </div>
       </div>

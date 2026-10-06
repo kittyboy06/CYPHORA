@@ -1157,7 +1157,7 @@ export function Round2Page({ onReturnToHub }) {
           <div className="navbar-title-wrap">
             <div className="stage-tag">
               <Compass size={14} />
-              <span>STAGE 2</span>
+              <span>ROUND 2</span>
             </div>
             <h1 className="page-heading">IMAGE NAVIGATION</h1>
 
@@ -1406,7 +1406,7 @@ export function Round2Page({ onReturnToHub }) {
             <div className="celebration-icon-wrap">
               <Sparkles size={42} className="gold-text" />
             </div>
-            <span className="celebration-tag">STAGE 2 &bull; IMAGE 1 EVALUATED</span>
+            <span className="celebration-tag">ROUND 2 &bull; IMAGE 1 EVALUATED</span>
             <h3 id="image1-modal-title" className="celebration-title">Image 1 Submitted &amp; Verified!</h3>
             
             <div className="celebration-score-pill">
@@ -1444,7 +1444,7 @@ export function Round2Page({ onReturnToHub }) {
             <div className="celebration-icon-wrap">
               <Sparkles size={42} className="gold-text" />
             </div>
-            <span className="celebration-tag">STAGE 2 &bull; IMAGE 2 EVALUATED</span>
+            <span className="celebration-tag">ROUND 2 &bull; IMAGE 2 EVALUATED</span>
             <h3 className="celebration-title">Image 2 Submitted &amp; Verified!</h3>
             
             <div className="celebration-score-pill">
@@ -1641,7 +1641,7 @@ export function Round2Page({ onReturnToHub }) {
             <div className="temple-modal-rune-border" aria-hidden="true" />
             <div className="temple-modal-inner">
               <div className="temple-modal-glyph" aria-hidden="true">𓂀</div>
-              <span className="temple-modal-tag">STAGE 2 ✦ FIRST RUNE ALIGNED</span>
+              <span className="temple-modal-tag">ROUND 2 ✦ FIRST RUNE ALIGNED</span>
               <h3 id="first-fragment-modal-title" className="temple-modal-title">
                 First Rune Aligned —<br />The Temple Gateway Shifts!
               </h3>
@@ -1679,7 +1679,7 @@ export function Round2Page({ onReturnToHub }) {
             <div className="temple-modal-rune-border" aria-hidden="true" />
             <div className="temple-modal-inner">
               <div className="temple-modal-glyph temple-modal-glyph--final" aria-hidden="true">𓆣</div>
-              <span className="temple-modal-tag temple-modal-tag--final">STAGE 2 ✦ GATEWAY UNSEALED</span>
+              <span className="temple-modal-tag temple-modal-tag--final">ROUND 2 ✦ GATEWAY UNSEALED</span>
               <h3 id="final-fragment-modal-title" className="temple-modal-title temple-modal-title--final">
                 Gateway Unsealed!<br />The Path to the Inner Temple is Open.
               </h3>

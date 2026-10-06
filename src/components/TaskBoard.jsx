@@ -273,16 +273,6 @@ export function TaskBoard({ round1State }) {
                 ) : <div />}
                 
                 <div style={{ display: 'flex', gap: '0.6rem' }}>
-                  <button 
-                    type="button" 
-                    className="objective-secondary-button" 
-                    onClick={() => setObjectiveMode('minimized')}
-                    style={{ background: 'rgba(255, 255, 255, 0.06)', color: '#c9d1d9', border: '1px solid #30363d', padding: '0.55rem 1rem', borderRadius: '4px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
-                  >
-                    <Minus size={14} />
-                    <span>MINIMIZE TO BOTTOM RIGHT</span>
-                  </button>
-
                   {isCorrect && (
                     <button
                       type="button"

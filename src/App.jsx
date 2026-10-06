@@ -1171,7 +1171,7 @@ function App({ initialStage = null, defaultAppId = null }) {
         localStorage.getItem('cyphora_round2_unlocked') === 'true'
       );
       if (!isR2Auth) {
-        alert('Stage 2 is locked! Your team must receive administrator clearance to enter Round 2.');
+        alert('Round 2 is locked! Your team must receive administrator clearance to enter Round 2.');
         return;
       }
       try {
@@ -1623,11 +1623,11 @@ function App({ initialStage = null, defaultAppId = null }) {
                 </button>
               </div>
 
-              {/* Stage 2 — Image Navigation */}
+              {/* Round 2 — Image Navigation */}
               <div className={`level-card ${isStage2Unlocked ? 'unlocked' : 'locked'}`} onClick={() => handleLevelClick(2, isStage2Unlocked)}>
                 <div className="icon-container"><Compass size={48} /></div>
                 <h2>Image Navigation</h2>
-                <p>Stage 2</p>
+                <p>Round 2</p>
                 <button
                   className="enter-os-btn"
                   onClick={(e) => {
@@ -1635,7 +1635,7 @@ function App({ initialStage = null, defaultAppId = null }) {
                     handleLevelClick(2, isStage2Unlocked);
                   }}
                 >
-                  <span>{isStage2Unlocked ? 'Enter Stage 2' : 'Locked (Admin Req)'}</span>
+                  <span>{isStage2Unlocked ? 'Enter Round 2' : 'Locked (Admin Req)'}</span>
                   <ChevronRight size={16} />
                 </button>
               </div>

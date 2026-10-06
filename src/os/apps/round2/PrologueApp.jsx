@@ -107,7 +107,7 @@ export function PrologueApp() {
       metadata: [
         "FINAL OBJECTIVE: RECONSTRUCT THE LOST EVENT",
         "TARGET: RESTORE FIELD DATA",
-        "STATUS: READY FOR STAGE 2"
+        "STATUS: READY FOR ROUND 2"
       ]
     }
   ];
@@ -166,7 +166,7 @@ export function PrologueApp() {
           }}
         >
           <Compass size={13} />
-          <span>Launch Stage 2</span>
+          <span>Launch Round 2</span>
         </button>
       </div>
 
@@ -359,7 +359,7 @@ export function PrologueApp() {
               gap: '0.3rem'
             }}
           >
-            <span>{currentSlide === slides.length - 1 ? 'Enter Stage 2' : 'Next'}</span>
+            <span>{currentSlide === slides.length - 1 ? 'Enter Round 2' : 'Next'}</span>
             <ChevronRight size={14} />
           </button>
         </div>

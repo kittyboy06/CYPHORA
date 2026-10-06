@@ -707,7 +707,7 @@ export function Round2App({ windowId }) {
         <div className="os-round2-bg" aria-hidden="true" />
         <header className="os-round2-toolbar">
           <div className="os-round2-title-section">
-            <span className="os-round2-badge">STAGE 2</span>
+            <span className="os-round2-badge">ROUND 2</span>
             <span className="os-round2-sub-badge">IMAGE NAVIGATION</span>
           </div>
           <div className="os-round2-metrics">
@@ -732,7 +732,7 @@ export function Round2App({ windowId }) {
                 </div>
                 <p className="lockout-desc">
                   This workstation is actively assigned to <strong>Round 1: OS Navigation</strong>.
-                  All 12 subsystem challenges must be solved to calibrate the optical communication transceiver before Stage 2 can be accessed.
+                  All 12 subsystem challenges must be solved to calibrate the optical communication transceiver before Round 2 can be accessed.
                 </p>
 
                 <div className="lockout-progress-bar-wrap">
@@ -773,7 +773,7 @@ export function Round2App({ windowId }) {
                   <span>ROUND 1 VERIFIED COMPLETE (12/12 TASKS)</span>
                 </div>
                 <p className="lockout-desc">
-                  Station subsystems are restored! Stage 2 Image Navigation is waiting for central authorization from the central <strong>Admin Dashboard</strong>.
+                  Station subsystems are restored! <strong>Round 2: Image Navigation</strong> is waiting for central authorization from the central <strong>Admin Dashboard</strong>.
                 </p>
 
                 <div className="lockout-beacon">
@@ -856,7 +856,7 @@ export function Round2App({ windowId }) {
             style={{ cursor: 'pointer' }}
           >
             <Compass size={13} />
-            <span>STAGE 2</span>
+            <span>ROUND 2</span>
           </div>
           <h2 className="os-round2-heading">IMAGE NAVIGATION</h2>
           <span className={`os-round2-phase-pill ${round2Phase === 2 ? 'phase-2' : ''}`}>
@@ -1053,7 +1053,7 @@ export function Round2App({ windowId }) {
             <div className="temple-modal-rune-border" aria-hidden="true" />
             <div className="temple-modal-inner">
               <div className="temple-modal-glyph" aria-hidden="true">𓂀</div>
-              <span className="temple-modal-tag">STAGE 2 ✦ FIRST RUNE ALIGNED</span>
+              <span className="temple-modal-tag">ROUND 2 ✦ FIRST RUNE ALIGNED</span>
               <h3 id="first-fragment-modal-title" className="temple-modal-title">
                 First Rune Aligned —<br />The Temple Gateway Shifts!
               </h3>
@@ -1091,7 +1091,7 @@ export function Round2App({ windowId }) {
             <div className="temple-modal-rune-border" aria-hidden="true" />
             <div className="temple-modal-inner">
               <div className="temple-modal-glyph temple-modal-glyph--final" aria-hidden="true">𓆣</div>
-              <span className="temple-modal-tag temple-modal-tag--final">STAGE 2 ✦ GATEWAY UNSEALED</span>
+              <span className="temple-modal-tag temple-modal-tag--final">ROUND 2 ✦ GATEWAY UNSEALED</span>
               <h3 id="final-fragment-modal-title" className="temple-modal-title temple-modal-title--final">
                 Gateway Unsealed!<br />The Path to the Inner Temple is Open.
               </h3>
