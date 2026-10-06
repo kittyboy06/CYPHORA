@@ -256,6 +256,9 @@ export function OSProvider({
     });
 
     eventBus.emit('APP_OPENED', { appId, title, meta: options.meta });
+    if (appId === 'tasks' || appId === 'task-terminal') {
+      eventBus.emit('OPEN_TASKS');
+    }
   };
 
   const closeWindow = (id) => {

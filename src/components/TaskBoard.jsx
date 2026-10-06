@@ -79,6 +79,21 @@ export function TaskBoard({ round1State }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [objectiveMode]);
 
+  useEffect(() => {
+    if (!eventBus || typeof eventBus.on !== 'function') return;
+    const handleExpandTasks = () => {
+      setObjectiveMode('expanded');
+    };
+    eventBus.on('OPEN_TASKS', handleExpandTasks);
+    eventBus.on('SHOW_TASKBOARD', handleExpandTasks);
+    return () => {
+      if (typeof eventBus.off === 'function') {
+        eventBus.off('OPEN_TASKS', handleExpandTasks);
+        eventBus.off('SHOW_TASKBOARD', handleExpandTasks);
+      }
+    };
+  }, [eventBus]);
+
   if (!round1State || !activeTask) {
     return celebratedTask ? <TaskCompletionCelebration {...celebratedTask} /> : null;
   }

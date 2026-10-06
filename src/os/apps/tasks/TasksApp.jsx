@@ -63,11 +63,15 @@ export function TasksApp() {
 
     // Emit event for backend sync and engine update
     eventBus.emit('TASK_ANSWER_SUBMITTED', {
-      answer: cleanAnswer
+      answer: cleanAnswer,
+      hintsUsed: hintLevel,
+      taskId: activeTask.id
     });
 
     if (isCorrect) {
-      setFeedback({ text: '✓ Correct! Task completed successfully.', type: 'success' });
+      const points = Math.max(0, 20 - (hintLevel * 5));
+      const penaltyText = hintLevel > 0 ? ` (${hintLevel} hint${hintLevel > 1 ? 's' : ''} used: -${hintLevel * 5} pts)` : '';
+      setFeedback({ text: `✓ Correct! (+${points} PTS EARNED${penaltyText})\n\nTask completed successfully.`, type: 'success' });
       setAnswerInput('');
     } else {
       setFeedback({ text: 'Incorrect answer. Verify evidence and try again.', type: 'error' });
@@ -115,8 +119,19 @@ export function TasksApp() {
         <div className="tasks-subsystem-tag">
           {setPresentation?.label || 'SUBSYSTEM'} — {setPresentation?.title || 'FIELD RESTORATION'}
         </div>
-        <div className="tasks-counter-tag">
-          TASK {presentation.number} / {totalTasks}
+        <div className="tasks-counter-tag" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <span>TASK {presentation.number} / {totalTasks}</span>
+          <span style={{
+            fontSize: '0.68rem',
+            fontWeight: 800,
+            padding: '0.15rem 0.45rem',
+            borderRadius: '10px',
+            background: hintLevel === 0 ? 'rgba(46, 160, 67, 0.2)' : hintLevel === 1 ? 'rgba(210, 153, 34, 0.2)' : 'rgba(248, 81, 73, 0.2)',
+            color: hintLevel === 0 ? '#3fb950' : hintLevel === 1 ? '#d29922' : '#f85149',
+            border: `1px solid ${hintLevel === 0 ? 'rgba(46, 160, 67, 0.35)' : hintLevel === 1 ? 'rgba(210, 153, 34, 0.35)' : 'rgba(248, 81, 73, 0.35)'}`
+          }}>
+            {hintLevel === 0 ? '20 PTS' : hintLevel === 1 ? '15 PTS (-5 HINT)' : '10 PTS (-10 HINT)'}
+          </span>
         </div>
       </div>
 
@@ -142,7 +157,7 @@ export function TasksApp() {
         {hintLevel > 0 && presentation.hints && presentation.hints.length > 0 && (
           <div className="tasks-hints-card">
             <div className="hints-header">
-              <span>REVEALED HINTS ({hintLevel} OF {presentation.hints.length})</span>
+              <span>REVEALED HINTS ({hintLevel} OF {presentation.hints.length}) &bull; -{hintLevel * 5} PTS PENALTY</span>
               {hintLevel < presentation.hints.length && (
                 <button type="button" className="hint-next-btn" onClick={handleRevealHint}>
                   Next Hint <ChevronRight size={13} />
