@@ -237,7 +237,7 @@ export const TASK_DEFINITIONS = [
     order: 9,
     title: 'TASK 09 — THE EVIDENCE TRAIL',
     story: 'An investigative trail spans across multiple records, beginning with an optical marking on a survey map.',
-    question: 'Locate map.png and use an optical scanning inspector to recover the clue reference key.\nCross-reference that key in index.txt to determine the target log record.\nInspect activity.log to identify which file ID USER-A downloaded, and enter that number below.',
+    question: 'Locate map.png and use an image scanning inspector to recover the clue reference key.\nCross-reference that key in index.txt to determine the target log record.\nInspect activity.log to identify which file ID USER-A downloaded, and enter that number below.',
     difficulty: 'hard',
     requiredInput: {
       type: 'files',
