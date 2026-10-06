@@ -572,7 +572,10 @@ export function Round2App() {
     const allowedCodes = ['HORIZON', 'SPECTRA', 'NEXUS', 'CYPHORA', 'AEGIS', 'CHRONOS'];
     if (allowedCodes.includes(unlockCode.trim().toUpperCase())) {
       setIsCodeModalOpen(false);
-      setPhaseSuccessNotice('Stage 3 clearance authorized. Access credentials verified.');
+      setPhaseSuccessNotice('Stage 3 clearance authorized. Redirecting to Temple...');
+      setTimeout(() => {
+        window.location.href = '/round3/index.html';
+      }, 1500);
     } else {
       setUnlockError('Invalid authorization code.');
     }
