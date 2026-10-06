@@ -2100,7 +2100,7 @@
   --objective-deep: #101d17;
   position: fixed;
   inset: 0;
-  z-index: 8500;
+  z-index: 9200;
   pointer-events: none;
   font-family: 'Montserrat', sans-serif;
 }
@@ -2111,11 +2111,11 @@
   display: grid;
   place-items: center;
   padding: 1.5rem;
-  background: rgba(5, 13, 9, 0.48);
-  backdrop-filter: blur(4px);
+  background: rgba(5, 13, 9, 0.65);
+  backdrop-filter: blur(6px);
   pointer-events: auto;
   animation: objective-backdrop-in 0.28s ease-out both;
-  z-index: 8501;
+  z-index: 9500;
 }
 
 .objective-modal {
@@ -2125,9 +2125,10 @@
   overscroll-behavior: contain;
   padding: clamp(1.25rem, 3vw, 2rem);
   border: 1px solid rgba(216, 184, 98, 0.58);
-  background: linear-gradient(145deg, rgba(25, 45, 33, 0.98), rgba(10, 23, 16, 0.98));
+  border-radius: 8px;
+  background: linear-gradient(145deg, rgba(20, 38, 28, 0.98), rgba(8, 18, 12, 0.98));
   color: var(--objective-ink);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48), inset 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.75), inset 0 1px rgba(255, 255, 255, 0.08), 0 0 30px rgba(216, 184, 98, 0.12);
   animation: objective-modal-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
   scrollbar-width: thin;
   scrollbar-color: rgba(223, 177, 37, 0.5) rgba(14, 20, 14, 0.7);
@@ -2397,7 +2398,7 @@
   font-weight: 700;
   letter-spacing: 0.06rem;
   pointer-events: auto;
-  z-index: 8500;
+  z-index: 9200;
   animation: objective-dock-in 0.28s ease-out both;
   transition: all 0.2s ease;
 }

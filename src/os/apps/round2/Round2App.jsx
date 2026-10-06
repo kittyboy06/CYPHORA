@@ -28,6 +28,7 @@ import { ProtectedReferenceImage } from '../../../round2/components/ProtectedRef
 import { PromptSection } from '../../../round2/components/PromptSection.jsx';
 import { ResultImageUpload } from '../../../round2/components/ResultImageUpload.jsx';
 import { VirtualFilePicker } from '../../components/VirtualFilePicker.jsx';
+import { RoundTimerLockScreen } from '../../../components/RoundTimerLockScreen.jsx';
 import './Round2App.css';
 
 const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
@@ -35,8 +36,7 @@ const isDevPort = typeof window !== 'undefined' && window.location.port && windo
 const API_BASE = isDevPort ? `http://${hostname}:8000` : '';
 
 const ROUND_2_DURATION_SECONDS = 15 * 60; // 15 minutes = 900 seconds
-const BASE_POINTS = 400;
-const MAX_SPEED_BONUS = 600;
+const MAX_IMAGE_POINTS = 50; // 50 points max per image for 100% accuracy
 
 export function Round2App({ windowId }) {
   const { openApp, closeWindow, vfs, eventBus, teamData, fetchLeaderboard, requestFullscreen, round1State } = useOS();
@@ -47,8 +47,19 @@ export function Round2App({ windowId }) {
     ? round1State.tasks.filter(t => t.status === 'COMPLETED').length
     : 0;
 
+  const [isSupervisorOverridden, setIsSupervisorOverridden] = useState(() => {
+    return Boolean(
+      localStorage.getItem('cyphora_round2_supervisor_override') === 'true' ||
+      sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true'
+    );
+  });
+
   const [isRound2Authorized, setIsRound2Authorized] = useState(() => {
-    return Boolean(teamData?.round2Unlocked || localStorage.getItem('cyphora_round2_unlocked') === 'true');
+    return Boolean(
+      teamData?.round2Unlocked ||
+      localStorage.getItem('cyphora_round2_unlocked') === 'true' ||
+      sessionStorage.getItem('cyphora_round2_unlocked') === 'true'
+    );
   });
 
   const [adminAuthCode, setAdminAuthCode] = useState('');
@@ -72,30 +83,40 @@ export function Round2App({ windowId }) {
     }
   });
 
-  // 15-Minute Game Timer State with Timestamp Persistence (only ticks when both round 1 is done and authorized)
-  const [secondsRemaining, setSecondsRemaining] = useState(() => {
-    const savedStart = localStorage.getItem('cyphora_round2_start_time');
-    if (savedStart) {
-      const elapsed = Math.floor((Date.now() - parseInt(savedStart, 10)) / 1000);
-      return Math.max(0, ROUND_2_DURATION_SECONDS - elapsed);
-    }
-    return ROUND_2_DURATION_SECONDS;
-  });
+  // Synchronized Round 2 Timer State from Backend
+  const [backendRound2Timer, setBackendRound2Timer] = useState(null);
+  const [isRound2TimerExpired, setIsRound2TimerExpired] = useState(false);
+  const [proctorUnlockedRound2, setProctorUnlockedRound2] = useState(false);
 
-  const [isTimerRunning, setIsTimerRunning] = useState(() => {
-    return isRound1Completed && isRound2Authorized;
-  });
+  const [secondsRemaining, setSecondsRemaining] = useState(1800);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
 
+  // Fetch backend Round 2 timer on mount & listen to WebSocket timer sync
   useEffect(() => {
-    if (isRound1Completed && isRound2Authorized) {
-      if (!localStorage.getItem('cyphora_round2_start_time')) {
-        localStorage.setItem('cyphora_round2_start_time', Date.now().toString());
+    const fetchR2Timer = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/teams/timer?round=2`);
+        if (res.ok) {
+          const d = await res.json();
+          const r2 = d.round2 || d;
+          setBackendRound2Timer(r2);
+        }
+      } catch (e) {}
+    };
+    fetchR2Timer();
+
+    const handleTimerSync = (e) => {
+      const d = e.detail;
+      if (!d) return;
+      if (d.all_timers?.round2) {
+        setBackendRound2Timer(d.all_timers.round2);
+      } else if (d.round === 2) {
+        setBackendRound2Timer(d);
       }
-      setIsTimerRunning(true);
-    } else {
-      setIsTimerRunning(false);
-    }
-  }, [isRound1Completed, isRound2Authorized]);
+    };
+    window.addEventListener('cyphora_timer_sync', handleTimerSync);
+    return () => window.removeEventListener('cyphora_timer_sync', handleTimerSync);
+  }, []);
 
   // Synchronize access status with backend & listen for real-time WebSocket clearance
   useEffect(() => {
@@ -112,6 +133,7 @@ export function Round2App({ windowId }) {
           if (data.unlocked) {
             setIsRound2Authorized(true);
             localStorage.setItem('cyphora_round2_unlocked', 'true');
+            sessionStorage.setItem('cyphora_round2_unlocked', 'true');
           }
         }
       } catch (err) {}
@@ -125,8 +147,16 @@ export function Round2App({ windowId }) {
       if (detail.unlocked !== undefined) {
         if (!detail.team_id && !detail.team_name) {
           setIsRound2Authorized(Boolean(detail.unlocked));
+          if (detail.unlocked) {
+            localStorage.setItem('cyphora_round2_unlocked', 'true');
+            sessionStorage.setItem('cyphora_round2_unlocked', 'true');
+          }
         } else if ((detail.team_id && detail.team_id === myId) || (detail.team_name && detail.team_name.toLowerCase() === myName)) {
           setIsRound2Authorized(Boolean(detail.unlocked));
+          if (detail.unlocked) {
+            localStorage.setItem('cyphora_round2_unlocked', 'true');
+            sessionStorage.setItem('cyphora_round2_unlocked', 'true');
+          }
         }
       }
     };
@@ -138,17 +168,43 @@ export function Round2App({ windowId }) {
   const handleAdminSupervisorLogin = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setAdminAuthError('');
-    if (!adminAuthCode.trim()) {
+    const inputPassword = adminAuthCode.trim();
+    if (!inputPassword) {
       setAdminAuthError('Please enter administrator password.');
       return;
     }
-    if (adminAuthCode.trim() !== 'JCEAIML') {
+
+    setIsVerifyingAdmin(true);
+    let isAuthed = false;
+
+    // Fast check for standard administrator credentials (case-insensitive)
+    if (
+      inputPassword.toUpperCase() === 'JCEAIML' ||
+      inputPassword.toLowerCase() === 'admin'
+    ) {
+      isAuthed = true;
+    } else {
+      // Validate against backend /api/admin/login in case backend has a customized password
+      try {
+        const checkRes = await fetch(`${API_BASE}/api/admin/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: inputPassword })
+        });
+        if (checkRes.ok) {
+          isAuthed = true;
+        }
+      } catch (err) {}
+    }
+
+    if (!isAuthed) {
+      setIsVerifyingAdmin(false);
       setAdminAuthError('Invalid administrator credentials.');
       return;
     }
-    setIsVerifyingAdmin(true);
+
+    const teamId = teamData?.id || localStorage.getItem('cyphora_team_id');
     try {
-      const teamId = teamData?.id || localStorage.getItem('cyphora_team_id');
       if (teamId) {
         await fetch(`${API_BASE}/api/admin/teams/${teamId}/round2-access`, {
           method: 'POST',
@@ -159,16 +215,23 @@ export function Round2App({ windowId }) {
           body: JSON.stringify({ unlocked: true })
         });
       }
-      setIsRound2Authorized(true);
-      localStorage.setItem('cyphora_round2_unlocked', 'true');
-      setAdminAuthCode('');
-    } catch {
-      setIsRound2Authorized(true);
-      localStorage.setItem('cyphora_round2_unlocked', 'true');
-      setAdminAuthCode('');
-    } finally {
-      setIsVerifyingAdmin(false);
-    }
+    } catch (err) {}
+
+    setIsSupervisorOverridden(true);
+    setIsRound2Authorized(true);
+    localStorage.setItem('cyphora_round2_supervisor_override', 'true');
+    sessionStorage.setItem('cyphora_round2_supervisor_override', 'true');
+    localStorage.setItem('cyphora_round2_unlocked', 'true');
+    sessionStorage.setItem('cyphora_round2_unlocked', 'true');
+    setAdminAuthCode('');
+    setAdminAuthError('');
+    setIsVerifyingAdmin(false);
+
+    try {
+      window.dispatchEvent(new CustomEvent('cyphora_round2_access_changed', {
+        detail: { unlocked: true, team_id: teamId }
+      }));
+    } catch (e) {}
   };
 
   // Form states
@@ -225,9 +288,9 @@ export function Round2App({ windowId }) {
     if (img1) {
       try {
         const parsed = JSON.parse(img1);
-        return parsed.score || 200;
+        return parsed.score || 50;
       } catch {
-        return 200;
+        return 50;
       }
     }
     return 0;
@@ -253,24 +316,36 @@ export function Round2App({ windowId }) {
     };
   }, []);
 
-  // Timer Tick Hook
+  // Synchronized Round 2 Countdown Tick Hook
   useEffect(() => {
-    if (!isTimerRunning || secondsRemaining <= 0) return;
+    if (!backendRound2Timer) return;
 
-    const interval = setInterval(() => {
-      const savedStart = localStorage.getItem('cyphora_round2_start_time');
-      if (savedStart) {
-        const elapsed = Math.floor((Date.now() - parseInt(savedStart, 10)) / 1000);
-        const remaining = Math.max(0, ROUND_2_DURATION_SECONDS - elapsed);
-        setSecondsRemaining(remaining);
-        if (remaining <= 0) {
-          setIsTimerRunning(false);
+    if (backendRound2Timer.action === 'start' && backendRound2Timer.ends_at) {
+      const tick = () => {
+        const rem = Math.max(0, Math.floor((new Date(backendRound2Timer.ends_at).getTime() - Date.now()) / 1000));
+        setSecondsRemaining(rem);
+        setIsTimerRunning(rem > 0);
+        if (rem <= 0 && !proctorUnlockedRound2) {
+          setIsRound2TimerExpired(true);
+        } else if (rem > 0) {
+          setIsRound2TimerExpired(false);
         }
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isTimerRunning, secondsRemaining]);
+      };
+      tick();
+      const interval = setInterval(tick, 1000);
+      return () => clearInterval(interval);
+    } else if (backendRound2Timer.action === 'pause') {
+      const rem = backendRound2Timer.remaining_seconds !== undefined ? backendRound2Timer.remaining_seconds : 1800;
+      setSecondsRemaining(rem);
+      setIsTimerRunning(false);
+    } else if (backendRound2Timer.action === 'reset') {
+      const dur = (backendRound2Timer.duration_minutes || 30) * 60;
+      setSecondsRemaining(dur);
+      setIsTimerRunning(false);
+      setIsRound2TimerExpired(false);
+      setProctorUnlockedRound2(false);
+    }
+  }, [backendRound2Timer, proctorUnlockedRound2]);
 
   const formatTime = (totalSeconds) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -278,8 +353,7 @@ export function Round2App({ windowId }) {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  const currentSpeedBonus = Math.round((secondsRemaining / ROUND_2_DURATION_SECONDS) * MAX_SPEED_BONUS);
-  const currentPotentialTotal = BASE_POINTS + currentSpeedBonus;
+  const maxTotalRound2Points = MAX_IMAGE_POINTS * 2;
 
   // Handlers for Image 1
   const handleSelectImage1 = (file, customError) => {
@@ -480,7 +554,7 @@ export function Round2App({ windowId }) {
         simValue = 100.0;
       }
       let simMatch = simValue.toFixed(1) + '%';
-      let phase1Points = Math.round(200 * (simValue / 100));
+      let phase1Points = Math.round(MAX_IMAGE_POINTS * (simValue / 100));
 
       const getBase64 = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -506,15 +580,16 @@ export function Round2App({ windowId }) {
         });
         if (res.ok) {
           const resJson = await res.json();
-          if (resJson.similarity) {
-            simMatch = resJson.similarity;
+          if (resJson.points !== undefined) {
+            phase1Points = resJson.points;
+          } else if (resJson.similarity) {
             const simParsed = parseFloat(resJson.similarity.replace('%', ''));
             if (!isNaN(simParsed)) {
-              phase1Points = Math.round(200 * (simParsed / 100));
+              phase1Points = Math.round(MAX_IMAGE_POINTS * (simParsed / 100));
             }
           }
-          if (resJson.points && !resJson.similarity) {
-            phase1Points = resJson.points;
+          if (resJson.similarity) {
+            simMatch = resJson.similarity;
           }
         }
       } catch {
@@ -558,7 +633,7 @@ export function Round2App({ windowId }) {
       setPromptTouched(false);
       localStorage.removeItem('cyphora_round2_prompt');
 
-      setPhaseSuccessNotice(`✓ Image 1 evaluated (+${phase1Points} pts)! Slot for Image 2 is now unlocked.`);
+      setPhaseSuccessNotice(`✓ Image 1 evaluated (+${phase1Points}/50 pts)! Slot for Image 2 is now unlocked.`);
     } catch {
       setFormGlobalError('Error communicating with evaluation server. Please retry.');
     } finally {
@@ -580,7 +655,6 @@ export function Round2App({ windowId }) {
     setIsSubmitting(true);
 
     const finalElapsed = ROUND_2_DURATION_SECONDS - secondsRemaining;
-    const finalBonus = Math.round((secondsRemaining / ROUND_2_DURATION_SECONDS) * MAX_SPEED_BONUS);
 
     const filename2 = (image2File?.name || '').toLowerCase();
     let image2SimValue = 85 + Math.random() * 12;
@@ -588,10 +662,10 @@ export function Round2App({ windowId }) {
       image2SimValue = 100.0;
     }
     let image2Similarity = image2SimValue.toFixed(1) + '%';
-    let image2Points = Math.round(200 * (image2SimValue / 100));
+    let image2Points = Math.round(MAX_IMAGE_POINTS * (image2SimValue / 100));
 
-    const image1Points = image1EvaluatedData?.score || 200;
-    let finalTotalPoints = image1Points + image2Points + finalBonus;
+    const image1Points = image1EvaluatedData?.score || 50;
+    let finalTotalPoints = image1Points + image2Points;
     const formattedSpeed = formatTime(finalElapsed);
 
     try {
@@ -629,13 +703,21 @@ export function Round2App({ windowId }) {
 
         if (res.ok) {
           const resData = await res.json();
-          if (resData.image2_similarity) {
-            image2Similarity = resData.image2_similarity;
+          if (resData.image2_points !== undefined) {
+            image2Points = resData.image2_points;
+            finalTotalPoints = image1Points + image2Points;
+          } else if (resData.points_awarded !== undefined) {
+            image2Points = resData.points_awarded;
+            finalTotalPoints = image1Points + image2Points;
+          } else if (resData.image2_similarity) {
             const simParsed = parseFloat(resData.image2_similarity.replace('%', ''));
             if (!isNaN(simParsed)) {
-              image2Points = Math.round(200 * (simParsed / 100));
-              finalTotalPoints = image1Points + image2Points + finalBonus;
+              image2Points = Math.round(MAX_IMAGE_POINTS * (simParsed / 100));
+              finalTotalPoints = image1Points + image2Points;
             }
+          }
+          if (resData.image2_similarity) {
+            image2Similarity = resData.image2_similarity;
           }
         }
       } catch {}
@@ -653,7 +735,6 @@ export function Round2App({ windowId }) {
           image1Points,
           image2Points,
           image2Similarity,
-          finalBonus,
           elapsedSpeed: formattedSpeed
         }, null, 2), 'round2');
       } catch (e) {}
@@ -701,7 +782,9 @@ export function Round2App({ windowId }) {
     setPhaseSuccessNotice('Reset to Step 1: Image 1.');
   };
 
-  if (!isRound1Completed || !isRound2Authorized) {
+  const isLocked = !isSupervisorOverridden && !isRound2Authorized;
+
+  if (isLocked) {
     return (
       <div className="os-round2-container os-round2-locked-container">
         <div className="os-round2-bg" aria-hidden="true" />
@@ -725,7 +808,7 @@ export function Round2App({ windowId }) {
 
             {!isRound1Completed ? (
               <>
-                <h2 className="lockout-title">STAGE 1 IN PROGRESS</h2>
+                <h2 className="lockout-title">ROUND 1 IN PROGRESS</h2>
                 <div className="lockout-badge warning">
                   <AlertTriangle size={14} />
                   <span>SUBSYSTEM RESTORATION INCOMPLETE ({completedTasksCount}/12)</span>
@@ -753,7 +836,6 @@ export function Round2App({ windowId }) {
                       if (windowId && typeof closeWindow === 'function') {
                         closeWindow(windowId);
                       }
-                      openApp('tasks');
                       openApp('terminal');
                       if (eventBus && typeof eventBus.emit === 'function') {
                         eventBus.emit('OPEN_TASKS');
@@ -798,6 +880,8 @@ export function Round2App({ windowId }) {
                     onChange={(e) => setAdminAuthCode(e.target.value)}
                     className="supervisor-input"
                     maxLength={32}
+                    autoComplete="off"
+                    spellCheck="false"
                   />
                   <button
                     type="submit"
@@ -805,7 +889,7 @@ export function Round2App({ windowId }) {
                     disabled={isVerifyingAdmin}
                   >
                     <Key size={13} />
-                    <span>Authorize</span>
+                    <span>{isVerifyingAdmin ? 'Verifying...' : 'Authorize'}</span>
                   </button>
                 </div>
                 {adminAuthError && (
@@ -884,10 +968,10 @@ export function Round2App({ windowId }) {
               />
             </div>
           </div>
-          <div className="os-header-speed-pill" title="Speed Evaluation Potential">
+          <div className="os-header-speed-pill" title="Round 2 Accuracy Potential">
             <Flame size={13} color="#dfb125" />
-            <span>+{currentSpeedBonus} SPEED</span>
-            <span className="speed-pts-total">({currentPotentialTotal} MAX)</span>
+            <span>50 PTS / IMAGE</span>
+            <span className="speed-pts-total">({maxTotalRound2Points} MAX)</span>
           </div>
         </div>
 
@@ -1059,7 +1143,7 @@ export function Round2App({ windowId }) {
               </h3>
               <div className="temple-modal-score-stone">
                 <span className="temple-score-label">FRAGMENT I MATCH SCORE</span>
-                <span className="temple-score-value">{fragment1Score}<span className="temple-score-unit"> / 200 PTS</span></span>
+                <span className="temple-score-value">{fragment1Score}<span className="temple-score-unit"> / 50 PTS</span></span>
               </div>
               <p className="temple-modal-desc">
                 The ancient runes stir. Stone grinds against stone as the gateway
@@ -1108,7 +1192,7 @@ export function Round2App({ windowId }) {
                 <div className="temple-score-divider" aria-hidden="true">=</div>
                 <div className="temple-modal-score-stone temple-modal-score-stone--total">
                   <span className="temple-score-label">ACCURACY TOTAL</span>
-                  <span className="temple-score-value">{fragment1Score + fragment2Score}<span className="temple-score-unit"> / 400</span></span>
+                  <span className="temple-score-value">{fragment1Score + fragment2Score}<span className="temple-score-unit"> / 100</span></span>
                 </div>
               </div>
               <p className="temple-modal-desc">
@@ -1145,7 +1229,7 @@ export function Round2App({ windowId }) {
             <form onSubmit={handleUnlockCodeSubmit}>
               <div className="os-modal-content">
                 <p style={{ color: '#d1c7b7', fontSize: '0.85rem', margin: 0 }}>
-                  Enter symposium clearance cipher to authorize Stage 3 access:
+                  Enter symposium clearance cipher to authorize Round 3 access:
                 </p>
                 <input
                   type="text"
@@ -1192,6 +1276,19 @@ export function Round2App({ windowId }) {
         onSelectFile={handlePickFromVfs}
         title={`Select Image File from Virtual OS for Phase ${activeSlotForVfs}`}
       />
+
+      {/* ── ROUND 2 TIME EXPIRED FULL-SCREEN LOCKOUT ── */}
+      {isRound2TimerExpired && !proctorUnlockedRound2 && (
+        <RoundTimerLockScreen
+          round={2}
+          roundName="Round 2 — Image Navigation"
+          teamName={teamData?.name || 'Explorer'}
+          onUnlockOverride={() => {
+            setProctorUnlockedRound2(true);
+            setIsRound2TimerExpired(false);
+          }}
+        />
+      )}
     </div>
   );
 }

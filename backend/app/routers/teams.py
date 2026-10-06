@@ -23,13 +23,31 @@ async def get_leaderboard(db: AsyncSession = Depends(get_db)):
     result = await db.execute(stmt)
     teams = result.scalars().all()
 
-    # Fetch event timer state
-    timer_data = None
+    # Fetch event timers for Round 1 & Round 2
+    timer_r1 = {"round": 1, "action": "reset", "duration_minutes": 60, "remaining_seconds": 3600}
+    timer_r2 = {"round": 2, "action": "reset", "duration_minutes": 30, "remaining_seconds": 1800}
     try:
-        t_res = await db.execute(select(EventConfig).filter(EventConfig.key == "event_timer"))
-        t_row = t_res.scalar_one_or_none()
-        if t_row and t_row.value:
-            timer_data = json.loads(t_row.value)
+        t1_res = await db.execute(select(EventConfig).filter(EventConfig.key.in_(["event_timer_round_1", "event_timer"])))
+        for row in t1_res.scalars().all():
+            if row and row.value:
+                try:
+                    timer_r1 = json.loads(row.value)
+                    timer_r1["round"] = 1
+                    break
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    try:
+        t2_res = await db.execute(select(EventConfig).filter(EventConfig.key == "event_timer_round_2"))
+        t2_row = t2_res.scalar_one_or_none()
+        if t2_row and t2_row.value:
+            try:
+                timer_r2 = json.loads(t2_row.value)
+                timer_r2["round"] = 2
+            except Exception:
+                pass
     except Exception:
         pass
 
@@ -51,18 +69,48 @@ async def get_leaderboard(db: AsyncSession = Depends(get_db)):
             updated_at=t.updated_at.isoformat() if t.updated_at else None,
         ))
 
-    return LeaderboardResponse(teams=items, total_explorers=len(items), timer=timer_data)
+    return LeaderboardResponse(
+        teams=items,
+        total_explorers=len(items),
+        timer=timer_r1,
+        timers={"round1": timer_r1, "round2": timer_r2}
+    )
 
 @router.get("/timer")
-async def get_event_timer(db: AsyncSession = Depends(get_db)):
+async def get_event_timer(round: int = None, db: AsyncSession = Depends(get_db)):
+    t1 = {"round": 1, "action": "reset", "duration_minutes": 60, "remaining_seconds": 3600}
+    t2 = {"round": 2, "action": "reset", "duration_minutes": 30, "remaining_seconds": 1800}
+
     try:
-        t_res = await db.execute(select(EventConfig).filter(EventConfig.key == "event_timer"))
-        t_row = t_res.scalar_one_or_none()
-        if t_row and t_row.value:
-            return json.loads(t_row.value)
+        r1_res = await db.execute(select(EventConfig).filter(EventConfig.key.in_(["event_timer_round_1", "event_timer"])))
+        for row in r1_res.scalars().all():
+            if row and row.value:
+                try:
+                    t1 = json.loads(row.value)
+                    t1["round"] = 1
+                    break
+                except Exception:
+                    pass
     except Exception:
         pass
-    return {"action": "reset", "duration_minutes": 60, "remaining_seconds": 3600}
+
+    try:
+        r2_res = await db.execute(select(EventConfig).filter(EventConfig.key == "event_timer_round_2"))
+        row2 = r2_res.scalar_one_or_none()
+        if row2 and row2.value:
+            try:
+                t2 = json.loads(row2.value)
+                t2["round"] = 2
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    if round == 1:
+        return t1
+    if round == 2:
+        return t2
+    return {"round1": t1, "round2": t2, **t1, "all_timers": {"round1": t1, "round2": t2}}
 
 @router.post("/heartbeat")
 async def team_heartbeat(current_team: Team = Depends(get_current_team), db: AsyncSession = Depends(get_db)):

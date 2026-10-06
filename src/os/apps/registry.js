@@ -15,25 +15,8 @@ import { PromptStudioApp } from './round2/PromptStudioApp.jsx';
 import { ImageEvaluatorApp } from './round2/ImageEvaluatorApp.jsx';
 import { LeaderboardApp } from './round2/LeaderboardApp.jsx';
 import { PrologueApp } from './round2/PrologueApp.jsx';
-import { TasksApp } from './tasks/TasksApp.jsx';
 
 export const APP_REGISTRY = {
-  'tasks': {
-    id: 'tasks',
-    title: 'Task Terminal',
-    icon: 'CheckSquare',
-    category: 'Expedition',
-    defaultBounds: { width: 880, height: 600 },
-    component: TasksApp
-  },
-  'task-terminal': {
-    id: 'task-terminal',
-    title: 'Task Terminal',
-    icon: 'CheckSquare',
-    category: 'Expedition',
-    defaultBounds: { width: 880, height: 600 },
-    component: TasksApp
-  },
   'round2': {
     id: 'round2',
     title: 'Round 2: Image Navigation',

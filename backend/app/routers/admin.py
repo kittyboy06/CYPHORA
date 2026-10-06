@@ -490,30 +490,81 @@ async def export_leaderboard_json(
     ]
     return {"export_timestamp": datetime.utcnow().isoformat(), "teams": data}
 
+def _default_timer(round_num: int):
+    mins = 60 if round_num == 1 else 30
+    return {
+        "round": round_num,
+        "action": "reset",
+        "duration_minutes": mins,
+        "started_at": None,
+        "ends_at": None,
+        "remaining_seconds": mins * 60,
+        "updated_at": datetime.utcnow().isoformat()
+    }
+
+async def _fetch_timer(db: AsyncSession, round_num: int) -> dict:
+    import json
+    key = f"event_timer_round_{round_num}"
+    res = await db.execute(select(EventConfig).filter(EventConfig.key == key))
+    cfg = res.scalar_one_or_none()
+    if cfg and cfg.value:
+        try:
+            d = json.loads(cfg.value)
+            d["round"] = round_num
+            return d
+        except Exception:
+            pass
+
+    if round_num == 1:
+        res_leg = await db.execute(select(EventConfig).filter(EventConfig.key == "event_timer"))
+        cfg_leg = res_leg.scalar_one_or_none()
+        if cfg_leg and cfg_leg.value:
+            try:
+                d = json.loads(cfg_leg.value)
+                d["round"] = 1
+                return d
+            except Exception:
+                pass
+
+    return _default_timer(round_num)
+
 @router.get("/timer")
 async def get_admin_event_timer(
+    round: Optional[int] = None,
     authorized: bool = Depends(verify_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    import json
-    res = await db.execute(select(EventConfig).filter(EventConfig.key == "event_timer"))
-    cfg = res.scalar_one_or_none()
-    if cfg and cfg.value:
-        return json.loads(cfg.value)
-    return {"action": "reset", "duration_minutes": 60, "remaining_seconds": 3600}
+    r1 = await _fetch_timer(db, 1)
+    r2 = await _fetch_timer(db, 2)
+    if round == 1:
+        return r1
+    if round == 2:
+        return r2
+
+    return {
+        "round1": r1,
+        "round2": r2,
+        **r1,
+        "all_timers": {
+            "round1": r1,
+            "round2": r2
+        }
+    }
 
 @router.post("/timer")
 async def configure_event_timer(
+    round: int = 1,
     duration_minutes: int = 60,
     action: str = "start", # "start" | "pause" | "resume" | "reset"
     remaining_seconds: Optional[int] = None,
     authorized: bool = Depends(verify_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Sets or synchronizes the global event countdown timer across all workstations."""
+    """Sets or synchronizes the countdown timer for Round 1 or Round 2 across all workstations."""
     import json
     from datetime import datetime, timedelta
 
+    round_num = 2 if int(round) == 2 else 1
     now = datetime.utcnow()
     ends_at = None
 
@@ -530,6 +581,7 @@ async def configure_event_timer(
         rem_sec = duration_minutes * 60
 
     timer_payload = {
+        "round": round_num,
         "action": action,
         "duration_minutes": duration_minutes,
         "started_at": now.isoformat(),
@@ -539,23 +591,49 @@ async def configure_event_timer(
     }
     raw = json.dumps(timer_payload)
 
-    res = await db.execute(select(EventConfig).filter(EventConfig.key == "event_timer"))
+    key = f"event_timer_round_{round_num}"
+    res = await db.execute(select(EventConfig).filter(EventConfig.key == key))
     cfg = res.scalar_one_or_none()
     if cfg:
         cfg.value = raw
     else:
-        cfg = EventConfig(key="event_timer", value=raw)
+        cfg = EventConfig(key=key, value=raw)
         db.add(cfg)
 
+    if round_num == 1:
+        res_leg = await db.execute(select(EventConfig).filter(EventConfig.key == "event_timer"))
+        cfg_leg = res_leg.scalar_one_or_none()
+        if cfg_leg:
+            cfg_leg.value = raw
+        else:
+            db.add(EventConfig(key="event_timer", value=raw))
+
     await db.commit()
+
+    r1 = await _fetch_timer(db, 1)
+    r2 = await _fetch_timer(db, 2)
 
     # Broadcast timer update over WebSocket to all 100 computers
     await ws_manager.broadcast({
         "event": "EVENT_TIMER_SYNC",
-        "data": timer_payload
+        "data": {
+            **timer_payload,
+            "all_timers": {
+                "round1": r1,
+                "round2": r2
+            }
+        }
     })
 
-    return {"status": "ok", "timer": timer_payload}
+    return {
+        "status": "ok",
+        "timer": timer_payload,
+        "round": round_num,
+        "all_timers": {
+            "round1": r1,
+            "round2": r2
+        }
+    }
 
 def execute_backup() -> dict:
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")

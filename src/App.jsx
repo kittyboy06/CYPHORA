@@ -12,10 +12,10 @@ import {
   processRound1Event,
   persistRound1State,
   updateRound1TimerFromNow,
-  formatCountdown,
   recalculateRound1State,
   clearRound1LocalData,
 } from './round1/round1Engine.js';
+import { RoundTimerLockScreen } from './components/RoundTimerLockScreen.jsx';
 import './App.css';
 
 
@@ -45,6 +45,10 @@ function App({ initialStage = null, defaultAppId = null }) {
       const s = params.get('stage');
       if (s) return s;
       if (params.get('round') === '2') return 'os-desktop';
+      const savedName = sessionStorage.getItem('cyphora_team_name');
+      if (savedName) {
+        return 'os-desktop';
+      }
     }
     return 'initial';
   });
@@ -90,7 +94,12 @@ function App({ initialStage = null, defaultAppId = null }) {
           standing: '1st',
           score: 0,
           isSelected: true,
-          round2Unlocked: (sessionStorage.getItem('cyphora_round2_unlocked') || localStorage.getItem('cyphora_round2_unlocked')) === 'true',
+          round2Unlocked: (
+            sessionStorage.getItem('cyphora_round2_unlocked') === 'true' ||
+            localStorage.getItem('cyphora_round2_unlocked') === 'true' ||
+            sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true' ||
+            localStorage.getItem('cyphora_round2_supervisor_override') === 'true'
+          ),
         };
       }
     }
@@ -118,6 +127,14 @@ function App({ initialStage = null, defaultAppId = null }) {
   const round1StateRef = useRef(round1State);
   const stageRef = useRef(stage);
   const syncedTasksRef = useRef(new Set());
+
+  // Multi-Round Synchronized Timers & Workstation Lockout States
+  const [round1Timer, setRound1Timer] = useState({ round: 1, action: 'reset', duration_minutes: 60, remaining_seconds: 3600 });
+  const [round2Timer, setRound2Timer] = useState({ round: 2, action: 'reset', duration_minutes: 30, remaining_seconds: 1800 });
+  const [isRound1LockedByTimer, setIsRound1LockedByTimer] = useState(false);
+  const [isRound2LockedByTimer, setIsRound2LockedByTimer] = useState(false);
+  const [proctorOverrideRound1, setProctorOverrideRound1] = useState(false);
+  const [proctorOverrideRound2, setProctorOverrideRound2] = useState(false);
 
   useEffect(() => {
     stageRef.current = stage;
@@ -231,43 +248,79 @@ function App({ initialStage = null, defaultAppId = null }) {
     return null;
   }, []);
 
-  // Synchronize global event countdown timer from backend
-  const applyGlobalTimer = useCallback((timer) => {
+  // Synchronize global event countdown timer from backend for Round 1 or Round 2
+  const applyGlobalTimer = useCallback((timer, roundNum = 1) => {
     if (!timer) return;
     const isDesktop = stageRef.current === 'os-desktop';
-    if (timer.action === 'start' && timer.ends_at) {
-      const remainingMs = Math.max(0, new Date(timer.ends_at).getTime() - Date.now());
-      setRound1State(prev => ({
-        ...prev,
-        isTimerRunning: isDesktop && remainingMs > 0,
-        isExpired: remainingMs <= 0,
-        remainingTimeMs: remainingMs,
-        round1StartedAt: prev.round1StartedAt || (isDesktop ? timer.started_at : null),
-        round1Status: remainingMs <= 0 ? 'TIME_EXPIRED' : 'IN_PROGRESS'
-      }));
-    } else if (timer.action === 'pause') {
-      const remSec = timer.remaining_seconds !== undefined ? timer.remaining_seconds : 3600;
-      setRound1State(prev => ({
-        ...prev,
-        isTimerRunning: false,
-        remainingTimeMs: remSec * 1000
-      }));
-    } else if (timer.action === 'resume' && timer.ends_at) {
-      const remainingMs = Math.max(0, new Date(timer.ends_at).getTime() - Date.now());
-      setRound1State(prev => ({
-        ...prev,
-        isTimerRunning: isDesktop && remainingMs > 0,
-        remainingTimeMs: remainingMs,
-        round1Status: 'IN_PROGRESS'
-      }));
-    } else if (timer.action === 'reset') {
-      const durationMs = (timer.duration_minutes || 60) * 60 * 1000;
-      setRound1State(prev => ({
-        ...prev,
-        isTimerRunning: false,
-        isExpired: false,
-        remainingTimeMs: durationMs
-      }));
+    const targetRound = timer.round || roundNum || 1;
+
+    if (targetRound === 1) {
+      setRound1Timer(timer);
+      if (timer.action === 'start' && timer.ends_at) {
+        const remainingMs = Math.max(0, new Date(timer.ends_at).getTime() - Date.now());
+        const isExp = remainingMs <= 0;
+        setRound1State(prev => ({
+          ...prev,
+          isTimerRunning: isDesktop && remainingMs > 0,
+          isExpired: isExp,
+          remainingTimeMs: remainingMs,
+          round1StartedAt: prev.round1StartedAt || (isDesktop ? timer.started_at : null),
+          round1Status: isExp ? 'TIME_EXPIRED' : 'IN_PROGRESS'
+        }));
+        if (isExp) {
+          setIsRound1LockedByTimer(true);
+        } else {
+          setIsRound1LockedByTimer(false);
+          setProctorOverrideRound1(false);
+        }
+      } else if (timer.action === 'pause') {
+        const remSec = timer.remaining_seconds !== undefined ? timer.remaining_seconds : 3600;
+        setRound1State(prev => ({
+          ...prev,
+          isTimerRunning: false,
+          remainingTimeMs: remSec * 1000
+        }));
+      } else if (timer.action === 'resume' && timer.ends_at) {
+        const remainingMs = Math.max(0, new Date(timer.ends_at).getTime() - Date.now());
+        const isExp = remainingMs <= 0;
+        setRound1State(prev => ({
+          ...prev,
+          isTimerRunning: isDesktop && remainingMs > 0,
+          remainingTimeMs: remainingMs,
+          isExpired: isExp,
+          round1Status: isExp ? 'TIME_EXPIRED' : 'IN_PROGRESS'
+        }));
+        if (isExp) {
+          setIsRound1LockedByTimer(true);
+        } else {
+          setIsRound1LockedByTimer(false);
+          setProctorOverrideRound1(false);
+        }
+      } else if (timer.action === 'reset') {
+        const durationMs = (timer.duration_minutes || 60) * 60 * 1000;
+        setRound1State(prev => ({
+          ...prev,
+          isTimerRunning: false,
+          isExpired: false,
+          remainingTimeMs: durationMs
+        }));
+        setIsRound1LockedByTimer(false);
+        setProctorOverrideRound1(false);
+      }
+    } else if (targetRound === 2) {
+      setRound2Timer(timer);
+      if (timer.action === 'start' && timer.ends_at) {
+        const remainingMs = Math.max(0, new Date(timer.ends_at).getTime() - Date.now());
+        if (remainingMs <= 0) {
+          setIsRound2LockedByTimer(true);
+        } else {
+          setIsRound2LockedByTimer(false);
+          setProctorOverrideRound2(false);
+        }
+      } else if (timer.action === 'reset') {
+        setIsRound2LockedByTimer(false);
+        setProctorOverrideRound2(false);
+      }
     }
   }, []);
 
@@ -323,17 +376,42 @@ function App({ initialStage = null, defaultAppId = null }) {
   useEffect(() => {
     if (stage !== 'os-desktop') return;
     if (!round1State.isTimerRunning || round1State.isExpired || round1State.round1Status === 'COMPLETED') {
+      if (round1State.isExpired && !proctorOverrideRound1) {
+        setIsRound1LockedByTimer(true);
+      }
       return;
     }
 
     const tick = () => {
-      setRound1State(prev => updateRound1TimerFromNow(prev));
+      setRound1State(prev => {
+        const next = updateRound1TimerFromNow(prev);
+        if ((next.isExpired || next.remainingTimeMs <= 0) && !proctorOverrideRound1) {
+          setIsRound1LockedByTimer(true);
+        }
+        return next;
+      });
     };
 
     tick();
     const intervalId = setInterval(tick, 1000);
     return () => clearInterval(intervalId);
-  }, [stage, round1State.isTimerRunning, round1State.isExpired, round1State.round1Status]);
+  }, [stage, round1State.isTimerRunning, round1State.isExpired, round1State.round1Status, proctorOverrideRound1]);
+
+  // Periodic check for Round 1 timer expiration from global countdown
+  useEffect(() => {
+    if (stage !== 'os-desktop' && stage !== 'os-boot') return;
+    const checkR1 = () => {
+      if (round1Timer?.action === 'start' && round1Timer.ends_at) {
+        const remMs = new Date(round1Timer.ends_at).getTime() - Date.now();
+        if (remMs <= 0 && !proctorOverrideRound1) {
+          setIsRound1LockedByTimer(true);
+        }
+      }
+    };
+    checkR1();
+    const intv = setInterval(checkR1, 1000);
+    return () => clearInterval(intv);
+  }, [stage, round1Timer, proctorOverrideRound1]);
 
   useEffect(() => {
     return () => { if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current); };
@@ -636,8 +714,11 @@ function App({ initialStage = null, defaultAppId = null }) {
             });
           }
         }
-        if (data.timer) {
-          applyGlobalTimer(data.timer);
+        if (data.timers) {
+          if (data.timers.round1) applyGlobalTimer(data.timers.round1, 1);
+          if (data.timers.round2) applyGlobalTimer(data.timers.round2, 2);
+        } else if (data.timer) {
+          applyGlobalTimer(data.timer, 1);
         }
       }
     } catch (err) {
@@ -663,7 +744,7 @@ function App({ initialStage = null, defaultAppId = null }) {
     } catch (err) {}
 
     const paramStage = params.get('stage');
-    if (paramStage && ['initial', 'prologue', 'main'].includes(paramStage)) {
+    if (paramStage && ['initial', 'prologue', 'main', 'os-boot', 'os-desktop'].includes(paramStage)) {
       setStage(paramStage);
     }
 
@@ -758,11 +839,20 @@ function App({ initialStage = null, defaultAppId = null }) {
                   });
                 }
               }
-              if (payload.timer) {
-                applyGlobalTimer(payload.timer);
+              if (payload.timers) {
+                if (payload.timers.round1) applyGlobalTimer(payload.timers.round1, 1);
+                if (payload.timers.round2) applyGlobalTimer(payload.timers.round2, 2);
+              } else if (payload.timer) {
+                applyGlobalTimer(payload.timer, 1);
               }
             } else if (payload.event === 'EVENT_TIMER_SYNC') {
-              applyGlobalTimer(payload.data);
+              window.dispatchEvent(new CustomEvent('cyphora_timer_sync', { detail: payload.data }));
+              if (payload.data?.all_timers) {
+                if (payload.data.all_timers.round1) applyGlobalTimer(payload.data.all_timers.round1, 1);
+                if (payload.data.all_timers.round2) applyGlobalTimer(payload.data.all_timers.round2, 2);
+              } else {
+                applyGlobalTimer(payload.data, payload.data?.round || 1);
+              }
             } else if (payload.event === 'ROUND2_ACCESS_UPDATE') {
               const cur = teamDataRef.current;
               const savedId = parseInt(localStorage.getItem('cyphora_team_id'), 10) || cur.id;
@@ -921,13 +1011,19 @@ function App({ initialStage = null, defaultAppId = null }) {
     // Rehydrate complete task completion record directly from central database
     const syncResult = await syncCompletedTasksFromBackend(team.id, team.name, token);
 
-    // If returning for Round 2, or completed Round 1, open Hub directly (or OS with Round 2 access)
+    // Clear any previous OS locks and stale session windows so resuming player starts fresh inside the OS
+    try {
+      sessionStorage.removeItem('cyphora_os_locked');
+      sessionStorage.removeItem('cyphora_os_session');
+    } catch (e) {}
+
+    // Resuming returning players always directly enters the OS!
     if (isR2Auth || (syncResult && syncResult.completedCount >= 12)) {
-      setStage('main');
+      setInitialAppId('round2');
     } else {
-      // Mid-Round 1 recovery: jump directly into OS without replaying prologue!
-      setStage('os-boot');
+      setInitialAppId('tasks');
     }
+    setStage('os-boot');
   };
 
   const handleExitWorkstation = useCallback(() => {
@@ -975,6 +1071,7 @@ function App({ initialStage = null, defaultAppId = null }) {
     setResumeError('');
     setModalMode('register');
     setShowTeamModal(false);
+    setInitialAppId(null);
     setStage('initial');
 
     if (socketRef.current) {
@@ -1139,6 +1236,11 @@ function App({ initialStage = null, defaultAppId = null }) {
   };
 
   const handleBeginExpedition = async () => {
+    // Clear any previous session lock flag when legitimately beginning expedition
+    try {
+      sessionStorage.removeItem('cyphora_os_locked');
+    } catch (e) { }
+
     // Transition to OS boot sequence - timer only starts when player lands on OS desktop
     setStage('os-boot');
 
@@ -1168,7 +1270,9 @@ function App({ initialStage = null, defaultAppId = null }) {
       const isR2Auth = Boolean(
         teamData?.round2Unlocked ||
         sessionStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-        localStorage.getItem('cyphora_round2_unlocked') === 'true'
+        localStorage.getItem('cyphora_round2_unlocked') === 'true' ||
+        sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true' ||
+        localStorage.getItem('cyphora_round2_supervisor_override') === 'true'
       );
       if (!isR2Auth) {
         alert('Round 2 is locked! Your team must receive administrator clearance to enter Round 2.');
@@ -1190,7 +1294,9 @@ function App({ initialStage = null, defaultAppId = null }) {
   const isStage2Unlocked = Boolean(
     teamData?.round2Unlocked ||
     sessionStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-    localStorage.getItem('cyphora_round2_unlocked') === 'true'
+    localStorage.getItem('cyphora_round2_unlocked') === 'true' ||
+    sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true' ||
+    localStorage.getItem('cyphora_round2_supervisor_override') === 'true'
   );
 
   const explorerList = Array.isArray(liveExplorers)
@@ -1662,13 +1768,29 @@ function App({ initialStage = null, defaultAppId = null }) {
           stage={stage}
           setStage={setStage}
           teamData={teamData}
-          onReturnToHub={() => setStage('main')}
+          onReturnToHub={() => {
+            setInitialAppId(null);
+            setStage('main');
+          }}
           round1State={round1State}
           setRound1State={setRound1State}
           liveExplorers={liveExplorers}
           isWsConnected={isWsConnected}
           fetchLeaderboard={fetchLeaderboard}
           initialAppId={initialAppId}
+        />
+      )}
+
+      {/* ── ROUND 1 TIME EXPIRED FULL-SCREEN LOCKOUT ── */}
+      {isRound1LockedByTimer && !proctorOverrideRound1 && (stage === 'os-desktop' || stage === 'os-boot') && (
+        <RoundTimerLockScreen
+          round={1}
+          roundName="Round 1 — OS Navigation"
+          teamName={teamData?.name || 'Explorer'}
+          onUnlockOverride={() => {
+            setProctorOverrideRound1(true);
+            setIsRound1LockedByTimer(false);
+          }}
         />
       )}
     </div>

@@ -1,0 +1,355 @@
+/* ── CYPHORA Round Timer Lockout Screen ── */
+.round-timer-lockscreen-root {
+  position: fixed;
+  inset: 0;
+  z-index: 9999999;
+  background: radial-gradient(circle at 50% 35%, rgba(45, 12, 16, 0.96) 0%, rgba(10, 8, 12, 0.99) 70%, #050406 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow: hidden;
+  user-select: none;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+  animation: lockscreenFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes lockscreenFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.lockscreen-scanner-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #e06c75, #dfb125, transparent);
+  opacity: 0.6;
+  animation: scanDown 4s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes scanDown {
+  0% { top: 0%; opacity: 0.2; }
+  50% { opacity: 0.8; }
+  100% { top: 100%; opacity: 0.2; }
+}
+
+.lockscreen-glow-ambient {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(224, 108, 117, 0.15) 0%, transparent 70%);
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.lockscreen-card {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  background: rgba(18, 16, 22, 0.92);
+  border: 1px solid rgba(224, 108, 117, 0.4);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(224, 108, 117, 0.2), inset 0 0 20px rgba(224, 108, 117, 0.05);
+  border-radius: 12px;
+  padding: 2.2rem 2.4rem;
+  text-align: center;
+  backdrop-filter: blur(24px);
+  box-sizing: border-box;
+}
+
+.lockscreen-icon-capsule {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(224, 108, 117, 0.12);
+  border: 1px solid rgba(224, 108, 117, 0.5);
+  color: #e06c75;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 0 25px rgba(224, 108, 117, 0.35);
+}
+
+.lockscreen-alert-icon {
+  animation: pulseAlert 2s infinite ease-in-out;
+}
+
+@keyframes pulseAlert {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px #e06c75); }
+  50% { transform: scale(1.08); filter: drop-shadow(0 0 12px #ff4d5a); }
+}
+
+.lockscreen-icon-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px dashed rgba(223, 177, 37, 0.4);
+  animation: rotateRing 20s linear infinite;
+}
+
+@keyframes rotateRing {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.lockscreen-badges-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.lockscreen-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.65rem;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-transform: uppercase;
+}
+
+.lockscreen-badge.round-badge {
+  background: rgba(224, 108, 117, 0.2);
+  color: #ff6b77;
+  border: 1px solid rgba(224, 108, 117, 0.45);
+}
+
+.lockscreen-badge.security-badge {
+  background: rgba(223, 177, 37, 0.15);
+  color: #dfb125;
+  border: 1px solid rgba(223, 177, 37, 0.4);
+}
+
+.lockscreen-title {
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  margin: 0 0 0.3rem 0;
+  text-shadow: 0 0 15px rgba(224, 108, 117, 0.6);
+}
+
+.lockscreen-round-sub {
+  font-size: 0.9rem;
+  color: #dfb125;
+  letter-spacing: 0.14em;
+  margin: 0 0 1.4rem 0;
+  font-weight: 600;
+}
+
+.lockscreen-alert-box {
+  background: rgba(36, 18, 22, 0.75);
+  border: 1px solid rgba(224, 108, 117, 0.5);
+  border-left: 4px solid #e06c75;
+  border-radius: 6px;
+  padding: 1.1rem 1.25rem;
+  text-align: left;
+  margin-bottom: 1.4rem;
+}
+
+.alert-box-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ff6b77;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.alert-triangle-icon {
+  color: #ff6b77;
+  flex-shrink: 0;
+}
+
+.alert-box-text {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #eae0c8;
+  margin: 0 0 0.4rem 0;
+}
+
+.alert-box-instruction {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #dfb125;
+  margin: 0;
+  font-weight: 500;
+}
+
+.lockscreen-diagnostics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  background: rgba(12, 10, 16, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 1.4rem;
+  text-align: left;
+}
+
+.diag-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.diag-label {
+  font-size: 0.62rem;
+  color: #8c8268;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.diag-val {
+  font-size: 0.75rem;
+  color: #eae0c8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diag-val.highlight {
+  color: #98c379;
+  font-weight: 700;
+}
+
+.diag-val.code-text {
+  color: #e06c75;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
+
+.lockscreen-override-section {
+  background: rgba(14, 12, 18, 0.85);
+  border: 1px dashed rgba(223, 177, 37, 0.35);
+  border-radius: 8px;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+.override-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #dfb125;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.override-caption {
+  font-size: 0.73rem;
+  color: #a89d80;
+  margin: 0 0 0.8rem 0;
+  line-height: 1.35;
+}
+
+.override-input-wrap {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.override-key-input {
+  flex: 1;
+  background: rgba(8, 7, 10, 0.9);
+  border: 1px solid rgba(223, 177, 37, 0.45);
+  border-radius: 4px;
+  color: #ffffff;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.88rem;
+  font-family: inherit;
+  outline: none;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.override-key-input:focus {
+  border-color: #dfb125;
+  box-shadow: 0 0 12px rgba(223, 177, 37, 0.35);
+  background: rgba(12, 10, 15, 1);
+}
+
+.override-submit-btn {
+  background: #dfb125;
+  color: #0b0a0e;
+  border: none;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 0 1.2rem;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.05em;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.override-submit-btn:hover {
+  background: #f0c33a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(223, 177, 37, 0.4);
+}
+
+.override-error-msg {
+  color: #ff6b77;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.override-success-msg {
+  color: #98c379;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.lockscreen-footer-hint {
+  font-size: 0.72rem;
+  color: #8c8268;
+  line-height: 1.4;
+}
+
+.lockscreen-footer-hint span {
+  color: #dfb125;
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .lockscreen-card {
+    padding: 1.5rem 1.2rem;
+  }
+  .lockscreen-diagnostics-grid {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+  .override-input-wrap {
+    flex-direction: column;
+  }
+  .override-submit-btn {
+    padding: 0.6rem;
+  }
+}

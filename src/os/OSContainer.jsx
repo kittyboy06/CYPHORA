@@ -12,11 +12,11 @@ import './OSContainer.css';
 
 function OSContent({ stage, setStage, teamData, round1State, initialAppId }) {
   const { windows = [], openApp = () => {}, showExitBanner = false, exitReason = '', unlockGate = () => {} } = useOS();
-  const hasOpenedInitialAppRef = useRef(false);
+  const lastOpenedAppRef = useRef(null);
 
   useEffect(() => {
-    if (stage === 'os-desktop' && initialAppId && !hasOpenedInitialAppRef.current) {
-      hasOpenedInitialAppRef.current = true;
+    if (stage === 'os-desktop' && initialAppId && lastOpenedAppRef.current !== initialAppId) {
+      lastOpenedAppRef.current = initialAppId;
       openApp(initialAppId);
     }
   }, [stage, initialAppId, openApp]);

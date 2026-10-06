@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronUp, Maximize2, Minus, CheckCircle, CheckSquare } from 'lucide-react';
+import { ChevronUp, Maximize2, Minus, CheckCircle, CheckSquare, X } from 'lucide-react';
 import { useOS } from '../os/state/OSContext.jsx';
 import { SET_PRESENTATIONS, TASK_PRESENTATIONS, TASK_DEFINITIONS } from '../round1/taskContent.js';
 import { ROUND_1_SETS } from '../round1/round1Engine.js';
@@ -13,7 +13,7 @@ export function TaskBoard({ round1State }) {
   const tasks = round1State?.tasks || [];
   const activeTask = tasks.find(task => task.status === 'ACTIVE');
   const activeTaskId = activeTask?.id || null;
-  const [objectiveMode, setObjectiveMode] = useState('expanded');
+  const [objectiveMode, setObjectiveMode] = useState('minimized');
   const [hintLevel, setHintLevel] = useState(0);
   const [submittedAnswer, setSubmittedAnswer] = useState('');
   const [feedbackMsg, setFeedbackMsg] = useState('');
@@ -28,6 +28,12 @@ export function TaskBoard({ round1State }) {
   useEffect(() => {
     if (!activeTaskId) {
       setObjectiveMode('minimized');
+      return;
+    }
+
+    if (previousActiveTask.current === null) {
+      // First mount: keep task terminal minimized at bottom right
+      previousActiveTask.current = activeTaskId;
       return;
     }
 
@@ -197,14 +203,24 @@ export function TaskBoard({ round1State }) {
                     {hintLevel === 0 ? '20 PTS' : hintLevel === 1 ? '15 PTS (-5 HINT)' : '10 PTS (-10 HINT)'}
                   </span>
                 </div>
-                <button
-                  className="objective-icon-button"
-                  onClick={() => setObjectiveMode('minimized')}
-                  aria-label="Minimize task to bottom right"
-                  title="Minimize task to bottom right"
-                >
-                  <Minus size={16} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <button
+                    className="objective-icon-button"
+                    onClick={() => setObjectiveMode('minimized')}
+                    aria-label="Minimize task to bottom right"
+                    title="Minimize task to bottom right"
+                  >
+                    <Minus size={16} />
+                  </button>
+                  <button
+                    className="objective-icon-button"
+                    onClick={() => setObjectiveMode('minimized')}
+                    aria-label="Close task popup (minimize to bottom right)"
+                    title="Close task popup"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
               <div className="objective-rule" style={{ margin: '0.5rem 0 0.8rem 0', borderBottom: '1px solid #30363d' }} />
 

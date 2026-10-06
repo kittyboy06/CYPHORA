@@ -157,12 +157,6 @@ export function Desktop() {
       action: () => openApp('file-manager')
     },
     {
-      id: 'tasks',
-      title: 'Task Terminal',
-      icon: <CheckSquare size={32} className="desktop-icon-svg settings-color" />,
-      action: () => openApp('tasks')
-    },
-    {
       id: 'terminal',
       title: 'Terminal',
       icon: <Terminal size={32} className="desktop-icon-svg terminal-color" />,

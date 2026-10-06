@@ -1037,3 +1037,332 @@
   background: rgba(223, 177, 37, 0.3) !important;
   border-color: #dfb125 !important;
 }
+
+/* ==========================================================================
+   ROUND 2 LOCKOUT & RESTRICTED ACCESS SCREEN STYLES
+   ========================================================================== */
+
+.os-round2-sub-badge {
+  font-family: 'Cinzel', serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: #fff;
+  margin: 0;
+  text-shadow: 0 0 10px rgba(223, 177, 37, 0.3);
+}
+
+.r2-badge-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.os-round2-locked-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #060905;
+  position: relative;
+}
+
+.os-round2-lockout-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  overflow-y: auto;
+  position: relative;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.lockout-card {
+  width: 100%;
+  max-width: 520px;
+  background: #080c07;
+  border: 1px solid rgba(223, 177, 37, 0.35);
+  border-radius: 8px;
+  padding: 2.4rem 2.2rem 1.8rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85), 0 0 30px rgba(223, 177, 37, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.lockout-icon-pulse {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(223, 177, 37, 0.45);
+  background: radial-gradient(circle, rgba(223, 177, 37, 0.12) 0%, rgba(223, 177, 37, 0.02) 70%, transparent 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.3rem;
+  box-shadow: 0 0 20px rgba(223, 177, 37, 0.15);
+  animation: lockoutGlowPulse 3s ease-in-out infinite;
+}
+
+@keyframes lockoutGlowPulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(223, 177, 37, 0.15);
+    border-color: rgba(223, 177, 37, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(223, 177, 37, 0.35);
+    border-color: rgba(223, 177, 37, 0.7);
+  }
+}
+
+.lockout-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #dfb125;
+  margin: 0 0 0.9rem 0;
+  text-shadow: 0 0 14px rgba(223, 177, 37, 0.35);
+  text-align: center;
+}
+
+.lockout-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  margin-bottom: 1.25rem;
+}
+
+.lockout-badge.warning {
+  background: rgba(223, 177, 37, 0.08);
+  border: 1px solid rgba(223, 177, 37, 0.4);
+  color: #dfb125;
+}
+
+.lockout-badge.success {
+  background: rgba(46, 160, 67, 0.15);
+  border: 1px solid rgba(46, 160, 67, 0.4);
+  color: #7ee787;
+}
+
+.lockout-desc {
+  color: #9ba698;
+  font-size: 0.84rem;
+  line-height: 1.6;
+  text-align: center;
+  max-width: 440px;
+  margin: 0 0 1.35rem 0;
+}
+
+.lockout-desc strong {
+  color: #eae0c8;
+  font-weight: 600;
+}
+
+.lockout-progress-bar-wrap {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.6rem;
+}
+
+.lockout-progress-track {
+  width: 100%;
+  height: 6px;
+  background: #161c14;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.lockout-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #dfb125 0%, #ffe680 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.lockout-progress-text {
+  font-size: 0.72rem;
+  color: #707b6e;
+  letter-spacing: 0.5px;
+}
+
+.lockout-actions {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 1.8rem;
+}
+
+.lockout-primary-btn {
+  background: rgba(223, 177, 37, 0.12);
+  border: 1px solid #dfb125;
+  color: #ffe680;
+  font-family: 'Cinzel', serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 0.6rem 1.4rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 15px rgba(223, 177, 37, 0.12);
+}
+
+.lockout-primary-btn:hover {
+  background: rgba(223, 177, 37, 0.25);
+  border-color: #ffe680;
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(223, 177, 37, 0.3);
+}
+
+.lockout-beacon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  font-size: 0.75rem;
+  color: #7ee787;
+  margin-bottom: 1.6rem;
+}
+
+.lockout-beacon .beacon-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3fb950;
+  box-shadow: 0 0 10px #3fb950;
+  animation: beaconPulse 1.8s infinite;
+}
+
+@keyframes beaconPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+
+.lockout-supervisor-box {
+  width: 100%;
+  max-width: 440px;
+  padding-top: 1.2rem;
+  border-top: 1px solid rgba(223, 177, 37, 0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.supervisor-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #8f9b8c;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+.supervisor-auth-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 0.4rem;
+}
+
+.supervisor-input-group {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.supervisor-input {
+  flex: 1;
+  background: #050805;
+  border: 1px solid #232b20;
+  border-radius: 4px;
+  padding: 0.48rem 0.8rem;
+  color: #eae0c8;
+  font-size: 0.8rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.supervisor-input:focus {
+  border-color: #dfb125;
+}
+
+.supervisor-input::placeholder {
+  color: #4a5448;
+}
+
+.supervisor-unlock-btn {
+  background: rgba(223, 177, 37, 0.12);
+  border: 1px solid rgba(223, 177, 37, 0.4);
+  color: #dfb125;
+  padding: 0.48rem 0.95rem;
+  border-radius: 4px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.supervisor-unlock-btn:hover:not(:disabled) {
+  background: rgba(223, 177, 37, 0.22);
+  border-color: #dfb125;
+  color: #ffe680;
+}
+
+.supervisor-unlock-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.supervisor-error-msg {
+  font-size: 0.72rem;
+  color: #f85149;
+  margin-top: 0.2rem;
+}

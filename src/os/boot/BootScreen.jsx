@@ -63,11 +63,25 @@ export function BootScreen({ teamName, onComplete }) {
     return () => clearInterval(interval);
   }, [teamName, onComplete]);
 
+  const handleSkip = () => {
+    onComplete();
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape') {
+        onComplete();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onComplete]);
+
   return (
-    <div className="bootscreen-container">
+    <div className="bootscreen-container" onClick={handleSkip} style={{ cursor: 'pointer' }} title="Click or press Space to skip">
       <div className="bootscreen-terminal-frame">
         <div className="bootscreen-header">
-          <div className="bootscreen-title">CYPHORA // STAGE 1: OS NAVIGATOR</div>
+          <div className="bootscreen-title">CYPHORA // WORKSTATION OS</div>
           <div className="bootscreen-chip">SYS_ID: {teamName.toUpperCase().replace(/\s+/g, '_')}</div>
         </div>
 
@@ -92,8 +106,9 @@ export function BootScreen({ teamName, onComplete }) {
           </div>
         </div>
 
-        <div className="bootscreen-footer">
+        <div className="bootscreen-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>SECURE COMPETITION RUNTIME // STANDALONE ENCLAVE</span>
+          <span style={{ fontSize: '0.72rem', opacity: 0.6 }}>[CLICK TO SKIP]</span>
         </div>
       </div>
     </div>

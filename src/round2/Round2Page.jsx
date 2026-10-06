@@ -24,12 +24,17 @@ import { ProtectedReferenceImage } from './components/ProtectedReferenceImage.js
 import { PromptSection } from './components/PromptSection.jsx';
 import { ResultImageUpload } from './components/ResultImageUpload.jsx';
 import { LeaderboardPanel } from './components/LeaderboardPanel.jsx';
+import { RoundTimerLockScreen } from '../components/RoundTimerLockScreen.jsx';
 import './Round2.css';
 import './Round2Page.css';
 
 const ROUND_2_DURATION_SECONDS = 15 * 60; // 15 minutes = 900 seconds
 const POINTS_PER_IMAGE = 50; // 50 points for 100% Accuracy, reduced proportionally
 const MAX_ROUND_2_POINTS = 100; // 2 images * 50 points max
+
+const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+const isDevPort = typeof window !== 'undefined' && window.location.port && window.location.port !== '8000';
+const API_BASE = isDevPort ? `http://${hostname}:8000` : '';
 
 // --- Grand Dust Burst Effect (ancient door reveal, one-shot ~3s) ---
 const DustParticles = ({ count = 400 }) => {
@@ -456,19 +461,40 @@ export function Round2Page({ onReturnToHub }) {
     }
   });
 
-  // 15-Minute Game Timer State with Timestamp Persistence
-  const [secondsRemaining, setSecondsRemaining] = useState(() => {
-    const savedStart = localStorage.getItem('cyphora_round2_start_time');
-    if (savedStart) {
-      const elapsed = Math.floor((Date.now() - parseInt(savedStart, 10)) / 1000);
-      return Math.max(0, ROUND_2_DURATION_SECONDS - elapsed);
-    }
-    const now = Date.now();
-    localStorage.setItem('cyphora_round2_start_time', now.toString());
-    return ROUND_2_DURATION_SECONDS;
-  });
+  // Synchronized Round 2 Timer State from Backend
+  const [backendRound2Timer, setBackendRound2Timer] = useState(null);
+  const [isRound2TimerExpired, setIsRound2TimerExpired] = useState(false);
+  const [proctorUnlockedRound2, setProctorUnlockedRound2] = useState(false);
 
-  const [isTimerRunning, setIsTimerRunning] = useState(true);
+  const [secondsRemaining, setSecondsRemaining] = useState(1800);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+
+  // Fetch backend Round 2 timer on mount & listen to WebSocket timer sync
+  useEffect(() => {
+    const fetchR2Timer = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/teams/timer?round=2`);
+        if (res.ok) {
+          const d = await res.json();
+          const r2 = d.round2 || d;
+          setBackendRound2Timer(r2);
+        }
+      } catch (e) {}
+    };
+    fetchR2Timer();
+
+    const handleTimerSync = (e) => {
+      const d = e.detail;
+      if (!d) return;
+      if (d.all_timers?.round2) {
+        setBackendRound2Timer(d.all_timers.round2);
+      } else if (d.round === 2) {
+        setBackendRound2Timer(d);
+      }
+    };
+    window.addEventListener('cyphora_timer_sync', handleTimerSync);
+    return () => window.removeEventListener('cyphora_timer_sync', handleTimerSync);
+  }, []);
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
 
   // --- Temple Background Layer State ---
@@ -595,24 +621,36 @@ export function Round2Page({ onReturnToHub }) {
     };
   }, []);
 
-  // Timer Tick Hook
+  // Synchronized Round 2 Countdown Tick Hook
   useEffect(() => {
-    if (!isTimerRunning || secondsRemaining <= 0) return;
+    if (!backendRound2Timer) return;
 
-    const interval = setInterval(() => {
-      const savedStart = localStorage.getItem('cyphora_round2_start_time');
-      if (savedStart) {
-        const elapsed = Math.floor((Date.now() - parseInt(savedStart, 10)) / 1000);
-        const remaining = Math.max(0, ROUND_2_DURATION_SECONDS - elapsed);
-        setSecondsRemaining(remaining);
-        if (remaining <= 0) {
-          setIsTimerRunning(false);
+    if (backendRound2Timer.action === 'start' && backendRound2Timer.ends_at) {
+      const tick = () => {
+        const rem = Math.max(0, Math.floor((new Date(backendRound2Timer.ends_at).getTime() - Date.now()) / 1000));
+        setSecondsRemaining(rem);
+        setIsTimerRunning(rem > 0);
+        if (rem <= 0 && !proctorUnlockedRound2) {
+          setIsRound2TimerExpired(true);
+        } else if (rem > 0) {
+          setIsRound2TimerExpired(false);
         }
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isTimerRunning, secondsRemaining]);
+      };
+      tick();
+      const interval = setInterval(tick, 1000);
+      return () => clearInterval(interval);
+    } else if (backendRound2Timer.action === 'pause') {
+      const rem = backendRound2Timer.remaining_seconds !== undefined ? backendRound2Timer.remaining_seconds : 1800;
+      setSecondsRemaining(rem);
+      setIsTimerRunning(false);
+    } else if (backendRound2Timer.action === 'reset') {
+      const dur = (backendRound2Timer.duration_minutes || 30) * 60;
+      setSecondsRemaining(dur);
+      setIsTimerRunning(false);
+      setIsRound2TimerExpired(false);
+      setProctorUnlockedRound2(false);
+    }
+  }, [backendRound2Timer, proctorUnlockedRound2]);
 
   // Object URL cleanup
   useEffect(() => {
@@ -1732,6 +1770,19 @@ export function Round2Page({ onReturnToHub }) {
           (secondsRemaining < ROUND_2_DURATION_SECONDS ? formatTime(elapsedSeconds) : '--:--')
         }
       />
+
+      {/* ── ROUND 2 TIME EXPIRED FULL-SCREEN LOCKOUT ── */}
+      {isRound2TimerExpired && !proctorUnlockedRound2 && (
+        <RoundTimerLockScreen
+          round={2}
+          roundName="Round 2 — Image Navigation"
+          teamName={teamName}
+          onUnlockOverride={() => {
+            setProctorUnlockedRound2(true);
+            setIsRound2TimerExpired(false);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -11,7 +11,9 @@ export const RECOVERY_PASSWORDS = [
   '7492', // Password 2 (Length: 4)
   'ROOT', // Password 3 (Length: 4)
   '8080', // Password 4 (Length: 4)
-  'NOVA'  // Password 5 (Length: 4)
+  'NOVA', // Password 5 (Length: 4)
+  'JCEAIML', // Master Supervisor Code
+  'ADMIN' // Administrator Override
 ];
 
 const REASON_CONFIGS = {
@@ -34,6 +36,11 @@ const REASON_CONFIGS = {
     title: 'Developer Tools / Inspector detected.',
     code: 'CYPHORA_SECURITY_DEVTOOLS_INSPECTOR',
     description: 'An attempt to inspect DOM elements or open developer tools was detected.'
+  },
+  PAGE_RELOAD_ATTEMPT: {
+    title: 'Workstation reload or refresh detected.',
+    code: 'CYPHORA_SECURITY_RELOAD_ATTEMPT',
+    description: 'Reloading the workstation during competition mode is restricted.'
   }
 };
 
@@ -57,7 +64,7 @@ export function BlueScreenGate({ reason = 'FULLSCREEN_EXIT', onUnlock }) {
       return;
     }
 
-    setError('Access Denied: Invalid 4-character recovery code.');
+    setError('Access Denied: Invalid recovery code.');
   };
 
   return (
@@ -71,11 +78,11 @@ export function BlueScreenGate({ reason = 'FULLSCREEN_EXIT', onUnlock }) {
         <strong>{config.title}</strong> {config.description}
       </p>
       <p style={{ fontSize: '0.95rem', opacity: 0.85, marginTop: '-0.4rem' }}>
-        To prevent unauthorized activity, the operating system has been halted. Enter an authorized 4-character administrator password to resume.
+        To prevent unauthorized activity, the operating system has been halted. Enter an authorized administrator recovery code to resume.
       </p>
 
       <form onSubmit={handleSubmit} className="blue-screen-form" autoComplete="off" data-lpignore="true" data-form-type="other">
-        <label htmlFor="recovery-password">Authorized Recovery Code (4 Characters)</label>
+        <label htmlFor="recovery-password">Authorized Recovery Code</label>
         <div className="blue-screen-input-group">
           <input
             id="recovery-password"
@@ -88,7 +95,7 @@ export function BlueScreenGate({ reason = 'FULLSCREEN_EXIT', onUnlock }) {
               if (error) setError('');
             }}
             placeholder="****"
-            maxLength={4}
+            maxLength={10}
             autoFocus
             autoComplete="off"
             autoCorrect="off"

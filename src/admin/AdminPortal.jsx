@@ -23,7 +23,8 @@ import {
   RotateCcw,
   Tag,
   ExternalLink,
-  Key
+  Key,
+  Compass
 } from 'lucide-react';
 import './AdminPortal.css';
 
@@ -48,6 +49,10 @@ export function AdminPortal() {
   const [isWsConnected, setIsWsConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [globalTimer, setGlobalTimer] = useState(null);
+  const [timers, setTimers] = useState({
+    round1: { round: 1, action: 'reset', duration_minutes: 60, remaining_seconds: 3600 },
+    round2: { round: 2, action: 'reset', duration_minutes: 30, remaining_seconds: 1800 }
+  });
 
   // Search & Filter & Sort
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,7 +65,7 @@ export function AdminPortal() {
   const [editModal, setEditModal] = useState({ open: false, team: null, name: '', member1: '', member2: '', current_stage: 1, notes: '' });
   const [noteModal, setNoteModal] = useState({ open: false, team: null, notes: '' });
   const [pinModal, setPinModal] = useState({ open: false, team: null, newPin: '' });
-  const [timerModal, setTimerModal] = useState({ open: false, durationMinutes: 60 });
+  const [timerModal, setTimerModal] = useState({ open: false, round: 1, durationMinutes: 60 });
 
   // Live timer tick
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -123,44 +128,63 @@ export function AdminPortal() {
       });
       if (res.ok) {
         const data = await res.json();
-        setGlobalTimer(data);
+        setGlobalTimer(data.round1 || data);
+        if (data.round1 && data.round2) {
+          setTimers({ round1: data.round1, round2: data.round2 });
+        } else if (data.all_timers) {
+          setTimers(data.all_timers);
+        }
       }
     } catch (err) {}
   };
 
-  // Timer controls
-  const handleControlTimer = async (action, durationMinutes = 60) => {
+  // Timer controls for Round 1 or Round 2
+  const handleControlTimer = async (roundNum, action, durationMinutes = null) => {
     try {
-      const remSec = globalTimer?.remaining_seconds !== undefined ? globalTimer.remaining_seconds : (durationMinutes * 60);
-      const res = await fetch(`${API_BASE}/api/admin/timer?duration_minutes=${durationMinutes}&action=${action}&remaining_seconds=${remSec}`, {
+      const rKey = `round${roundNum}`;
+      const curTimer = timers[rKey] || { duration_minutes: roundNum === 1 ? 60 : 30 };
+      const dur = durationMinutes !== null ? durationMinutes : (curTimer.duration_minutes || (roundNum === 1 ? 60 : 30));
+      const remSec = curTimer.remaining_seconds !== undefined ? curTimer.remaining_seconds : (dur * 60);
+
+      const res = await fetch(`${API_BASE}/api/admin/timer?round=${roundNum}&duration_minutes=${dur}&action=${action}&remaining_seconds=${remSec}`, {
         method: 'POST',
         headers: { 'X-Admin-Password': HARDCODED_ADMIN_PASS }
       });
       if (res.ok) {
         const data = await res.json();
-        setGlobalTimer(data.timer);
+        if (data.all_timers) {
+          setTimers(data.all_timers);
+        } else if (data.timer) {
+          setTimers(prev => ({ ...prev, [rKey]: data.timer }));
+        }
+        if (roundNum === 1 && data.timer) {
+          setGlobalTimer(data.timer);
+        }
       }
     } catch (e) {
-      alert('Error updating event timer');
+      alert(`Error updating Round ${roundNum} timer`);
     }
   };
 
-  const getRemainingTimeString = () => {
-    if (!globalTimer) return '60:00 (STOPPED)';
-    if (globalTimer.action === 'start' && globalTimer.ends_at) {
-      const diffMs = Math.max(0, new Date(globalTimer.ends_at) - currentTime);
+  const getRemainingTimeString = (t) => {
+    if (!t) return '60:00 (STOPPED)';
+    if (t.action === 'start' && t.ends_at) {
+      const diffMs = Math.max(0, new Date(t.ends_at) - currentTime);
+      if (diffMs <= 0) {
+        return '00:00 (EXPIRED)';
+      }
       const totalSec = Math.floor(diffMs / 1000);
       const m = Math.floor(totalSec / 60);
       const s = totalSec % 60;
       return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     }
-    if (globalTimer.action === 'pause') {
-      const sec = globalTimer.remaining_seconds || 0;
+    if (t.action === 'pause') {
+      const sec = t.remaining_seconds || 0;
       const m = Math.floor(sec / 60);
       const s = sec % 60;
       return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')} (PAUSED)`;
     }
-    return `${globalTimer.duration_minutes || 60}:00 (STOPPED)`;
+    return `${t.duration_minutes || (t.round === 2 ? 30 : 60)}:00 (STOPPED)`;
   };
 
   useEffect(() => {
@@ -198,11 +222,25 @@ export function AdminPortal() {
                 setTeams(payload.data);
                 fetchStatus();
               }
+              if (payload.timers) {
+                setTimers(payload.timers);
+              }
               if (payload.timer) {
                 setGlobalTimer(payload.timer);
               }
             } else if (payload.event === 'EVENT_TIMER_SYNC') {
-              setGlobalTimer(payload.data);
+              if (payload.data?.all_timers) {
+                setTimers(payload.data.all_timers);
+                if (payload.data.all_timers.round1) {
+                  setGlobalTimer(payload.data.all_timers.round1);
+                }
+              } else if (payload.data?.round) {
+                const rKey = `round${payload.data.round}`;
+                setTimers(prev => ({ ...prev, [rKey]: payload.data }));
+                if (payload.data.round === 1) {
+                  setGlobalTimer(payload.data);
+                }
+              }
             }
           } catch (e) {}
         };
@@ -704,29 +742,60 @@ export function AdminPortal() {
             </div>
           </div>
 
-          <div className="admin-metric-card" style={{ borderColor: globalTimer?.action === 'start' ? '#dfb125' : 'rgba(223, 177, 37, 0.25)' }}>
+          {/* ── Round 1 Countdown Card ── */}
+          <div className="admin-metric-card" style={{ borderColor: timers.round1?.action === 'start' ? '#dfb125' : 'rgba(223, 177, 37, 0.25)' }}>
             <div className="metric-icon-wrap" style={{ color: '#dfb125', background: 'rgba(223,177,37,0.1)' }}>
               <Clock size={22} />
             </div>
             <div className="metric-data">
-              <span className="metric-label">Event Countdown</span>
-              <span className="metric-val" style={{ color: globalTimer?.action === 'start' ? '#dfb125' : '#eae0c8' }}>
-                {getRemainingTimeString()}
+              <span className="metric-label">Round 1 Timer (OS Nav)</span>
+              <span className="metric-val" style={{ color: timers.round1?.action === 'start' ? '#dfb125' : '#eae0c8' }}>
+                {getRemainingTimeString(timers.round1)}
               </span>
               <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-                {globalTimer?.action === 'start' ? (
-                  <button className="admin-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => handleControlTimer('pause')}>
+                {timers.round1?.action === 'start' ? (
+                  <button className="admin-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => handleControlTimer(1, 'pause')}>
                     <Pause size={10} /> Pause
                   </button>
                 ) : (
-                  <button className="admin-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => handleControlTimer(globalTimer?.action === 'pause' ? 'resume' : 'start', globalTimer?.duration_minutes || 60)}>
-                    <Play size={10} /> {globalTimer?.action === 'pause' ? 'Resume' : 'Start'}
+                  <button className="admin-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => handleControlTimer(1, timers.round1?.action === 'pause' ? 'resume' : 'start', timers.round1?.duration_minutes || 60)}>
+                    <Play size={10} /> {timers.round1?.action === 'pause' ? 'Resume' : 'Start'}
                   </button>
                 )}
-                <button className="admin-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => setTimerModal({ open: true, durationMinutes: globalTimer?.duration_minutes || 60 })}>
+                <button className="admin-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => setTimerModal({ open: true, round: 1, durationMinutes: timers.round1?.duration_minutes || 60 })}>
                   <Clock size={10} /> Config
                 </button>
-                <button className="admin-btn danger" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => handleControlTimer('reset')}>
+                <button className="admin-btn danger" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => handleControlTimer(1, 'reset')}>
+                  <RotateCcw size={10} /> Reset
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Round 2 Countdown Card ── */}
+          <div className="admin-metric-card" style={{ borderColor: timers.round2?.action === 'start' ? '#61afef' : 'rgba(97, 175, 239, 0.25)' }}>
+            <div className="metric-icon-wrap" style={{ color: '#61afef', background: 'rgba(97, 175, 239, 0.1)', borderColor: 'rgba(97, 175, 239, 0.3)' }}>
+              <Compass size={22} />
+            </div>
+            <div className="metric-data">
+              <span className="metric-label">Round 2 Timer (Image Nav)</span>
+              <span className="metric-val" style={{ color: timers.round2?.action === 'start' ? '#61afef' : '#eae0c8' }}>
+                {getRemainingTimeString(timers.round2)}
+              </span>
+              <div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                {timers.round2?.action === 'start' ? (
+                  <button className="admin-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => handleControlTimer(2, 'pause')}>
+                    <Pause size={10} /> Pause
+                  </button>
+                ) : (
+                  <button className="admin-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => handleControlTimer(2, timers.round2?.action === 'pause' ? 'resume' : 'start', timers.round2?.duration_minutes || 30)}>
+                    <Play size={10} /> {timers.round2?.action === 'pause' ? 'Resume' : 'Start'}
+                  </button>
+                )}
+                <button className="admin-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => setTimerModal({ open: true, round: 2, durationMinutes: timers.round2?.duration_minutes || 30 })}>
+                  <Clock size={10} /> Config
+                </button>
+                <button className="admin-btn danger" style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem' }} onClick={() => handleControlTimer(2, 'reset')}>
                   <RotateCcw size={10} /> Reset
                 </button>
               </div>
@@ -1305,15 +1374,15 @@ export function AdminPortal() {
         </div>
       )}
 
-      {/* ── MODAL: Configure Event Timer ── */}
+      {/* ── MODAL: Configure Round Timer ── */}
       {timerModal.open && (
-        <div className="admin-modal-backdrop" onClick={() => setTimerModal({ open: false, durationMinutes: 60 })}>
+        <div className="admin-modal-backdrop" onClick={() => setTimerModal({ open: false, round: 1, durationMinutes: 60 })}>
           <div className="admin-modal" onClick={e => e.stopPropagation()}>
             <div className="admin-modal-header">
-              <h3>Configure Global Event Timer</h3>
+              <h3>Configure Round {timerModal.round} Timer ({timerModal.round === 1 ? 'OS Navigation' : 'Image Navigation'})</h3>
             </div>
             <p style={{ color: '#a89d80', fontSize: '0.85rem', marginBottom: '1rem' }}>
-              Broadcasts a synchronized countdown clock to all 100 workstations.
+              Broadcasts a synchronized countdown clock for Round {timerModal.round} to all connected workstations. When time expires, participant screens will lock automatically.
             </p>
             <div className="admin-field">
               <label>Duration (Minutes)</label>
@@ -1325,8 +1394,8 @@ export function AdminPortal() {
                 onChange={e => setTimerModal(prev => ({ ...prev, durationMinutes: parseInt(e.target.value, 10) || 60 }))}
               />
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-              {[15, 30, 45, 60, 90, 120].map(mins => (
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+              {[5, 10, 15, 20, 30, 45, 60, 90, 120].map(mins => (
                 <button
                   key={mins}
                   type="button"
@@ -1341,7 +1410,7 @@ export function AdminPortal() {
               <button
                 className="admin-btn"
                 style={{ background: 'transparent' }}
-                onClick={() => setTimerModal({ open: false, durationMinutes: 60 })}
+                onClick={() => setTimerModal({ open: false, round: 1, durationMinutes: 60 })}
               >
                 Cancel
               </button>
@@ -1349,11 +1418,11 @@ export function AdminPortal() {
                 className="admin-btn"
                 style={{ background: '#dfb125', color: '#000', fontWeight: 'bold' }}
                 onClick={async () => {
-                  await handleControlTimer('start', timerModal.durationMinutes);
-                  setTimerModal({ open: false, durationMinutes: 60 });
+                  await handleControlTimer(timerModal.round, 'start', timerModal.durationMinutes);
+                  setTimerModal({ open: false, round: 1, durationMinutes: 60 });
                 }}
               >
-                Start Countdown
+                Start Round {timerModal.round} Countdown
               </button>
             </div>
           </div>

@@ -87,10 +87,13 @@ export function OSProvider({
     // 2. Set generous 3.5-second immunity cooldown to prevent immediate re-locking while window focus settles
     unlockCooldownRef.current = Date.now() + 3500;
 
-    // 3. Immediately dismiss the Blue Screen gate
+    // 3. Mark as having entered fullscreen so subsequent exits lock the workstation
+    hasEnteredFullscreenRef.current = true;
+
+    // 4. Immediately dismiss the Blue Screen gate
     dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
 
-    // 4. Synchronously request fullscreen on the user submit gesture (never re-lock on catch)
+    // 5. Synchronously request fullscreen on the user submit gesture (never re-lock on catch)
     try {
       if (typeof document !== 'undefined' && !document.fullscreenElement && document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch((err) => {
@@ -102,7 +105,7 @@ export function OSProvider({
     }
   };
 
-  // Track security triggers: Fullscreen exit, Screenshots, Tab Switch, DevTools Inspector
+  // Track security triggers: Fullscreen exit, Screenshots, Tab Switch, DevTools Inspector, Page Reload
   useEffect(() => {
     // 1. Initial lock state recovery from sessionStorage
     let initialLock = null;
@@ -158,11 +161,34 @@ export function OSProvider({
       }, 250);
     };
 
-    // 5. Screenshots and Inspector keyboard shortcuts
+    // 5. Workstation reload / refresh interceptor (browser reload button, closing/leaving tab)
+    const handleBeforeUnload = (e) => {
+      try {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('cyphora_os_locked', 'PAGE_RELOAD_ATTEMPT');
+        }
+      } catch (err) { }
+      triggerLock('PAGE_RELOAD_ATTEMPT');
+      e.preventDefault();
+      e.returnValue = 'Workstation session active. Reloading the workstation is prohibited.';
+      return e.returnValue;
+    };
+
+    // 6. Security keyboard shortcuts: Screenshots, Reload, DevTools Inspector
     const handleSecurityKeyDown = (e) => {
       if (Date.now() < unlockCooldownRef.current) return;
 
-      // Screenshot shortcut: PrintScreen
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+
+      // 6a. Page Reload shortcuts: F5, Ctrl+R, Ctrl+Shift+R, Cmd+R
+      if (e.key === 'F5' || e.keyCode === 116 || (isCtrlOrMeta && (e.key === 'r' || e.key === 'R'))) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerLock('PAGE_RELOAD_ATTEMPT');
+        return;
+      }
+
+      // 6b. Screenshot shortcut: PrintScreen
       if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
         e.preventDefault();
         e.stopPropagation();
@@ -170,9 +196,7 @@ export function OSProvider({
         return;
       }
 
-      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
-
-      // Screenshot shortcut: Win+Shift+S or Ctrl+Shift+S (Snipping Tool)
+      // 6c. Screenshot shortcut: Win+Shift+S or Ctrl+Shift+S (Snipping Tool)
       if ((e.key === 'S' || e.key === 's') && e.shiftKey && isCtrlOrMeta) {
         e.preventDefault();
         e.stopPropagation();
@@ -180,7 +204,7 @@ export function OSProvider({
         return;
       }
 
-      // Mac screenshot: Cmd+Shift+3, 4, 5
+      // 6d. Mac screenshot: Cmd+Shift+3, 4, 5
       if (e.metaKey && e.shiftKey && ['3', '4', '5'].includes(e.key)) {
         e.preventDefault();
         e.stopPropagation();
@@ -188,7 +212,7 @@ export function OSProvider({
         return;
       }
 
-      // DevTools Inspector shortcut: F12
+      // 6e. DevTools Inspector shortcut: F12
       if (e.key === 'F12' || e.keyCode === 123) {
         e.preventDefault();
         e.stopPropagation();
@@ -196,15 +220,23 @@ export function OSProvider({
         return;
       }
 
-      // DevTools Inspector shortcut: Ctrl+Shift+I, J, C (or Mac equivalents)
-      if (isCtrlOrMeta && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
+      // 6f. DevTools Inspector shortcut: Ctrl+Shift+I, J, C, K
+      if (isCtrlOrMeta && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c', 'K', 'k'].includes(e.key)) {
         e.preventDefault();
         e.stopPropagation();
         triggerLock('INSPECTOR_DEVTOOLS');
         return;
       }
 
-      // View Source shortcut: Ctrl+U
+      // 6g. Mac DevTools Inspector: Cmd+Option+I, J, C, K, U
+      if (e.metaKey && e.altKey && ['I', 'i', 'J', 'j', 'C', 'c', 'K', 'k', 'U', 'u'].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerLock('INSPECTOR_DEVTOOLS');
+        return;
+      }
+
+      // 6h. View Source shortcut: Ctrl+U
       if (isCtrlOrMeta && (e.key === 'U' || e.key === 'u')) {
         e.preventDefault();
         e.stopPropagation();
@@ -220,15 +252,51 @@ export function OSProvider({
       }
     };
 
+    // 7. Global Context Menu Block (Blocks native browser right-click Inspect menu)
+    const handleGlobalContextMenu = (e) => {
+      // Allow legitimate custom in-app context menus (File Manager)
+      if (e.target && e.target.closest && e.target.closest('.fm-container, .fm-content-pane, .fm-sidebar, .fm-context-menu')) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    // 8. Docked DevTools Inspector Detection (Outer vs Inner Viewport Dimension Delta)
+    const checkDevTools = () => {
+      if (Date.now() < unlockCooldownRef.current) return;
+
+      const widthDelta = window.outerWidth - window.innerWidth;
+      const heightDelta = window.outerHeight - window.innerHeight;
+
+      // When docked DevTools is opened, widthDelta > 160 or heightDelta > 160 (or > 250 in non-fullscreen)
+      const isDockedInspector = document.fullscreenElement
+        ? (widthDelta > 160 || heightDelta > 160)
+        : (widthDelta > 160 || heightDelta > 250);
+
+      if (isDockedInspector && (hasEnteredFullscreenRef.current || document.fullscreenElement)) {
+        triggerLock('INSPECTOR_DEVTOOLS');
+      }
+    };
+
+    const devToolsInterval = setInterval(checkDevTools, 1000);
+
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('contextmenu', handleGlobalContextMenu, true);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('resize', checkDevTools);
     window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('keydown', handleSecurityKeyDown, true);
     window.addEventListener('keyup', handleSecurityKeyUp, true);
 
     return () => {
+      clearInterval(devToolsInterval);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('contextmenu', handleGlobalContextMenu, true);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('resize', checkDevTools);
       window.removeEventListener('blur', handleWindowBlur);
       window.removeEventListener('keydown', handleSecurityKeyDown, true);
       window.removeEventListener('keyup', handleSecurityKeyUp, true);
@@ -237,6 +305,11 @@ export function OSProvider({
 
   const openApp = (appId, options = {}) => {
     const appDef = APP_REGISTRY[appId];
+    if (appId === 'tasks' || appId === 'task-terminal') {
+      eventBus.emit('OPEN_TASKS');
+      return;
+    }
+
     if (!appDef) {
       console.error(`[OS] App not found in registry: ${appId}`);
       return;
@@ -256,9 +329,6 @@ export function OSProvider({
     });
 
     eventBus.emit('APP_OPENED', { appId, title, meta: options.meta });
-    if (appId === 'tasks' || appId === 'task-terminal') {
-      eventBus.emit('OPEN_TASKS');
-    }
   };
 
   const closeWindow = (id) => {
@@ -316,6 +386,17 @@ export function OSProvider({
     dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: false });
   };
 
+  const handleReturnToHub = () => {
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.removeItem('cyphora_os_locked');
+      }
+    } catch (e) { }
+    if (typeof onReturnToHub === 'function') {
+      onReturnToHub();
+    }
+  };
+
   const value = {
     ...state,
     teamData: teamData || { name: 'Explorer', standing: '1st', score: 0 },
@@ -338,7 +419,7 @@ export function OSProvider({
     dismissExitBanner,
     triggerLock,
     unlockGate,
-    onReturnToHub,
+    onReturnToHub: handleReturnToHub,
     round1State: round1State || null,
     setRound1State: setRound1State || (() => { })
   };
