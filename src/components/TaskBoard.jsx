@@ -185,8 +185,8 @@ export function TaskBoard({ round1State }) {
                 <button
                   className="objective-icon-button"
                   onClick={() => setObjectiveMode('minimized')}
-                  aria-label="Minimize task to bottom left"
-                  title="Minimize task to bottom left"
+                  aria-label="Minimize task to bottom right"
+                  title="Minimize task to bottom right"
                 >
                   <Minus size={16} />
                 </button>
@@ -265,7 +265,7 @@ export function TaskBoard({ round1State }) {
                     style={{ background: 'rgba(255, 255, 255, 0.06)', color: '#c9d1d9', border: '1px solid #30363d', padding: '0.55rem 1rem', borderRadius: '4px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
                   >
                     <Minus size={14} />
-                    <span>MINIMIZE TO BOTTOM LEFT</span>
+                    <span>MINIMIZE TO BOTTOM RIGHT</span>
                   </button>
 
                   {isCorrect && (
@@ -335,7 +335,7 @@ export function TaskBoard({ round1State }) {
               <span>CURRENT OBJECTIVE — TASK {presentation.number}</span>
               <div>
                 <button onClick={() => setObjectiveMode('expanded')} aria-label="Expand objective popup" title="Expand objective popup"><Maximize2 size={14} /></button>
-                <button onClick={() => setObjectiveMode('minimized')} aria-label="Minimize to bottom left tab" title="Minimize to bottom left tab"><Minus size={14} /></button>
+                <button onClick={() => setObjectiveMode('minimized')} aria-label="Minimize to bottom right tab" title="Minimize to bottom right tab"><Minus size={14} /></button>
               </div>
             </div>
             <button className="objective-widget-main" onClick={() => setObjectiveMode('expanded')}>

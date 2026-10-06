@@ -17,7 +17,6 @@ import {
   GitCompare,
   Maximize,
   Minimize,
-  Clock,
   CheckSquare,
   Eye,
   Sparkles,
@@ -26,7 +25,6 @@ import {
   BookOpen
 } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
-import { formatCountdown } from '../../round1/round1Engine.js';
 
 export function Taskbar() {
   const {
@@ -38,7 +36,6 @@ export function Taskbar() {
     toggleStartMenu,
     isMuted,
     toggleMute,
-    round1State,
     isFullscreen,
     requestFullscreen
   } = useOS();
@@ -120,14 +117,6 @@ export function Taskbar() {
 
       {/* System Tray */}
       <div className="taskbar-tray">
-        {/* Round 1 Timer */}
-        {round1State?.round1StartedAt && (
-          <div className="tray-timer" title="Round 1 Remaining Time">
-            <Clock size={13} style={{ color: '#dfb125' }} />
-            <span className="tray-timer-val">{formatCountdown(round1State.remainingTimeMs ?? 1200000)}</span>
-          </div>
-        )}
-
         <button
           className="tray-btn"
           onClick={handleToggleFullscreen}
