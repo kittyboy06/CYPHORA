@@ -7,6 +7,7 @@ interface Props {
 export const StoryIntro: React.FC<Props> = ({ onComplete }) => {
   const [step, setStep] = useState(0);
   const [canAdvance, setCanAdvance] = useState(false);
+  const [countdown, setCountdown] = useState(3);
 
   const storyScenes = [
     {
@@ -33,6 +34,20 @@ export const StoryIntro: React.FC<Props> = ({ onComplete }) => {
       setCanAdvance(true);
     }, 3000);
     return () => clearTimeout(timer);
+  }, [step]);
+
+  useEffect(() => {
+    setCountdown(3);
+    const interval = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
   }, [step]);
 
   useEffect(() => {
@@ -74,9 +89,26 @@ export const StoryIntro: React.FC<Props> = ({ onComplete }) => {
           </p>
         </div>
 
-        <p className={`text-[var(--accent-gold)] font-mono text-xs md:text-sm uppercase tracking-widest pt-2 md:pt-4 transition-opacity duration-300 ${canAdvance ? 'animate-pulse opacity-100' : 'opacity-0'}`}>
-          [ Press Enter to {step < storyScenes.length - 1 ? 'continue' : 'begin trial'} ]
-        </p>
+        <div className="pt-2 md:pt-4 flex items-center justify-center" style={{ minHeight: '48px' }}>
+          {!canAdvance ? (
+            <div className="relative flex items-center justify-center">
+              <svg width="44" height="44" viewBox="0 0 44 44">
+                <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(223,177,37,0.2)" strokeWidth="3" />
+                <circle cx="22" cy="22" r="18" fill="none" stroke="var(--accent-gold)" strokeWidth="3"
+                  strokeDasharray={`${(2 * Math.PI * 18)}`}
+                  strokeDashoffset={`${(2 * Math.PI * 18) * (1 - countdown / 3)}`}
+                  strokeLinecap="round"
+                  style={{ transition: 'stroke-dashoffset 0.9s linear', transform: 'rotate(-90deg)', transformOrigin: 'center' }}
+                />
+              </svg>
+              <span className="absolute text-[var(--accent-gold)] font-mono text-sm font-bold">{countdown}</span>
+            </div>
+          ) : (
+            <p className="text-[var(--accent-gold)] font-mono text-xs md:text-sm uppercase tracking-widest animate-pulse opacity-100 transition-opacity duration-500">
+              [ Press Enter to {step < storyScenes.length - 1 ? 'continue' : 'begin trial'} ]
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
