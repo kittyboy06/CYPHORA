@@ -7,7 +7,7 @@ interface Props {
   onNextLevel: (next: number) => void;
 }
 
-const LEVEL_ORDER = [1, 2, 3, 4];
+const LEVEL_ORDER = [1, 2, 3];
 
 export const GameOverlay: React.FC<Props> = ({ onRetry, onNextLevel }) => {
   const { status, score, efficiency, totalCommands, level, setLevel } = useGameStore();

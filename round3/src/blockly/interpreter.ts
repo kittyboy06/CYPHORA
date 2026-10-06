@@ -70,36 +70,6 @@ export const executeCode = async (code: string, gameRef: any, blocklyRef: any, b
       if (result === 'LEVEL_COMPLETE') throw new Error('LEVEL_COMPLETE');
       if (isFailed) throw new Error('Activate Totem failed');
     },
-    dodgeStep: async (id: string) => {
-      if (isFailed) return;
-      blocklyRef.highlightBlock(id);
-      useGameStore.getState().incExecutedCommands();
-      const result = await gameRef.executeCommand({ type: 'DODGE' });
-      if (result === 'FAILED') isFailed = true;
-      if (result === 'LEVEL_COMPLETE') throw new Error('LEVEL_COMPLETE');
-      if (isFailed) throw new Error('Dodge failed');
-    },
-    slideStep: async (id: string) => {
-      if (isFailed) return;
-      blocklyRef.highlightBlock(id);
-      useGameStore.getState().incExecutedCommands();
-      const result = await gameRef.executeCommand({ type: 'SLIDE' });
-      if (result === 'FAILED') isFailed = true;
-      if (result === 'LEVEL_COMPLETE') throw new Error('LEVEL_COMPLETE');
-      if (isFailed) throw new Error('Slide failed');
-    },
-    activateTileStep: async (id: string) => {
-      if (isFailed) return;
-      blocklyRef.highlightBlock(id);
-      useGameStore.getState().incExecutedCommands();
-      const result = await gameRef.executeCommand({ type: 'ACTIVATE_TILE' });
-      if (result === 'FAILED') isFailed = true;
-      if (result === 'LEVEL_COMPLETE') throw new Error('LEVEL_COMPLETE');
-      if (isFailed) throw new Error('Activate Tile failed');
-    },
-    getTileColor: async () => {
-      return await gameRef.getTileColor();
-    }
   };
 
   try {
@@ -117,9 +87,8 @@ export const executeCode = async (code: string, gameRef: any, blocklyRef: any, b
       // Per-level par block counts (optimal solution size)
       const PAR_BLOCKS: Record<number, number> = {
         1: 8,   // variables + while-loop + nested repeat + run + jump
-        2: 10,  // sequential run/equip with if/else beast check
-        3: 5,   // repeat with if/elseif/else color checks
-        4: 12,  // repeat(3) with for-loop, if/elseif/else, mod checks, totem
+        2: 17,  // item pickups, long approach, and five-hit beast fight
+        3: 12,  // repeat(3) with for-loop, if/elseif/else, mod checks, totem
       };
       
       const level = state.level;

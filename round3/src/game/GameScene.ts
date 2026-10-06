@@ -4,6 +4,28 @@ import { Command, TileType, LevelDefinition } from '../types/game';
 
 const TILE_W = 140;
 const TILE_H = 117;
+const BEAST_SWIPE_FRAMES = [
+  'beast_swipe_01_windup',
+  'beast_swipe_02_preparation',
+  'beast_swipe_03_arc_start',
+  'beast_swipe_04_mid_swing',
+  'beast_swipe_06_follow_through',
+  'beast_swipe_07_recovery',
+  'beast_swipe_08_idle_recover',
+] as const;
+const BEAST_SMASH_FRAMES = [
+  'beast_smash_left_01_anticipation',
+  'beast_smash_left_02_raise',
+  'beast_smash_left_03_peak',
+  'beast_smash_left_05_impact',
+  'beast_smash_left_06_follow_through',
+  'beast_smash_left_07_recovery',
+  'beast_smash_left_08_idle_recover',
+] as const;
+const BEAST_IDLE_FRAMES = [
+  'beast_swipe_08_idle_recover',
+  'beast_swipe_01_windup',
+] as const;
 
 export default class GameScene extends Phaser.Scene {
   private levelData: LevelDefinition = level1;
@@ -14,11 +36,23 @@ export default class GameScene extends Phaser.Scene {
   private startX = 0;
   
   // Level 2: Beast state
-  private turnCount = 0;
   private beastHp = 0;
   private beastVisual?: Phaser.GameObjects.Container;
+  private beastCanBeHit = false;
+  private beastDefensesRemaining = 2;
+  private nextBeastAction: 'smash' | 'swipe' | 'weaken' = 'smash';
+  private beastOpeningAnimation?: Promise<void>;
+  private beastIdleTimer?: Phaser.Time.TimerEvent;
+  private beastIdleActive = false;
+  private beastAttackInProgress = false;
+  private beastIdleFrameIndex = 0;
+  private beastDefeated = false;
+  private beastRevealed = false;
+  private beastRevealCutscenePlayed = false;
+  private goblinSprites: Map<number, Phaser.GameObjects.Image> = new Map();
+  private goblinIdleFrameIndex = 0;
   
-  // Level 4: Totem state
+  // Stage 3: Totem state
   private totemsActivated = 0;
   
   // Level 2: Item state
@@ -32,12 +66,18 @@ export default class GameScene extends Phaser.Scene {
 
   preload() {
     this.load.image('bg_forest', '/assets/bg_new.png');
-    this.load.image('bg_level3', '/assets/bg_level3.png');
-    this.load.image('bg_level4', '/assets/bg_level4_stitched.png');
+    this.load.image('bg_path_trials', '/assets/bg_level4_stitched.png');
     this.load.image('char_idle', '/assets/story/character_standing_v3.png');
     this.load.image('char_attack_1', '/assets/story/first_3_attack_frames_spaced_attack1.png');
     this.load.image('char_attack_2', '/assets/story/first_3_attack_frames_spaced_attack2.png');
     this.load.image('char_defend', '/assets/story/hero_defend.png');
+    this.load.image('char_hurt_sword', '/assets/story/Anime Adventurer Impact Sprite 1.png');
+    this.load.image('char_defeated_sword', '/assets/story/Anime Adventurer Impact Sprite 2.png');
+    this.load.image('char_hurt_unarmed', '/assets/story/Anime RPG Hero Hurt and Defeated Sprites without sword 1.png');
+    this.load.image('char_defeated_unarmed', '/assets/story/Anime RPG Hero Hurt and Defeated Sprites without sword 2.png');
+    this.load.image('goblin_idle_1', '/assets/story/Goblin Warrior Animation 1.png');
+    this.load.image('goblin_idle_2', '/assets/story/Goblin Warrior Animation 2.png');
+    this.load.image('goblin_defeated', '/assets/story/Defeated Goblin Knockback Sprite.png');
     this.load.image('char_run_1', '/assets/story/hero_run_1.png');
     this.load.image('char_run_2', '/assets/story/hero_run_2.png');
     this.load.image('char_run_3', '/assets/story/hero_run_3.png');
@@ -55,7 +95,7 @@ export default class GameScene extends Phaser.Scene {
     this.load.image('char_run_sword_2', '/assets/hero_run_sword_2.png');
     this.load.image('char_run_sword_3', '/assets/hero_run_sword_3.png');
     this.load.image('char_run_sword_4', '/assets/hero_run_sword_4.png');
-    this.load.image('char_run_sword_7', '/assets/hero_run_sword_7.png');
+    this.load.image('char_run_sword_7', '/assets/hero_run_sword_5.png');
 
     // Run with sword & shield
     this.load.image('char_run_sword_shield_1', '/assets/hero_run_sword_shield_1.png');
@@ -79,14 +119,10 @@ export default class GameScene extends Phaser.Scene {
 
     this.load.image('beast', '/assets/beast_v2.png');
     this.load.image('beast_shield', '/assets/story/Molten Forest Golem with Golden Shield.png');
-    this.load.image('beast_full', '/assets/story/Molten Forest Titan Golem full health.png');
-    this.load.image('beast_50', '/assets/story/Molten Moss Tree Golem 50 per health.png');
-    this.load.image('beast_10', '/assets/story/Ruined Molten Nature Colossus 10 per.png');
     this.load.image('beast_dead', '/assets/story/Ruined Molten Stone-Tree Golem destroyed.png');
-    this.load.image('beast_swipe_1', '/assets/story/Tree Golem Twin-Swipe Attack Frames f1.png');
-    this.load.image('beast_swipe_2', '/assets/story/Tree Golem Twin-Swipe Attack Frames f2.png');
-    this.load.image('beast_smash_1', '/assets/story/Moss-Crowned Golem Ground Smash f1.png');
-    this.load.image('beast_smash_2', '/assets/story/Moss-Crowned Golem Ground Smash f2.png');
+    this.load.image('beast_standoff', '/assets/story/forest_guardian_standoff.png');
+    BEAST_SWIPE_FRAMES.forEach((key) => this.load.image(key, `/assets/story/${key}.png`));
+    BEAST_SMASH_FRAMES.forEach((key) => this.load.image(key, `/assets/story/${key}.png`));
     this.load.image('platform_ancient', '/assets/platform_ancient.png');
     this.load.image('platform_red', '/assets/platform_red.png');
     this.load.image('platform_blue_slide', '/assets/platform_blue_slide.png');
@@ -100,13 +136,26 @@ export default class GameScene extends Phaser.Scene {
   }
 
   create() {
-    this.turnCount = 0;
     this.totemsActivated = 0;
     this.beastHp = this.levelData.beast?.hp || 0;
     this.beastVisual = undefined;
+    this.beastCanBeHit = false;
+    this.beastDefensesRemaining = 2;
+    this.nextBeastAction = 'smash';
+    this.beastOpeningAnimation = undefined;
+    this.beastIdleActive = false;
+    this.beastAttackInProgress = false;
+    this.beastIdleFrameIndex = 0;
+    this.beastDefeated = false;
+    this.beastRevealed = false;
+    this.beastRevealCutscenePlayed = false;
+    this.beastIdleTimer?.remove();
+    this.beastIdleTimer = undefined;
     this.hasSword = false;
     this.hasShield = false;
     this.itemSprites.clear();
+    this.goblinSprites.clear();
+    this.goblinIdleFrameIndex = 0;
     
     // Create animations from individual frames
     if (!this.anims.exists('run')) {
@@ -205,6 +254,80 @@ export default class GameScene extends Phaser.Scene {
     return index > this.getBeastCombatIndex();
   }
 
+  private revealBeastWhenCameraReachesIt(): void {
+    if (this.beastRevealed || !this.beastVisual || this.cameras.main.scrollX <= 0) return;
+
+    const cameraRight = this.cameras.main.scrollX + this.cameras.main.width;
+    if (this.beastVisual.x - 260 <= cameraRight) {
+      this.beastVisual.setVisible(true);
+      this.beastRevealed = true;
+    }
+  }
+
+  private async playBeastRevealCutscene(): Promise<void> {
+    if (this.beastRevealCutscenePlayed) return;
+    this.beastRevealCutscenePlayed = true;
+    if (!this.beastRevealed && this.beastVisual) {
+      this.beastVisual.setVisible(true);
+      this.beastRevealed = true;
+    }
+
+    const source = this.textures.get('beast_standoff').getSourceImage() as HTMLImageElement;
+    const halfWidth = Math.floor(source.width / 2);
+    const halfHeight = source.height;
+    const makeHalfTexture = (key: string, sourceX: number) => {
+      if (this.textures.exists(key)) return;
+      const canvas = document.createElement('canvas');
+      canvas.width = halfWidth;
+      canvas.height = halfHeight;
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      context.drawImage(source, sourceX, 0, halfWidth, halfHeight, 0, 0, halfWidth, halfHeight);
+      this.textures.addCanvas(key, canvas);
+    };
+
+    makeHalfTexture('beast_standoff_left', 0);
+    makeHalfTexture('beast_standoff_right', halfWidth);
+    if (!this.textures.exists('beast_standoff_left') || !this.textures.exists('beast_standoff_right')) return;
+
+    const screenWidth = this.scale.width;
+    const screenHeight = this.scale.height;
+    const imageWidth = Math.min(screenWidth * 0.94, screenHeight * 3.2);
+    const imageHeight = imageWidth * (halfHeight / source.width);
+    const halfDisplayWidth = imageWidth / 2;
+    const centerX = screenWidth / 2;
+    const centerY = screenHeight / 2;
+    const curtain = this.add.rectangle(centerX, centerY, screenWidth, screenHeight, 0x000000, 0.78)
+      .setScrollFactor(0)
+      .setDepth(1000);
+    const left = this.add.image(-halfDisplayWidth / 2, centerY, 'beast_standoff_left')
+      .setScrollFactor(0)
+      .setDepth(1001)
+      .setDisplaySize(halfDisplayWidth, imageHeight);
+    const right = this.add.image(screenWidth + halfDisplayWidth / 2, centerY, 'beast_standoff_right')
+      .setScrollFactor(0)
+      .setDepth(1001)
+      .setDisplaySize(halfDisplayWidth, imageHeight);
+
+    const slideIn = (target: Phaser.GameObjects.Image, x: number) => new Promise<void>((resolve) => {
+      this.tweens.add({ targets: target, x, duration: 700, ease: 'Cubic.easeOut', onComplete: () => resolve() });
+    });
+    await Promise.all([
+      slideIn(left, centerX - halfDisplayWidth / 2),
+      slideIn(right, centerX + halfDisplayWidth / 2),
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 1600));
+
+    await Promise.all([
+      new Promise<void>((resolve) => this.tweens.add({ targets: left, x: -halfDisplayWidth, alpha: 0, duration: 450, onComplete: () => resolve() })),
+      new Promise<void>((resolve) => this.tweens.add({ targets: right, x: screenWidth + halfDisplayWidth, alpha: 0, duration: 450, onComplete: () => resolve() })),
+      new Promise<void>((resolve) => this.tweens.add({ targets: curtain, alpha: 0, duration: 450, onComplete: () => resolve() })),
+    ]);
+    left.destroy();
+    right.destroy();
+    curtain.destroy();
+  }
+
   spawnBeast() {
     if (!this.levelData.beast) return;
 
@@ -217,7 +340,74 @@ export default class GameScene extends Phaser.Scene {
     this.setBeastTexture(body, 'beast_shield');
 
     this.beastVisual = this.add.container(bx, by, [body]);
+    this.beastVisual.setVisible(false);
     this.updateBeastVisuals();
+    this.tweens.add({
+      targets: this.beastVisual,
+      y: by - 2,
+      duration: 1450,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    this.beastIdleTimer = this.time.addEvent({
+      delay: 850,
+      loop: true,
+      callback: () => {
+        if (!this.beastIdleActive || this.beastAttackInProgress || this.beastDefeated || !this.beastVisual?.active) return;
+        this.beastIdleFrameIndex = (this.beastIdleFrameIndex + 1) % BEAST_IDLE_FRAMES.length;
+        const currentBody = this.beastVisual.list[0] as Phaser.GameObjects.Image;
+        this.setBeastTexture(currentBody, BEAST_IDLE_FRAMES[this.beastIdleFrameIndex]);
+      }
+    });
+  }
+
+  private setGoblinTexture(goblin: Phaser.GameObjects.Image, textureKey: string): void {
+    const bounds: Record<string, { originX: number; originY: number; scale: number }> = {
+      goblin_idle_1: { originX: 0.543, originY: 0.916, scale: 0.165 },
+      goblin_idle_2: { originX: 0.449, originY: 0.907, scale: 0.165 },
+      goblin_defeated: { originX: 0.521, originY: 0.895, scale: 0.09 },
+    };
+    const boundsForTexture = bounds[textureKey];
+    goblin.setTexture(textureKey);
+    goblin.setOrigin(boundsForTexture.originX, boundsForTexture.originY);
+    goblin.setScale(boundsForTexture.scale);
+  }
+
+  private spawnGoblin(tileIndex: number, centerX: number, floorY: number): void {
+    const goblin = this.add.image(centerX, floorY, 'goblin_idle_1');
+    this.setGoblinTexture(goblin, 'goblin_idle_1');
+    this.goblinSprites.set(tileIndex, goblin);
+    this.tweens.add({
+      targets: goblin,
+      y: floorY - 2,
+      duration: 1250,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  private playGoblinDefeat(tileIndex: number): Promise<void> {
+    const goblin = this.goblinSprites.get(tileIndex);
+    if (!goblin?.active) return Promise.resolve();
+
+    this.tweens.killTweensOf(goblin);
+    this.goblinSprites.delete(tileIndex);
+    this.setGoblinTexture(goblin, 'goblin_defeated');
+    return new Promise((resolve) => {
+      this.tweens.add({
+        targets: goblin,
+        x: goblin.x + 22,
+        alpha: 0,
+        duration: 650,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          goblin.destroy();
+          resolve();
+        },
+      });
+    });
   }
 
   private setBeastTexture(body: Phaser.GameObjects.Image, textureKey: string) {
@@ -229,14 +419,13 @@ export default class GameScene extends Phaser.Scene {
     // swapping between idle, hit, swipe and smash frames.
     const config: Record<string, { scale: number, offsetY: number, offsetX: number }> = {
       'beast_shield': { scale: 0.227, offsetY: 0, offsetX: -100 },
-      'beast_full': { scale: 0.254, offsetY: 0, offsetX: -100 },
-      'beast_50': { scale: 0.254, offsetY: 0, offsetX: -100 },
-      'beast_10': { scale: 0.260, offsetY: 0, offsetX: -100 },
-      'beast_dead': { scale: 0.260, offsetY: 0, offsetX: -100 },
-      'beast_swipe_1': { scale: 0.374, offsetY: 0, offsetX: -130 },
-      'beast_swipe_2': { scale: 0.392, offsetY: 0, offsetX: -130 },
-      'beast_smash_1': { scale: 0.367, offsetY: 0, offsetX: -130 },
-      'beast_smash_2': { scale: 0.389, offsetY: 0, offsetX: -130 }
+      'beast_dead': { scale: 0.20, offsetY: 0, offsetX: -100 },
+      ...Object.fromEntries(
+        BEAST_SWIPE_FRAMES.map((key) => [key, { scale: 0.374, offsetY: 0, offsetX: -130 }])
+      ),
+      ...Object.fromEntries(
+        BEAST_SMASH_FRAMES.map((key) => [key, { scale: 0.66, offsetY: 0, offsetX: -130 }])
+      )
     };
 
     const cfg = config[textureKey] || { scale: 0.25, offsetY: 0, offsetX: -100 };
@@ -247,22 +436,109 @@ export default class GameScene extends Phaser.Scene {
   updateBeastVisuals() {
     if (!this.levelData.beast || !this.beastVisual) return;
     const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
-    const vulnerable = this.isBeastVulnerable();
-    
-    if (!vulnerable) {
+    if (this.beastDefeated) {
+      this.beastIdleActive = false;
+      this.setBeastTexture(body, 'beast_dead');
+    } else if (!this.isBeastVulnerable()) {
+      this.beastIdleActive = false;
       this.setBeastTexture(body, 'beast_shield');
     } else {
-      if (this.beastHp === 4 || this.beastHp === 3) this.setBeastTexture(body, 'beast_full');
-      else if (this.beastHp === 2) this.setBeastTexture(body, 'beast_50');
-      else if (this.beastHp === 1) this.setBeastTexture(body, 'beast_10');
-      else this.setBeastTexture(body, 'beast_dead');
+      this.beastIdleActive = true;
+      this.beastIdleFrameIndex = 0;
+      this.setBeastTexture(body, BEAST_IDLE_FRAMES[this.beastIdleFrameIndex]);
     }
   }
   
   isBeastVulnerable(): boolean {
     if (!this.levelData.beast) return false;
-    const pattern = this.levelData.beast.vulnerablePattern;
-    return pattern[this.turnCount % pattern.length];
+    return this.beastCanBeHit;
+  }
+
+  private async playBeastOpeningSwipe(): Promise<void> {
+    if (!this.beastOpeningAnimation) {
+      this.beastOpeningAnimation = this.playBeastAttackAnimation(false).then(() => {
+        if (!this.beastVisual?.active) return;
+        const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
+        this.setBeastTexture(body, 'beast_shield');
+      });
+    }
+
+    await this.beastOpeningAnimation;
+  }
+
+  private setBeastVulnerable(): void {
+    this.beastCanBeHit = true;
+    this.updateBeastVisuals();
+  }
+
+  private async resolveBeastDefense(): Promise<void> {
+    if (this.beastCanBeHit) return;
+
+    this.beastDefensesRemaining = Math.max(0, this.beastDefensesRemaining - 1);
+    if (this.beastDefensesRemaining > 0) return;
+
+    if (this.nextBeastAction === 'smash' || this.nextBeastAction === 'swipe') {
+      await this.playBeastAttackAnimation(this.nextBeastAction === 'smash');
+      if (this.beastVisual) {
+        const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
+        this.setBeastTexture(body, 'beast_shield');
+      }
+    }
+
+    this.setBeastVulnerable();
+  }
+
+  private async prepareNextBeastPhase(): Promise<void> {
+    this.beastCanBeHit = false;
+
+    if (this.beastHp === 4) {
+      // After the first hit, the beast shields, smashes, then opens up.
+      this.beastDefensesRemaining = 1;
+      this.nextBeastAction = 'smash';
+    } else if (this.beastHp === 3) {
+      // After the second hit, it holds its shield before becoming vulnerable.
+      this.beastDefensesRemaining = 1;
+      this.nextBeastAction = 'weaken';
+    } else if (this.beastHp === 2) {
+      // After the third hit, it swipes once, shields, then swipes again.
+      await this.playBeastAttackAnimation(false);
+      if (this.beastVisual) {
+        const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
+        this.setBeastTexture(body, 'beast_shield');
+      }
+      this.beastDefensesRemaining = 1;
+      this.nextBeastAction = 'swipe';
+    } else {
+      // At its last health, it shields, smashes, then exposes its core.
+      this.beastDefensesRemaining = 1;
+      this.nextBeastAction = 'smash';
+    }
+
+    this.updateBeastVisuals();
+  }
+
+  private async playBeastAttackAnimation(isSmash: boolean): Promise<void> {
+    if (!this.beastVisual) return;
+
+    const frames = isSmash ? BEAST_SMASH_FRAMES : BEAST_SWIPE_FRAMES;
+    const frameDurations = isSmash
+      ? [430, 380, 340, 430, 350, 390, 420]
+      : [400, 340, 280, 380, 320, 360, 400];
+    const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
+
+    this.beastIdleActive = false;
+    this.beastAttackInProgress = true;
+    try {
+      for (let index = 0; index < frames.length; index++) {
+        this.setBeastTexture(body, frames[index]);
+        if (isSmash && index === 3) {
+          this.cameras.main.shake(320, 0.018);
+        }
+        await new Promise((resolve) => setTimeout(resolve, frameDurations[index]));
+      }
+    } finally {
+      this.beastAttackInProgress = false;
+    }
   }
 
   resetLevel() {
@@ -277,10 +553,7 @@ export default class GameScene extends Phaser.Scene {
     let originalHeight = 724;
 
     if (this.levelData.id === 'level_03') {
-      bgKey = 'bg_level3';
-      originalHeight = 341;
-    } else if (this.levelData.id === 'level_04') {
-      bgKey = 'bg_level4';
+      bgKey = 'bg_path_trials';
       originalHeight = 341;
     }
 
@@ -298,14 +571,9 @@ export default class GameScene extends Phaser.Scene {
 
   createPlatforms() {
     this.tileHeights = new Array(this.levelData.length).fill(this.groundY);
-    if (this.levelData.id === 'level_03' || this.levelData.id === 'level_04') {
-      let currentY = this.groundY;
+    if (this.levelData.id === 'level_03') {
       for (let i = 0; i < this.levelData.length; i++) {
-        const tile = this.levelData.tiles[i];
-        this.tileHeights[i] = currentY;
-        if (this.levelData.id === 'level_03' && tile === TileType.COLOR_BLUE) { // TileType.COLOR_BLUE
-          currentY += 25; // drop height for next tiles
-        }
+        this.tileHeights[i] = this.groundY;
       }
     }
 
@@ -322,23 +590,16 @@ export default class GameScene extends Phaser.Scene {
       const tile = this.levelData.tiles[i];
       if (!isWalkable(tile)) { i++; continue; }
 
-      if (this.levelData.id === 'level_03' || this.levelData.id === 'level_04') {
+      if (this.levelData.id === 'level_03') {
         const currentX = this.startX + i * TILE_W;
         const blockCenterX = currentX + TILE_W / 2;
         
         let texture = 'platform_yellow';
-        if (this.levelData.id === 'level_03') {
-          if (tile === TileType.COLOR_BLUE) texture = 'platform_blue_slide'; // COLOR_BLUE
-          else if (tile === TileType.COLOR_RED) texture = 'platform_red'; // COLOR_RED
-          else if (tile === TileType.COLOR_GOLD) texture = 'platform_yellow'; // COLOR_GOLD
-          else if (tile === TileType.GOAL) texture = 'platform_yellow'; // GOAL
-        } else if (this.levelData.id === 'level_04') {
-          if (tile === TileType.FIRE) {
-            i++;
-            continue;
-            }
-          texture = 'platform_red'; // Everything else in Level 4 is red blocks
+        if (tile === TileType.FIRE) {
+          i++;
+          continue;
         }
+        texture = 'platform_red';
         
         const img = this.add.image(blockCenterX, this.tileHeights[i], texture).setOrigin(0.5, 0);
         img.displayWidth = TILE_W;
@@ -401,7 +662,7 @@ export default class GameScene extends Phaser.Scene {
         strip.setAlpha(0.55);
         // Sun icon
         this.add.circle(cx, y - 8, 7, 0xffaa00).setAlpha(0.7);
-      } else if (tile === TileType.FIRE || tile === TileType.TOTEM_FIRE) {
+      } else if (tile === TileType.FIRE) {
         // Realistic fire emitter on the bridge
         // Push the fire down by 60px so it sits inside the gap
         this.add.particles(cx, y + 60, 'fire_particle', {
@@ -415,21 +676,13 @@ export default class GameScene extends Phaser.Scene {
           frequency: 40
         });
 
-        if (tile === TileType.TOTEM_FIRE) {
-          const diamond = this.add.polygon(cx, y - 40, [0, -12, 12, 0, 0, 12, -12, 0], 0xffd700);
-          diamond.setStrokeStyle(2, 0xffaa00);
-          this.add.circle(cx, y - 40, 18, 0xffd700).setAlpha(0.15);
-        }
-      } else if (tile === TileType.GOBLIN || tile === TileType.TOTEM_GOBLIN) {
-        // Goblin body
-        this.add.rectangle(cx, y - 10, 20, 20, 0x228b22);
-        this.add.circle(cx - 4, y - 14, 2, 0xff0000);
-        this.add.circle(cx + 4, y - 14, 2, 0xff0000);
-        if (tile === TileType.TOTEM_GOBLIN) {
-          const diamond = this.add.polygon(cx, y - 40, [0, -12, 12, 0, 0, 12, -12, 0], 0xffd700);
-          diamond.setStrokeStyle(2, 0xffaa00);
-          this.add.circle(cx, y - 40, 18, 0xffd700).setAlpha(0.15);
-        }
+      } else if (tile === TileType.TOTEM_FIRE || tile === TileType.TOTEM_GOBLIN) {
+        // Totems are safe tiles and never share their cell with a hazard.
+        const diamond = this.add.polygon(cx, y - 40, [0, -12, 12, 0, 0, 12, -12, 0], 0xffd700);
+        diamond.setStrokeStyle(2, 0xffaa00);
+        this.add.circle(cx, y - 40, 18, 0xffd700).setAlpha(0.15);
+      } else if (tile === TileType.GOBLIN) {
+        this.spawnGoblin(j, cx, y);
       } else if (tile === TileType.TOTEM_FINAL) {
         const diamond = this.add.polygon(cx, y - 25, [0, -20, 20, 0, 0, 20, -20, 0], 0xffd700);
         diamond.setStrokeStyle(2, 0xffaa00);
@@ -449,6 +702,20 @@ export default class GameScene extends Phaser.Scene {
         });
         this.itemSprites.set(j, shield);
       }
+    }
+
+    if (this.goblinSprites.size > 0) {
+      this.time.addEvent({
+        delay: 760,
+        loop: true,
+        callback: () => {
+          this.goblinIdleFrameIndex = 1 - this.goblinIdleFrameIndex;
+          const textureKey = this.goblinIdleFrameIndex === 0 ? 'goblin_idle_1' : 'goblin_idle_2';
+          for (const goblin of this.goblinSprites.values()) {
+            if (goblin.active) this.setGoblinTexture(goblin, textureKey);
+          }
+        },
+      });
     }
 
     // ─── PASS 3: Render low-hanging branches above GROUND tiles (Level 1 only) ───
@@ -614,19 +881,14 @@ export default class GameScene extends Phaser.Scene {
   // COMMAND EXECUTION
   // ═══════════════════════════════════════════
   async executeCommand(cmd: Command): Promise<string> {
-    // ──── Level 4: The Path of Trials ────
-    if (this.levelData.id === 'level_04') {
-      return this.executeLevel4Command(cmd);
+    // ──── Stage 3: The Path of Trials ────
+    if (this.levelData.id === 'level_03') {
+      return this.executePathTrialsCommand(cmd);
     }
 
     // ──── Level 2: Beast Fight ────
     if (this.levelData.id === 'level_02') {
       return this.executeLevel2Command(cmd);
-    }
-
-    // ──── Level 3: Ancient Colour Cipher ────
-    if (this.levelData.id === 'level_03') {
-      return this.executeLevel3Command(cmd);
     }
 
     // ──── Level 1: The Broken Bridge ────
@@ -700,8 +962,8 @@ export default class GameScene extends Phaser.Scene {
     return 'OK';
   }
 
-  // ──── Level 4 Command Handler ────
-  private async executeLevel4Command(cmd: Command): Promise<string> {
+  // ──── Path of Trials Command Handler ────
+  private async executePathTrialsCommand(cmd: Command): Promise<string> {
     // ACTIVATE_TOTEM: doesn't advance, checks current tile
     if (cmd.type === 'ACTIVATE_TOTEM') {
       const currentTile = this.levelData.tiles[this.pIndex];
@@ -772,6 +1034,9 @@ export default class GameScene extends Phaser.Scene {
       if (nextTile === TileType.FIRE || nextTile === TileType.TOTEM_FIRE) {
         await this.playerFallDeath();
         return 'FAILED';
+      }
+      if (nextTile === TileType.GOBLIN) {
+        await this.playGoblinDefeat(nextIndex);
       }
       return 'OK';
 
@@ -867,6 +1132,8 @@ export default class GameScene extends Phaser.Scene {
         return 'FAILED';
       }
       if (nextTile === TileType.GOAL) return 'LEVEL_COMPLETE';
+      this.revealBeastWhenCameraReachesIt();
+      if (this.isAtBeastCombatPosition()) await this.playBeastRevealCutscene();
       return 'OK';
     }
 
@@ -886,6 +1153,8 @@ export default class GameScene extends Phaser.Scene {
       }
       const landTile = this.levelData.tiles[landIndex];
       if (landTile === TileType.GOAL) return 'LEVEL_COMPLETE';
+      this.revealBeastWhenCameraReachesIt();
+      if (this.isAtBeastCombatPosition()) await this.playBeastRevealCutscene();
       return 'OK';
     }
 
@@ -894,10 +1163,11 @@ export default class GameScene extends Phaser.Scene {
 
   private async handleAttack(): Promise<string> {
     if (!this.levelData.beast) return 'OK';
+    await this.playBeastOpeningSwipe();
 
     const vulnerable = this.isBeastVulnerable();
 
-    // Hero strikes first. A shielded beast gets a counterattack; a vulnerable
+    // Hero strikes first. A shielded beast gets a full counterattack; a vulnerable
     // beast takes damage and never plays an attack animation.
     this.setPlayerTextureScale('char_attack_1');
     await new Promise(r => setTimeout(r, 600));
@@ -906,24 +1176,21 @@ export default class GameScene extends Phaser.Scene {
 
     if (vulnerable) {
       this.beastHp--;
+      this.beastCanBeHit = false;
+      this.beastIdleActive = false;
+      this.beastDefeated = this.beastHp <= 0;
 
       if (this.beastVisual) {
         const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
         body.setTintFill(0xffffff);
-        this.time.delayedCall(160, () => { if (body.active) body.clearTint(); });
-        this.setBeastTexture(body, this.beastHp <= 0
-          ? 'beast_dead'
-          : this.beastHp === 3
-            ? 'beast_full'
-            : this.beastHp === 2
-              ? 'beast_50'
-              : 'beast_10');
+        this.updateBeastVisuals();
 
         const impact = this.add.circle(this.beastVisual.x - 90, this.beastVisual.y - 130, 18, 0xffffff, 0.9);
         this.tweens.add({
           targets: impact, scale: 3, alpha: 0, duration: 220,
           onComplete: () => impact.destroy()
         });
+        this.time.delayedCall(180, () => { if (body.active) body.clearTint(); });
       }
 
       this.setPlayerIdle();
@@ -932,35 +1199,18 @@ export default class GameScene extends Phaser.Scene {
         await new Promise(r => setTimeout(r, 900));
         return 'LEVEL_COMPLETE';
       }
+      await this.prepareNextBeastPhase();
     } else {
       this.setPlayerIdle();
 
       if (this.beastVisual) {
-        const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
-        const isSmash = this.turnCount === 1 || this.turnCount === 5;
-        this.setBeastTexture(
-          body,
-          isSmash ? 'beast_smash_1' : 'beast_swipe_1'
-        );
-
-        await new Promise(r => setTimeout(r, 400));
-
-        this.setBeastTexture(
-          body,
-          isSmash ? 'beast_smash_2' : 'beast_swipe_2'
-        );
-
-        this.cameras.main.shake(280, 0.018);
-
-        await new Promise(r => setTimeout(r, 550));
+        await this.playBeastAttackAnimation(this.nextBeastAction === 'smash');
       }
 
       await this.playerFallDeath();
       return 'FAILED';
     }
 
-    this.turnCount++;
-    this.updateBeastVisuals();
     return 'OK';
   }
 
@@ -972,30 +1222,8 @@ export default class GameScene extends Phaser.Scene {
     const shield = this.add.circle(this.player.x + 35, this.player.y - 72, 62, 0x55aaff, 0.32);
     shield.setStrokeStyle(5, 0xaaddff);
 
-    const isSmash = this.turnCount === 1 || this.turnCount === 5;
-    const isSwipe = this.turnCount === 2;
-
-    if (this.beastVisual && (isSmash || isSwipe)) {
-      const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
-      this.setBeastTexture(
-        body,
-        isSmash ? 'beast_smash_1' : 'beast_swipe_1'
-      );
-
-      await new Promise(r => setTimeout(r, 400));
-
-      this.setBeastTexture(
-        body,
-        isSmash ? 'beast_smash_2' : 'beast_swipe_2'
-      );
-
-      this.cameras.main.shake(
-        isSmash ? 260 : 160,
-        isSmash ? 0.016 : 0.01
-      );
-
-      await new Promise(r => setTimeout(r, 500));
-    }
+    await this.playBeastOpeningSwipe();
+    await this.resolveBeastDefense();
 
     await new Promise<void>((resolve) => {
       this.tweens.add({
@@ -1006,22 +1234,41 @@ export default class GameScene extends Phaser.Scene {
     shield.destroy();
     this.setPlayerIdle();
 
-    this.turnCount++;
     this.updateBeastVisuals();
     return 'OK';
   }
 
   // ──── Shared Animations ────
   private async playerFallDeath(): Promise<void> {
-    this.playPlayerAnim('fall');
-    this.tweens.add({
-      targets: this.player,
-      y: this.player.y + 400,
-      alpha: 0,
-      duration: 600,
-      ease: 'Power2'
+    const hasSword = this.hasSword;
+    const hurtTexture = hasSword ? 'char_hurt_sword' : 'char_hurt_unarmed';
+    const defeatedTexture = hasSword ? 'char_defeated_sword' : 'char_defeated_unarmed';
+    const origins: Record<string, { x: number; y: number }> = {
+      char_hurt_sword: { x: 0.494, y: 0.934 },
+      char_defeated_sword: { x: 0.502, y: 0.974 },
+      char_hurt_unarmed: { x: 0.506, y: 0.972 },
+      char_defeated_unarmed: { x: 0.494, y: 0.978 },
+    };
+
+    this.player.stop();
+    this.player.setTexture(hurtTexture);
+    this.player.setOrigin(origins[hurtTexture].x, origins[hurtTexture].y);
+    this.player.setScale(0.15);
+    await new Promise((resolve) => setTimeout(resolve, 280));
+
+    this.player.setTexture(defeatedTexture);
+    this.player.setOrigin(origins[defeatedTexture].x, origins[defeatedTexture].y);
+    this.player.setScale(0.15);
+    await new Promise<void>((resolve) => {
+      this.tweens.add({
+        targets: this.player,
+        x: this.player.x - 18,
+        alpha: 0,
+        duration: 720,
+        ease: 'Power2',
+        onComplete: () => resolve(),
+      });
     });
-    await new Promise(r => setTimeout(r, 1000));
   }
 
   private jumpInPlace(): Promise<void> {
@@ -1044,107 +1291,4 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
-  // ──── Level 3: Ancient Colour Cipher ────
-  public getTileColor(): string {
-    const tile = this.levelData.tiles[this.pIndex];
-    if (tile === TileType.COLOR_RED) return 'red';
-    if (tile === TileType.COLOR_BLUE) return 'blue';
-    if (tile === TileType.COLOR_GOLD) return 'yellow';
-    return 'none';
-  }
-
-  private async executeLevel3Command(cmd: Command): Promise<string> {
-    const nextIndex = this.pIndex + 1;
-    if (this.pIndex >= this.levelData.length) return 'OK';
-
-    const currentTile = this.levelData.tiles[this.pIndex];
-
-    if (cmd.type === 'DODGE') {
-      if (currentTile === TileType.COLOR_RED) {
-        // Correct! Dodge animation
-        this.pIndex = nextIndex;
-        const targetX = this.startX + this.pIndex * TILE_W + TILE_W / 2;
-        const targetY = (this.tileHeights && this.tileHeights.length > this.pIndex ? this.tileHeights[this.pIndex] : this.groundY) + 5;
-        this.playPlayerAnim('jump');
-        
-        
-        await new Promise<void>((resolve) => {
-          this.tweens.add({
-            targets: this.player,
-            x: targetX,
-            y: this.player.y - 80,
-            yoyo: true,
-            duration: 200,
-            ease: 'Sine.easeOut',
-            onComplete: () => {
-              this.player.stop();
-              
-              this.setPlayerIdle();
-              resolve();
-            }
-          });
-        });
-        await this.updatePlayerVisuals(false);
-      } else {
-        await this.playerFallDeath();
-        return 'FAILED';
-      }
-    } else if (cmd.type === 'SLIDE') {
-      if (currentTile === TileType.COLOR_BLUE) {
-        // Correct! Slide animation
-        this.pIndex = nextIndex;
-        const targetX = this.startX + this.pIndex * TILE_W + TILE_W / 2;
-        const targetY = (this.tileHeights && this.tileHeights.length > this.pIndex ? this.tileHeights[this.pIndex] : this.groundY) + 5;
-        this.playPlayerAnim('fall');
-        
-        await new Promise<void>((resolve) => {
-          this.tweens.add({
-            targets: this.player,
-            x: targetX,
-            scaleY: 0.6,
-            y: targetY,
-            yoyo: true,
-            duration: 200,
-            onComplete: () => {
-              this.player.stop();
-              
-              this.setPlayerIdle();
-              resolve();
-            }
-          });
-        });
-        await this.updatePlayerVisuals(false);
-      } else {
-        await this.playerFallDeath();
-        return 'FAILED';
-      }
-    } else if (cmd.type === 'ACTIVATE_TILE') {
-      if (currentTile === TileType.COLOR_GOLD) {
-        // Correct! Activate animation
-        const glow = this.add.circle(this.player.x, this.player.y - 70, 70, 0xffd700, 0.6);
-        this.tweens.add({
-          targets: glow, alpha: 0, scale: 2, duration: 400,
-          onComplete: () => glow.destroy()
-        });
-        await new Promise(r => setTimeout(r, 800));
-        
-        this.pIndex = nextIndex;
-        await this.updatePlayerVisuals(true, false);
-      } else {
-        await this.playerFallDeath();
-        return 'FAILED';
-      }
-    } else {
-      // Any other command is an invalid move in this strict cipher sequence!
-      await this.playerFallDeath();
-      return 'FAILED';
-    }
-
-    if (this.pIndex < this.levelData.length && this.levelData.tiles[this.pIndex] === TileType.GOAL) {
-      return 'LEVEL_COMPLETE';
-    }
-    
-    return 'OK';
-  }
 }
-

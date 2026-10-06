@@ -30,6 +30,6 @@ export interface LevelDefinition {
   beast?: {
     positionIndex: number;
     hp: number;
-    vulnerablePattern: boolean[]; // e.g. [false, false, true] means Shielded, Shielded, Vulnerable
+    vulnerablePattern: boolean[]; // Used by the legacy backup scene.
   };
 }

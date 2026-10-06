@@ -4,7 +4,6 @@ import GameScene from './GameScene';
 import { level1 } from '../levels/level1';
 import { level2 } from '../levels/level2';
 import { level3 } from '../levels/level3';
-import { level4 } from '../levels/level4';
 
 interface Props {
   levelIndex: number;
@@ -50,7 +49,6 @@ const PhaserGame = forwardRef((props: Props, ref) => {
         let levelDef = level1;
         if (props.levelIndex === 2) levelDef = level2;
         if (props.levelIndex === 3) levelDef = level3;
-        if (props.levelIndex === 4) levelDef = level4;
         scene.loadLevel(levelDef);
       }
     }
@@ -77,13 +75,6 @@ const PhaserGame = forwardRef((props: Props, ref) => {
       }
       return false;
     },
-    getTileColor: () => {
-      if (gameRef.current) {
-        const scene = gameRef.current.scene.getScene('GameScene') as GameScene;
-        return scene.getTileColor();
-      }
-      return 'none';
-    }
   }));
 
   return <div ref={containerRef} className="absolute inset-0"></div>;

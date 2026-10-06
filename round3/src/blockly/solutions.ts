@@ -44,56 +44,41 @@ export const SOLUTIONS: Record<number, string> = {
   </block>
 </xml>`,
   2: `<xml>
-  <block type="action_run"><next>
-  <block type="action_run"><next>
-  <block type="action_equip"><next>
-  <block type="action_run"><next>
-  <block type="action_run"><next>
-  <block type="action_equip"><next>
-  <block type="action_run"><next>
-  <block type="action_run"><next>
-  <block type="controls_if">
-    <mutation else="1"></mutation>
-    <value name="IF0">
-      <block type="sensor_beast_vulnerable"></block>
-    </value>
-    <statement name="DO0">
-      <block type="action_attack"></block>
-    </statement>
-    <statement name="ELSE">
-      <block type="action_defend"></block>
-    </statement>
+  <block type="controls_repeat_ext">
+    <value name="TIMES"><block type="math_number"><field name="NUM">2</field></block></value>
+    <statement name="DO"><block type="action_run"></block></statement>
+    <next>
+      <block type="action_equip"><next>
+        <block type="controls_repeat_ext">
+          <value name="TIMES"><block type="math_number"><field name="NUM">2</field></block></value>
+          <statement name="DO"><block type="action_run"></block></statement>
+          <next>
+            <block type="action_equip"><next>
+              <block type="controls_repeat_ext">
+                <value name="TIMES"><block type="math_number"><field name="NUM">14</field></block></value>
+                <statement name="DO"><block type="action_run"></block></statement>
+                <next>
+                  <block type="controls_repeat_ext">
+                    <value name="TIMES"><block type="math_number"><field name="NUM">11</field></block></value>
+                    <statement name="DO">
+                      <block type="controls_if">
+                        <mutation else="1"></mutation>
+                        <value name="IF0"><block type="sensor_beast_vulnerable"></block></value>
+                        <statement name="DO0"><block type="action_attack"></block></statement>
+                        <statement name="ELSE"><block type="action_defend"></block></statement>
+                      </block>
+                    </statement>
+                  </block>
+                </next>
+              </block>
+            </next></block>
+          </next>
+        </block>
+      </next></block>
+    </next>
   </block>
-  </next></block></next></block></next></block></next></block></next></block></next></block></next></block></next></block></next></block>
 </xml>`,
   3: `<xml>
-  <block type="controls_repeat_ext">
-    <value name="TIMES"><block type="math_number"><field name="NUM">9</field></block></value>
-    <statement name="DO">
-      <block type="controls_if">
-        <mutation elseif="1" else="1"></mutation>
-        <value name="IF0">
-          <block type="logic_compare">
-            <field name="OP">EQ</field>
-            <value name="A"><block type="sensor_tile_color"></block></value>
-            <value name="B"><block type="color_value"><field name="COLOR">red</field></block></value>
-          </block>
-        </value>
-        <statement name="DO0"><block type="action_dodge"></block></statement>
-        <value name="IF1">
-          <block type="logic_compare">
-            <field name="OP">EQ</field>
-            <value name="A"><block type="sensor_tile_color"></block></value>
-            <value name="B"><block type="color_value"><field name="COLOR">blue</field></block></value>
-          </block>
-        </value>
-        <statement name="DO1"><block type="action_slide"></block></statement>
-        <statement name="ELSE"><block type="action_activate_tile"></block></statement>
-      </block>
-    </statement>
-  </block>
-</xml>`,
-  4: `<xml>
   <block type="controls_repeat_ext">
     <value name="TIMES"><block type="math_number"><field name="NUM">3</field></block></value>
     <statement name="DO">
