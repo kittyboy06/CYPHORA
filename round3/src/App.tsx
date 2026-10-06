@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import PhaserGame from './game/PhaserGame';
 import BlocklyEditor from './components/BlocklyEditor';
 import { GameOverlay } from './components/GameOverlay';
@@ -10,11 +10,12 @@ import { useGameStore } from './state/gameStore';
 import { executeCode } from './blockly/interpreter';
 import { Play, RotateCcw, Wand2 } from 'lucide-react';
 import { SOLUTIONS } from './blockly/solutions';
+import * as Blockly from 'blockly';
+import { PromptDialog, AlertDialog } from './components/PromptDialog';
 
 function App() {
   const [hasEntered, setHasEntered] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [adminOverride, setAdminOverride] = useState(false);
   const [showStory, setShowStory] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -25,6 +26,19 @@ function App() {
   const setStatus = useGameStore((state) => state.setStatus);
   const timeRemaining = useGameStore((state) => state.timeRemaining);
   const tickTime = useGameStore((state) => state.tickTime);
+
+  const [promptConfig, setPromptConfig] = useState<{ message: string, defaultValue: string, isPassword?: boolean, callback: (result: string | null) => void } | null>(null);
+  const [alertConfig, setAlertConfig] = useState<{ message: string, callback?: () => void } | null>(null);
+
+  useEffect(() => {
+    // Override Blockly dialogs to use our React states
+    Blockly.dialog.setPrompt(function(message, defaultValue, callback) {
+      setPromptConfig({ message, defaultValue, callback });
+    });
+    Blockly.dialog.setAlert(function(message, callback) {
+      setAlertConfig({ message, callback });
+    });
+  }, []);
 
   useEffect(() => {
     if (!showStory && !showTutorial) {
@@ -68,7 +82,7 @@ function App() {
     
     try {
       setStatus('running');
-      await executeCode(code, gameRef.current, blocklyRef.current);
+      await executeCode(code, gameRef.current, blocklyRef.current, blocklyRef.current.getBlockCount());
     } catch (e: any) {
       console.error(e);
       setStatus('failed');
@@ -96,9 +110,9 @@ function App() {
   }
 
   // Anti-Cheat is disabled:
-  // if (!isFullscreen && !adminOverride) {
-  //   return <AntiCheatScreen onReenter={enterFullscreen} onAdminUnlock={() => setAdminOverride(true)} />;
-  // }
+  if (!isFullscreen) {
+    return <AntiCheatScreen onAdminUnlock={enterFullscreen} />;
+  }
 
   if (showStory) {
     return <StoryIntro onComplete={() => { setShowStory(false); setShowTutorial(true); }} />;
@@ -113,7 +127,7 @@ function App() {
     <div className="w-screen h-screen flex flex-col relative bg-[var(--bg-dark)] overflow-hidden">
       <GameOverlay onRetry={handleReset} onNextLevel={handleNextLevel} />
 
-      {/* ═══ TOP HALF: Game Canvas ═══ */}
+      {/* â•â•â• TOP HALF: Game Canvas â•â•â• */}
       <div className="h-[40%] min-h-[200px] relative bg-[#050804] border-b border-[var(--border-gold)]">
         <PhaserGame ref={gameRef} levelIndex={level} />
         
@@ -125,7 +139,7 @@ function App() {
         </div>
       </div>
 
-      {/* ═══ TASK STRIP ═══ */}
+      {/* â•â•â• TASK STRIP â•â•â• */}
       <div className="px-6 py-3 bg-[rgba(14,18,12,0.95)] border-b border-[var(--border-gold)] flex items-center justify-between">
         <div>
           {level === 1 && (
@@ -134,7 +148,7 @@ function App() {
                 Current Task: The Broken Bridge
               </h3>
               <p className="text-sm leading-relaxed text-[var(--text-primary)]">
-                The bridge gaps are expanding! First you must jump, then run 1 tile and jump, then run 2 tiles and jump, then 3 tiles, and so on... (a triangular number progression). <strong className="text-red-400">⚠️ Low-hanging branches block jumping on solid ground — you can only jump over gaps!</strong> Use variables and nested loops with <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">run()</code> and <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code> to reach the other side!
+                The bridge gaps are expanding! First you must jump, then run 1 tile and jump, then run 2 tiles and jump, then 3 tiles, and so on... (a triangular number progression). <strong className="text-red-400">âš ï¸ Low-hanging branches block jumping on solid ground â€” you can only jump over gaps!</strong> Use variables and nested loops with <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">run()</code> and <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code> to reach the other side!
               </p>
             </>
           )}
@@ -146,7 +160,7 @@ function App() {
               <p className="text-sm leading-relaxed text-[var(--text-primary)]">
                 The Guardian blocks the path! Run forward on the continuous bridge. 
                 Use <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">equip()</code> at the 3rd tile to pick up the Sword (required to attack), and again at the 5th tile to pick up the Shield (required to defend). 
-                Stop exactly 2 blocks before the beast.
+                Stop exactly 3 blocks before the beast.
                 Then check its shield: if <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">is_beast_vulnerable()</code>, use <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">attack()</code>. 
                 Otherwise, <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">defend()</code>.
               </p>
@@ -198,16 +212,26 @@ function App() {
           ) : (
             <button 
               onClick={() => {
-                const pass = prompt('Enter Admin Password to unlock level skip:');
-                if (pass === 'cyphora-admin') {
-                  setIsAdminUnlocked(true);
-                } else if (pass) {
-                  alert('Incorrect password');
-                }
+                setPromptConfig({
+                  message: 'Enter Admin Password to unlock level skip:',
+                  defaultValue: '',
+                  isPassword: true,
+                  callback: (pass) => {
+                    setPromptConfig(null);
+                    if (pass === '1234') {
+                      setIsAdminUnlocked(true);
+                    } else if (pass) {
+                      setAlertConfig({
+                        message: 'Incorrect password',
+                        callback: () => setAlertConfig(null)
+                      });
+                    }
+                  }
+                });
               }}
               className="px-3 py-2 bg-black/30 border border-gray-800 text-gray-500 hover:text-gray-300 text-xs font-mono uppercase tracking-widest rounded-sm cursor-pointer transition-all"
             >
-              🔒 Admin
+              ðŸ”’ Admin
             </button>
           )}
 
@@ -246,15 +270,37 @@ function App() {
         </div>
       </div>
 
-      {/* ═══ BOTTOM HALF: Blockly Workspace (toolbox on left, workspace spanning full width) ═══ */}
+      {/* â•â•â• BOTTOM HALF: Blockly Workspace (toolbox on left, workspace spanning full width) â•â•â• */}
       <div className="flex-1 relative">
         <BlocklyEditor ref={blocklyRef} level={level} />
       </div>
+      {promptConfig && (
+        <PromptDialog 
+          message={promptConfig.message}
+          defaultValue={promptConfig.defaultValue}
+          isPassword={promptConfig.isPassword}
+          onSubmit={(result) => {
+            promptConfig.callback(result);
+            setPromptConfig(null);
+          }}
+        />
+      )}
+      {alertConfig && (
+        <AlertDialog
+          message={alertConfig.message}
+          onConfirm={() => {
+            if (alertConfig.callback) alertConfig.callback();
+            setAlertConfig(null);
+          }}
+        />
+      )}
     </div>
   );
 }
 
 export default App;
+
+
 
 
 

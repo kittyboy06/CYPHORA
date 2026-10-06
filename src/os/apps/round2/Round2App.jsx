@@ -32,7 +32,7 @@ const BASE_POINTS = 400;
 const MAX_SPEED_BONUS = 600;
 
 export function Round2App() {
-  const { openApp, vfs, eventBus, teamData, fetchLeaderboard } = useOS();
+  const { openApp, vfs, eventBus, teamData, fetchLeaderboard, requestFullscreen } = useOS();
 
   const teamName = teamData?.name || localStorage.getItem('cyphora_team_name') || 'Wandering Nomad';
 
@@ -542,8 +542,15 @@ export function Round2App() {
       {/* Header Toolbar */}
       <header className="os-round2-toolbar">
         <div className="os-round2-title-section">
-          <div className="os-round2-badge">
-            <Compass size={14} />
+          <div 
+            className="os-round2-badge"
+            onClick={() => {
+              if (requestFullscreen) requestFullscreen();
+              openApp('mission-prologue', { meta: { isMaximized: true } });
+            }}
+            style={{ cursor: 'pointer' }}
+          >
+            <Compass size={13} />
             <span>STAGE 2</span>
           </div>
           <h2 className="os-round2-heading">IMAGE NAVIGATION</h2>
@@ -551,10 +558,31 @@ export function Round2App() {
             {round2Phase === 1 ? 'Phase 1: Target 1' : 'Phase 2: Target 2'}
           </span>
           <div className="os-round2-points-chip" title="Team Points Earned">
-            <Award size={14} />
+            <Award size={13} />
             <span>PTS:</span>
             <span className="os-round2-points-val">{teamPoints}</span>
             {pointsDelta && <span style={{ color: '#7ee787', fontSize: '0.72rem' }}>+{pointsDelta}</span>}
+          </div>
+        </div>
+
+        {/* Compact Integrated Mission Clock & Speed Potential HUD */}
+        <div className="os-round2-header-hud">
+          <div className="os-header-timer-wrap" title="15-Minute Mission Timer">
+            <Clock size={13} className="timer-icon" />
+            <span className={`os-header-timer-digits ${timerUrgencyClass}`}>
+              {formatTime(secondsRemaining)}
+            </span>
+            <div className="os-header-timer-track">
+              <div
+                className={`os-header-timer-bar ${timerUrgencyClass}`}
+                style={{ width: `${(secondsRemaining / ROUND_2_DURATION_SECONDS) * 100}%` }}
+              />
+            </div>
+          </div>
+          <div className="os-header-speed-pill" title="Speed Evaluation Potential">
+            <Flame size={13} color="#dfb125" />
+            <span>+{currentSpeedBonus} SPEED</span>
+            <span className="speed-pts-total">({currentPotentialTotal} MAX)</span>
           </div>
         </div>
 
@@ -563,41 +591,11 @@ export function Round2App() {
           <button
             type="button"
             className="os-tool-btn"
-            onClick={() => openApp('vision-target')}
-            title="Open Vision Target Viewer in separate window"
-          >
-            <Eye size={13} color="#79c0ff" />
-            <span>Vision Viewer</span>
-          </button>
-
-          <button
-            type="button"
-            className="os-tool-btn"
-            onClick={() => openApp('prompt-studio')}
-            title="Open Prompt Studio in separate window"
-          >
-            <Sparkles size={13} color="#dfb125" />
-            <span>Prompt Studio</span>
-          </button>
-
-          <button
-            type="button"
-            className="os-tool-btn"
-            onClick={() => openApp('image-evaluator')}
-            title="Open Similarity Evaluator in separate window"
-          >
-            <Zap size={13} color="#f59e0b" />
-            <span>Evaluator</span>
-          </button>
-
-          <button
-            type="button"
-            className="os-tool-btn"
             onClick={() => openApp('leaderboard')}
             title="View Live Expedition Standings"
           >
-            <Trophy size={13} color="#dfb125" />
-            <span>Standings</span>
+            <Trophy size={12} color="#dfb125" />
+            <span>Leaderboard</span>
           </button>
 
           <button
@@ -606,91 +604,40 @@ export function Round2App() {
             onClick={() => openApp('mission-prologue')}
             title="Review Recovered Mission Briefing & Story"
           >
-            <BookOpen size={13} color="#a8a08d" />
+            <BookOpen size={12} color="#a8a08d" />
             <span>Briefing</span>
-          </button>
-
-          <button
-            type="button"
-            className="os-tool-btn"
-            onClick={() => {
-              setActiveSlotForVfs(round2Phase);
-              setShowVfsPicker(true);
-            }}
-            title="Select Image File from OS Virtual Disk"
-          >
-            <Folder size={13} color="#58a6ff" />
-            <span>Browse OS Files</span>
           </button>
         </nav>
       </header>
 
       {/* Main Content Area */}
       <div className="os-round2-body">
-        {/* HUD Mission Clock */}
-        <section className="os-round2-hud">
-          <div className="os-hud-timer-block">
-            <div className="os-hud-label-row">
-              <span style={{ color: '#a8a08d', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <Clock size={14} color="#dfb125" /> 15-MINUTE EXPEDITION CLOCK
-              </span>
-              <span className={`os-hud-digits ${timerUrgencyClass}`}>
-                {formatTime(secondsRemaining)}
-              </span>
-            </div>
-            <div className="os-hud-track">
-              <div
-                className={`os-hud-bar ${timerUrgencyClass}`}
-                style={{ width: `${(secondsRemaining / ROUND_2_DURATION_SECONDS) * 100}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="os-hud-speed-block">
-            <Flame size={20} color="#dfb125" />
-            <div className="os-speed-info">
-              <span className="os-speed-label">SPEED EVALUATION POTENTIAL</span>
-              <span className="os-speed-calc">
-                {BASE_POINTS} Base + <span style={{ color: '#dfb125' }}>+{currentSpeedBonus} Speed</span> = {currentPotentialTotal} PTS
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* Alerts */}
+        {/* Floating / Compact Alert Banners */}
         {formGlobalError && (
           <div className="os-alert-banner error" role="alert">
-            <AlertTriangle size={16} />
+            <AlertTriangle size={14} />
             <span>{formGlobalError}</span>
           </div>
         )}
 
         {phaseSuccessNotice && (
           <div className="os-alert-banner success" role="status">
-            <CheckCircle2 size={16} />
+            <CheckCircle2 size={14} />
             <span>{phaseSuccessNotice}</span>
           </div>
         )}
 
-        {/* Challenge Work Area */}
+        {/* Challenge Work Area: Single-Page Fitted 2-Column Grid */}
         <div className="os-round2-main-grid">
-          {/* Column 1: Reference Target */}
-          <div className="os-round2-col">
-            <div className="os-round2-card">
+          {/* Column 1: Reference Target (Full Left Column, Auto-Fitting Height) */}
+          <div className="os-round2-col os-round2-col-target">
+            <div className="os-round2-card os-round2-target-card">
               <div className="os-card-header">
                 <div className="os-card-title-group">
-                  <Eye size={16} color="#dfb125" />
+                  <Eye size={15} color="#dfb125" />
                   <h3>Sector 4 Reference Target</h3>
                 </div>
                 <div className="os-card-actions">
-                  <button
-                    type="button"
-                    className="os-tool-btn"
-                    onClick={() => openApp('vision-target')}
-                    title="Pop out in Vision Target Viewer"
-                  >
-                    <span>Inspect Target</span>
-                  </button>
                 </div>
               </div>
 
@@ -698,36 +645,22 @@ export function Round2App() {
                 src={round2Phase === 1 ? '/assets/round2/targets/target1.jpg' : '/assets/round2/targets/target2.jpg'}
                 images={['/assets/round2/targets/target1.jpg', '/assets/round2/targets/target2.jpg']}
                 teamName={teamName}
-                enableTimer={true}
-                initialTimerSeconds={15}
+                enableTimer={false}
+                compact={true}
               />
             </div>
+          </div>
 
+          {/* Column 2: Prompt + Upload + Action Controls (Right Column, Height 100%) */}
+          <div className="os-round2-col os-round2-col-actions">
             {/* Prompt Studio Card */}
-            <div className="os-round2-card">
+            <div className="os-round2-card os-round2-prompt-card">
               <div className="os-card-header">
                 <div className="os-card-title-group">
-                  <Sparkles size={16} color="#dfb125" />
+                  <Sparkles size={15} color="#dfb125" />
                   <h3>Recreation Prompt</h3>
                 </div>
                 <div className="os-card-actions">
-                  <button
-                    type="button"
-                    className="os-tool-btn"
-                    onClick={handleSavePromptToVfs}
-                    title="Save current prompt to OS Drive"
-                  >
-                    <Save size={12} />
-                    <span>Save to VFS</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="os-tool-btn"
-                    onClick={() => openApp('prompt-studio')}
-                    title="Open full studio with keyword builder"
-                  >
-                    <span>Prompt Studio</span>
-                  </button>
                 </div>
               </div>
 
@@ -737,39 +670,18 @@ export function Round2App() {
                 error={promptError}
                 touched={promptTouched}
                 phase={round2Phase}
+                compact={true}
               />
             </div>
-          </div>
 
-          {/* Column 2: Upload & Evaluation */}
-          <div className="os-round2-col">
-            <div className="os-round2-card">
+            {/* Reconstruction Submission Card */}
+            <div className="os-round2-card os-round2-upload-card">
               <div className="os-card-header">
                 <div className="os-card-title-group">
-                  <Zap size={16} color="#dfb125" />
+                  <Zap size={15} color="#dfb125" />
                   <h3>Reconstruction Submission</h3>
                 </div>
                 <div className="os-card-actions">
-                  <button
-                    type="button"
-                    className="os-tool-btn"
-                    onClick={() => {
-                      setActiveSlotForVfs(round2Phase);
-                      setShowVfsPicker(true);
-                    }}
-                    title="Pick an image from OS files"
-                  >
-                    <Folder size={12} />
-                    <span>Select from OS</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="os-tool-btn"
-                    onClick={() => openApp('image-evaluator')}
-                    title="Open similarity evaluator"
-                  >
-                    <span>Test Evaluator</span>
-                  </button>
                 </div>
               </div>
 
@@ -787,6 +699,7 @@ export function Round2App() {
                 onRemoveImage2={handleRemoveImage2}
                 image2Error={image2Error}
                 touched={promptTouched}
+                compact={true}
               />
 
               {/* Action Buttons */}
@@ -798,8 +711,8 @@ export function Round2App() {
                     onClick={handleResetPhase}
                     title="Reset to Phase 1"
                   >
-                    <RotateCcw size={14} />
-                    <span>Reset to Phase 1</span>
+                    <RotateCcw size={13} />
+                    <span>Reset</span>
                   </button>
                 )}
 
@@ -819,16 +732,16 @@ export function Round2App() {
                   onClick={round2Phase === 1 ? handleSubmitImage1 : handleSubmitImage2}
                 >
                   {isSubmitting ? (
-                    <span>Evaluating Cosine Similarity...</span>
+                    <span>Evaluating...</span>
                   ) : round2Phase === 1 ? (
                     <>
                       <span>Evaluate Image 1</span>
-                      <ArrowRight size={16} />
+                      <ArrowRight size={13} />
                     </>
                   ) : (
                     <>
-                      <span>Transmit Image 2 & Finalize</span>
-                      <Check size={16} />
+                      <span>Finalize Image 2</span>
+                      <Check size={13} />
                     </>
                   )}
                 </button>

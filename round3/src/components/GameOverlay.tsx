@@ -10,7 +10,7 @@ interface Props {
 const LEVEL_ORDER = [1, 2, 3, 4];
 
 export const GameOverlay: React.FC<Props> = ({ onRetry, onNextLevel }) => {
-  const { status, score, totalCommands, level, setLevel } = useGameStore();
+  const { status, score, efficiency, totalCommands, level, setLevel } = useGameStore();
 
   if (status === 'idle' || status === 'running') return null;
 
@@ -28,12 +28,12 @@ export const GameOverlay: React.FC<Props> = ({ onRetry, onNextLevel }) => {
 
           <div className="space-y-4 mb-8">
             <div className="flex justify-between border-b border-[var(--border-gold)]/30 pb-2">
-              <span className="text-[var(--text-muted)]">Commands Used</span>
+              <span className="text-[var(--text-muted)]">Blocks Used</span>
               <span className="font-mono">{totalCommands}</span>
             </div>
             <div className="flex justify-between border-b border-[var(--border-gold)]/30 pb-2">
               <span className="text-[var(--text-muted)]">Efficiency</span>
-              <span className="font-mono text-green-400">Excellent</span>
+              <span className={`font-mono ${efficiency === 'Excellent' ? 'text-green-400' : efficiency === 'Good' ? 'text-yellow-400' : 'text-orange-400'}`}>{efficiency}</span>
             </div>
             <div className="flex justify-between pt-2">
               <span className="text-[var(--accent-gold)] font-bold">LEVEL SCORE</span>

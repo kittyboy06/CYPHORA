@@ -83,7 +83,7 @@ export function osReducer(state, action) {
         width: initialWidth,
         height: initialHeight,
         isMinimized: false,
-        isMaximized: false,
+        isMaximized: meta.isMaximized || false,
         zIndex: state.nextZIndex + 1,
         meta
       };

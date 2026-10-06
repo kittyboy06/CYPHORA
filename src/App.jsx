@@ -307,16 +307,31 @@ function App({ initialStage = null, defaultAppId = null }) {
     // Helper to find the primary scroll container of an OS window
     const getWindowScrollContainer = (winFrame) => {
       if (!winFrame) return null;
-      // Dedicated app scroll containers
-      const appScroll = winFrame.querySelector(
+
+      // 1. Check for any active scrollable container with overflowing content
+      const candidates = winFrame.querySelectorAll(
+        '.terminal-output-area, .terminal-app-container, .te-textarea, .te-editor-wrapper, .os-round2-body, ' +
         '.universal-converter-app, .metadata-inspector-app, .file-comparator-app, ' +
         '.image-inspector-app, .audio-inspector-app, .qr-scanner-app, .text-analyzer-app, ' +
-        '.fm-content-pane, .settings-main, .terminal-body, .text-editor-textarea, ' +
+        '.fm-content-pane, .fm-sidebar, .settings-main, .tasks-scroll-content, ' +
+        '.virtual-file-picker-body, .window-content-area, textarea'
+      );
+      for (const el of candidates) {
+        if (el.scrollHeight > el.clientHeight + 2) {
+          return el;
+        }
+      }
+
+      // 2. Specific dedicated app scroll targets fallback
+      const appScroll = winFrame.querySelector(
+        '.terminal-output-area, .te-textarea, .os-round2-body, .universal-converter-app, ' +
+        '.metadata-inspector-app, .file-comparator-app, .image-inspector-app, .audio-inspector-app, ' +
+        '.qr-scanner-app, .text-analyzer-app, .fm-content-pane, .settings-main, ' +
         '.tasks-scroll-content, .virtual-file-picker-body'
       );
       if (appScroll) return appScroll;
 
-      // Inner window content area
+      // 3. Inner window content area
       const contentArea = winFrame.querySelector('.window-content-area');
       if (contentArea) return contentArea;
 
@@ -327,12 +342,13 @@ function App({ initialStage = null, defaultAppId = null }) {
       let cur = element;
       while (cur && cur !== boundary && cur !== document.body && cur !== document.documentElement) {
         if (cur.matches && cur.matches(
+          '.terminal-output-area, .terminal-app-container, .te-textarea, .te-editor-wrapper, .te-container, .os-round2-body, ' +
           '.universal-converter-app, .metadata-inspector-app, .file-comparator-app, ' +
           '.image-inspector-app, .audio-inspector-app, .qr-scanner-app, .text-analyzer-app, ' +
-          '.fm-content-pane, .fm-sidebar, .settings-main, .terminal-body, .text-editor-textarea, ' +
-          '.tasks-scroll-content, .virtual-file-picker-body, .start-menu-content, ' +
+          '.fm-content-pane, .fm-sidebar, .settings-main, .tasks-scroll-content, ' +
+          '.virtual-file-picker-body, .start-menu-content, ' +
           '.desktop-leaderboard-list, .virtual-file-list, .panel-list, ' +
-          '.objective-modal, .objective-shell, .window-content-area'
+          '.objective-modal, .objective-shell, .window-content-area, textarea'
         )) {
           return cur;
         }

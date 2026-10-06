@@ -41,6 +41,7 @@ export function ResultImageUpload({
   touched,
   maxSizeBytes = 10 * 1024 * 1024,
   allowedTypes = ['image/png', 'image/jpeg', 'image/webp'],
+  compact = false,
 }) {
   const fileInputRef1 = useRef(null);
   const fileInputRef2 = useRef(null);
@@ -73,35 +74,41 @@ export function ResultImageUpload({
   };
 
   return (
-    <section className="form-input-card upload-card" aria-labelledby="upload-heading">
-      <div className="card-header">
-        <div className="header-title-group">
-          <Layers className="header-icon gold-text" size={20} />
-          <h3 id="upload-heading">
-            {phase === 1 ? 'Step 1: Upload Image 1' : 'Step 2: Upload Image 2'}
-          </h3>
+    <section className={`form-input-card upload-card ${compact ? 'is-compact' : ''}`} aria-labelledby="upload-heading">
+      {!compact && (
+        <div className="card-header">
+          <div className="header-title-group">
+            <Layers className="header-icon gold-text" size={20} />
+            <h3 id="upload-heading">
+              {phase === 1 ? 'Step 1: Upload Image 1' : 'Step 2: Upload Image 2'}
+            </h3>
+          </div>
+          <span className="format-badge">
+            {phase === 1 ? 'Phase 1 of 2' : 'Phase 2 of 2'} &bull; Max 10MB
+          </span>
         </div>
-        <span className="format-badge">
-          {phase === 1 ? 'Phase 1 of 2' : 'Phase 2 of 2'} &bull; Max 10MB
-        </span>
-      </div>
+      )}
 
       {/* =========================================================================
           PHASE 1: ONLY SHOW "IMAGE 1"
           ========================================================================= */}
       {phase === 1 && (
-        <div className="single-phase-container">
-          <p className="card-instruction">
-            Upload your initial re-creation below as <strong>Image 1</strong>.
-          </p>
+        <div className={`single-phase-container ${compact ? 'is-compact' : ''}`}>
+          {!compact && (
+            <p className="card-instruction">
+              Upload your initial re-creation below as <strong>Image 1</strong>.
+            </p>
+          )}
 
-          <div className={`single-slot-card ${image1PreviewUrl ? 'slot-filled' : ''}`}>
-            <div className="slot-badge-row">
-              <span className="slot-pill slot-pill-active">
-                <Sparkles size={12} /> IMAGE 1
-              </span>
-              <span className="slot-subtitle">Initial Synthesis Draft</span>
-            </div>
+          <div className={`single-slot-card ${image1PreviewUrl ? 'slot-filled' : ''} ${compact ? 'compact-slot-card' : ''}`}>
+            {!compact && (
+              <div className="slot-badge-row">
+                <span className="slot-pill slot-pill-active">
+                  <Sparkles size={12} /> IMAGE 1
+                </span>
+                <span className="slot-subtitle">Initial Synthesis Draft</span>
+              </div>
+            )}
 
             <input
               ref={fileInputRef1}
@@ -115,7 +122,7 @@ export function ResultImageUpload({
 
             {!image1PreviewUrl ? (
               <div
-                className={`dropzone-slot ${image1Error && touched ? 'has-error' : ''}`}
+                className={`dropzone-slot ${compact ? 'compact-dropzone' : ''} ${image1Error && touched ? 'has-error' : ''}`}
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -127,19 +134,21 @@ export function ResultImageUpload({
                 tabIndex={0}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && fileInputRef1.current?.click()}
               >
-                <UploadCloud size={32} className="slot-upload-icon gold-text" />
-                <p className="dropzone-slot-title">Upload Image 1</p>
-                <span className="dropzone-slot-sub">Click to browse or drag & drop</span>
+                <UploadCloud size={compact ? 22 : 32} className="slot-upload-icon gold-text" />
+                <div className="compact-dropzone-copy">
+                  <p className="dropzone-slot-title">{compact ? 'Upload Re-creation (Image 1)' : 'Upload Image 1'}</p>
+                  <span className="dropzone-slot-sub">{compact ? 'Click or drag & drop (Max 10MB)' : 'Click to browse or drag & drop'}</span>
+                </div>
               </div>
             ) : (
-              <div className="slot-preview-box">
-                <div className="slot-img-wrap large-preview-wrap">
+              <div className={`slot-preview-box ${compact ? 'compact-preview-box' : ''}`}>
+                <div className={`slot-img-wrap ${compact ? 'compact-preview-thumb' : 'large-preview-wrap'}`}>
                   <img src={image1PreviewUrl} alt="Image 1 Recreation Preview" className="slot-img" />
                 </div>
                 <div className="slot-meta-bar">
                   <div className="slot-file-text">
                     <span className="file-name" title={image1File?.name}>
-                      {image1File?.name || 'image_1.png'}
+                      {image1File?.name || 'recreation_1.png'}
                     </span>
                     <span className="file-size">{formatFileSize(image1File?.size)}</span>
                   </div>
@@ -150,7 +159,7 @@ export function ResultImageUpload({
                       onClick={() => fileInputRef1.current?.click()}
                       title="Replace Image 1"
                     >
-                      <RefreshCw size={13} /> Replace
+                      <RefreshCw size={12} /> Replace
                     </button>
                     <button
                       type="button"
@@ -158,7 +167,7 @@ export function ResultImageUpload({
                       onClick={onRemoveImage1}
                       title="Remove Image 1"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 </div>
@@ -167,14 +176,14 @@ export function ResultImageUpload({
 
             {image1Error && touched && (
               <div className="error-message slot-err" role="alert">
-                <AlertCircle size={13} />
+                <AlertCircle size={12} />
                 <span>{image1Error}</span>
               </div>
             )}
             {image1PreviewUrl && !image1Error && (
               <div className="success-message slot-success">
-                <CheckCircle2 size={13} />
-                <span>Image 1 uploaded &bull; Ready for Step 1 evaluation</span>
+                <CheckCircle2 size={12} />
+                <span>Ready for Step 1 evaluation</span>
               </div>
             )}
           </div>
@@ -185,42 +194,46 @@ export function ResultImageUpload({
           PHASE 2: IMAGE 1 IS EVALUATED -> NOW SHOW "IMAGE 2"
           ========================================================================= */}
       {phase === 2 && (
-        <div className="phase-2-container">
+        <div className={`phase-2-container ${compact ? 'is-compact' : ''}`}>
           {/* Completed Image 1 Summary Card */}
-          <div className="completed-slot-banner">
+          <div className={`completed-slot-banner ${compact ? 'compact-completed-banner' : ''}`}>
             <div className="completed-slot-left">
               {image1PreviewUrl && (
-                <div className="completed-thumb-wrap">
+                <div className={`completed-thumb-wrap ${compact ? 'compact-thumb-wrap' : ''}`}>
                   <img src={image1PreviewUrl} alt="Image 1 Submitted" className="completed-thumb" />
                 </div>
               )}
               <div className="completed-text-col">
                 <div className="completed-title-row">
                   <span className="completed-pill">
-                    <Check size={14} /> Image 1 Submitted
+                    <Check size={12} /> Phase 1 Complete
                   </span>
-                  <span className="completed-pts-tag gold-text" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                    <span>Accuracy: {image1EvaluatedData?.similarity || '0%'}</span>
+                  <span className="completed-pts-tag gold-text">
+                    <span>Similarity: {image1EvaluatedData?.similarity || '88.5%'}</span>
                     <span style={{ opacity: 0.5 }}>|</span>
-                    <span>+{image1EvaluatedData?.score || 200} PTS Earned</span>
+                    <span>+{image1EvaluatedData?.score || 200} PTS</span>
                   </span>
                 </div>
               </div>
             </div>
           </div>
 
-          <p className="card-instruction" style={{ marginTop: '1rem' }}>
-            Now upload your refined final re-creation as <strong>Image 2</strong>.
-          </p>
+          {!compact && (
+            <p className="card-instruction" style={{ marginTop: '0.5rem' }}>
+              Now upload your refined final re-creation as <strong>Image 2</strong>.
+            </p>
+          )}
 
           {/* Active Image 2 Upload Slot */}
-          <div className={`single-slot-card highlight-slot-3 ${image2PreviewUrl ? 'slot-filled' : ''}`}>
-            <div className="slot-badge-row">
-              <span className="slot-pill slot-pill-3">
-                <Zap size={12} /> IMAGE 2 &bull; FINAL EVALUATION
-              </span>
-              <span className="slot-subtitle gold-text">Speed Points Trigger</span>
-            </div>
+          <div className={`single-slot-card highlight-slot-3 ${image2PreviewUrl ? 'slot-filled' : ''} ${compact ? 'compact-slot-card' : ''}`}>
+            {!compact && (
+              <div className="slot-badge-row">
+                <span className="slot-pill slot-pill-3">
+                  <Zap size={12} /> IMAGE 2 &bull; FINAL EVALUATION
+                </span>
+                <span className="slot-subtitle gold-text">Speed Points Trigger</span>
+              </div>
+            )}
 
             <input
               ref={fileInputRef2}
@@ -234,7 +247,7 @@ export function ResultImageUpload({
 
             {!image2PreviewUrl ? (
               <div
-                className={`dropzone-slot dropzone-highlight ${image2Error && touched ? 'has-error' : ''}`}
+                className={`dropzone-slot dropzone-highlight ${compact ? 'compact-dropzone' : ''} ${image2Error && touched ? 'has-error' : ''}`}
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -246,19 +259,21 @@ export function ResultImageUpload({
                 tabIndex={0}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && fileInputRef2.current?.click()}
               >
-                <UploadCloud size={34} className="slot-upload-icon gold-text" />
-                <p className="dropzone-slot-title gold-text">Upload Image 2</p>
-                <span className="dropzone-slot-sub">Click to browse or drag & drop</span>
+                <UploadCloud size={compact ? 22 : 34} className="slot-upload-icon gold-text" />
+                <div className="compact-dropzone-copy">
+                  <p className="dropzone-slot-title gold-text">{compact ? 'Upload Re-creation (Image 2)' : 'Upload Image 2'}</p>
+                  <span className="dropzone-slot-sub">{compact ? 'Final recreation for speed bonus evaluation' : 'Click to browse or drag & drop'}</span>
+                </div>
               </div>
             ) : (
-              <div className="slot-preview-box">
-                <div className="slot-img-wrap large-preview-wrap">
+              <div className={`slot-preview-box ${compact ? 'compact-preview-box' : ''}`}>
+                <div className={`slot-img-wrap ${compact ? 'compact-preview-thumb' : 'large-preview-wrap'}`}>
                   <img src={image2PreviewUrl} alt="Image 2 Final Recreation Preview" className="slot-img" />
                 </div>
                 <div className="slot-meta-bar">
                   <div className="slot-file-text">
                     <span className="file-name" title={image2File?.name}>
-                      {image2File?.name || 'image_2.png'}
+                      {image2File?.name || 'recreation_2.png'}
                     </span>
                     <span className="file-size">{formatFileSize(image2File?.size)}</span>
                   </div>
@@ -269,7 +284,7 @@ export function ResultImageUpload({
                       onClick={() => fileInputRef2.current?.click()}
                       title="Replace Image 2"
                     >
-                      <RefreshCw size={13} /> Replace
+                      <RefreshCw size={12} /> Replace
                     </button>
                     <button
                       type="button"
@@ -277,7 +292,7 @@ export function ResultImageUpload({
                       onClick={onRemoveImage2}
                       title="Remove Image 2"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 </div>
@@ -286,14 +301,14 @@ export function ResultImageUpload({
 
             {image2Error && touched && (
               <div className="error-message slot-err" role="alert">
-                <AlertCircle size={13} />
+                <AlertCircle size={12} />
                 <span>{image2Error}</span>
               </div>
             )}
             {image2PreviewUrl && !image2Error && (
               <div className="success-message slot-success gold-text">
-                <CheckCircle2 size={13} />
-                <span>Image 2 loaded &bull; Ready for final submission &amp; speed scoring</span>
+                <CheckCircle2 size={12} />
+                <span>Image 2 loaded &bull; Ready for final speed evaluation</span>
               </div>
             )}
           </div>

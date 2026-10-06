@@ -17,7 +17,6 @@ export default class GameScene extends Phaser.Scene {
   private turnCount = 0;
   private beastHp = 0;
   private beastVisual?: Phaser.GameObjects.Container;
-  private beastShieldVisual?: Phaser.GameObjects.Arc;
   
   // Level 4: Totem state
   private totemsActivated = 0;
@@ -36,6 +35,9 @@ export default class GameScene extends Phaser.Scene {
     this.load.image('bg_level3', '/assets/bg_level3.png');
     this.load.image('bg_level4', '/assets/bg_level4_stitched.png');
     this.load.image('char_idle', '/assets/story/character_standing_v3.png');
+    this.load.image('char_attack_1', '/assets/story/first_3_attack_frames_spaced_attack1.png');
+    this.load.image('char_attack_2', '/assets/story/first_3_attack_frames_spaced_attack2.png');
+    this.load.image('char_defend', '/assets/story/hero_defend.png');
     this.load.image('char_run_1', '/assets/story/hero_run_1.png');
     this.load.image('char_run_2', '/assets/story/hero_run_2.png');
     this.load.image('char_run_3', '/assets/story/hero_run_3.png');
@@ -76,6 +78,15 @@ export default class GameScene extends Phaser.Scene {
     this.load.image('bridge_6', '/assets/6_block_bridge_v2.png');
 
     this.load.image('beast', '/assets/beast_v2.png');
+    this.load.image('beast_shield', '/assets/story/Molten Forest Golem with Golden Shield.png');
+    this.load.image('beast_full', '/assets/story/Molten Forest Titan Golem full health.png');
+    this.load.image('beast_50', '/assets/story/Molten Moss Tree Golem 50 per health.png');
+    this.load.image('beast_10', '/assets/story/Ruined Molten Nature Colossus 10 per.png');
+    this.load.image('beast_dead', '/assets/story/Ruined Molten Stone-Tree Golem destroyed.png');
+    this.load.image('beast_swipe_1', '/assets/story/Tree Golem Twin-Swipe Attack Frames f1.png');
+    this.load.image('beast_swipe_2', '/assets/story/Tree Golem Twin-Swipe Attack Frames f2.png');
+    this.load.image('beast_smash_1', '/assets/story/Moss-Crowned Golem Ground Smash f1.png');
+    this.load.image('beast_smash_2', '/assets/story/Moss-Crowned Golem Ground Smash f2.png');
     this.load.image('platform_ancient', '/assets/platform_ancient.png');
     this.load.image('platform_red', '/assets/platform_red.png');
     this.load.image('platform_blue_slide', '/assets/platform_blue_slide.png');
@@ -93,7 +104,6 @@ export default class GameScene extends Phaser.Scene {
     this.totemsActivated = 0;
     this.beastHp = this.levelData.beast?.hp || 0;
     this.beastVisual = undefined;
-    this.beastShieldVisual = undefined;
     this.hasSword = false;
     this.hasShield = false;
     this.itemSprites.clear();
@@ -181,30 +191,72 @@ export default class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, worldWidth, h);
   }
 
+  private getBeastCombatIndex(): number {
+    return this.levelData.beast
+      ? this.levelData.beast.positionIndex - 3
+      : Number.POSITIVE_INFINITY;
+  }
+
+  private isAtBeastCombatPosition(): boolean {
+    return this.pIndex === this.getBeastCombatIndex();
+  }
+
+  private isBeyondBeastCombatPosition(index: number): boolean {
+    return index > this.getBeastCombatIndex();
+  }
+
   spawnBeast() {
     if (!this.levelData.beast) return;
-    
+
     const bx = this.startX + this.levelData.beast.positionIndex * TILE_W + TILE_W / 2;
-    const by = this.groundY;
+    const by = this.groundY+18;
 
-    // Use the beast image (flipped if it naturally faces right, assuming we want it facing left towards the player)
-    const body = this.add.image(0, -70, 'beast').setOrigin(0.5, 1);
-    body.setDisplaySize(180, 150); // Scale appropriately
-    body.setFlipX(true); // Assuming the original art faces right
+    // Fixed world anchor: the large PNG is decorative; combat distance is
+    // always determined by tile index, never by the artwork's transparent canvas.
+    const body = this.add.image(0, 0, 'beast_shield').setOrigin(0.5, 1);
+    this.setBeastTexture(body, 'beast_shield');
 
-    // Glowing shield
-    this.beastShieldVisual = this.add.circle(0, -110, 100, 0x5555ff, 0.3);
-    this.beastShieldVisual.setStrokeStyle(4, 0xaaaaff);
-    
-    this.beastVisual = this.add.container(bx, by + 20, [body, this.beastShieldVisual]); // offset Y slightly so feet touch ground
-    
+    this.beastVisual = this.add.container(bx, by, [body]);
     this.updateBeastVisuals();
   }
-  
+
+  private setBeastTexture(body: Phaser.GameObjects.Image, textureKey: string) {
+    body.setTexture(textureKey);
+    body.setOrigin(0.5, 1);
+
+    // The source PNGs have different canvas heights. Normalize their visible
+    // height and keep the bottom at y=0 so the beast never jumps/floats when
+    // swapping between idle, hit, swipe and smash frames.
+    const config: Record<string, { scale: number, offsetY: number, offsetX: number }> = {
+      'beast_shield': { scale: 0.227, offsetY: 0, offsetX: -100 },
+      'beast_full': { scale: 0.254, offsetY: 0, offsetX: -100 },
+      'beast_50': { scale: 0.254, offsetY: 0, offsetX: -100 },
+      'beast_10': { scale: 0.260, offsetY: 0, offsetX: -100 },
+      'beast_dead': { scale: 0.260, offsetY: 0, offsetX: -100 },
+      'beast_swipe_1': { scale: 0.374, offsetY: 0, offsetX: -130 },
+      'beast_swipe_2': { scale: 0.392, offsetY: 0, offsetX: -130 },
+      'beast_smash_1': { scale: 0.367, offsetY: 0, offsetX: -130 },
+      'beast_smash_2': { scale: 0.389, offsetY: 0, offsetX: -130 }
+    };
+
+    const cfg = config[textureKey] || { scale: 0.25, offsetY: 0, offsetX: -100 };
+    body.setScale(cfg.scale);
+    body.setPosition(cfg.offsetX, cfg.offsetY);
+  }
+
   updateBeastVisuals() {
-    if (!this.levelData.beast || !this.beastShieldVisual) return;
+    if (!this.levelData.beast || !this.beastVisual) return;
+    const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
     const vulnerable = this.isBeastVulnerable();
-    this.beastShieldVisual.setVisible(!vulnerable);
+    
+    if (!vulnerable) {
+      this.setBeastTexture(body, 'beast_shield');
+    } else {
+      if (this.beastHp === 4 || this.beastHp === 3) this.setBeastTexture(body, 'beast_full');
+      else if (this.beastHp === 2) this.setBeastTexture(body, 'beast_50');
+      else if (this.beastHp === 1) this.setBeastTexture(body, 'beast_10');
+      else this.setBeastTexture(body, 'beast_dead');
+    }
   }
   
   isBeastVulnerable(): boolean {
@@ -281,27 +333,14 @@ export default class GameScene extends Phaser.Scene {
           else if (tile === TileType.COLOR_GOLD) texture = 'platform_yellow'; // COLOR_GOLD
           else if (tile === TileType.GOAL) texture = 'platform_yellow'; // GOAL
         } else if (this.levelData.id === 'level_04') {
-          if (tile === TileType.FIRE || tile === TileType.GOBLIN || tile === TileType.TOTEM_FIRE || tile === TileType.TOTEM_GOBLIN) texture = 'platform_red';
-          else texture = 'platform_yellow';
+          if (tile === TileType.FIRE) {
+            i++;
+            continue;
+            }
+          texture = 'platform_red'; // Everything else in Level 4 is red blocks
         }
         
         const img = this.add.image(blockCenterX, this.tileHeights[i], texture).setOrigin(0.5, 0);
-        img.displayWidth = TILE_W;
-        img.displayHeight = 110;
-        
-        i++;
- continue; }
-
-      if (this.levelData.id === 'level_03' || this.levelData.id === 'level_04') {
-        const currentX = this.startX + i * TILE_W;
-        const blockCenterX = currentX + TILE_W / 2;
-        
-        let texture = 'platform_ancient';
-        if (this.levelData.id === 'level_03' && tile === TileType.COLOR_BLUE) {
-          texture = 'platform_slant';
-        }
-        
-        const img = this.add.image(blockCenterX, this.groundY, texture).setOrigin(0.5, 0);
         img.displayWidth = TILE_W;
         img.displayHeight = 110;
         
@@ -364,7 +403,8 @@ export default class GameScene extends Phaser.Scene {
         this.add.circle(cx, y - 8, 7, 0xffaa00).setAlpha(0.7);
       } else if (tile === TileType.FIRE || tile === TileType.TOTEM_FIRE) {
         // Realistic fire emitter on the bridge
-        this.add.particles(cx, y, 'fire_particle', {
+        // Push the fire down by 60px so it sits inside the gap
+        this.add.particles(cx, y + 60, 'fire_particle', {
           color: [0xffff00, 0xff4500, 0x220000],
           colorEase: 'quad.out',
           lifespan: 600,
@@ -453,6 +493,41 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  
+  private setPlayerIdle() {
+    if (!this.player) return;
+    this.player.stop();
+    this.setPlayerTextureScale(this.getIdleTexture());
+  }
+
+
+  private setPlayerTextureScale(tex: string) {
+    if (!this.player) return;
+    this.player.setTexture(tex);
+    if (tex === 'char_idle') {
+      this.player.setScale(125 / 1520);
+      this.player.setOrigin(0.5, 0.98);
+    } else if (tex === 'char_attack_1') {
+      this.player.setScale(0.246);
+      this.player.setOrigin(0.5, 0.847);
+    } else if (tex === 'char_attack_2') {
+      this.player.setScale(0.237);
+      this.player.setOrigin(0.5, 0.874);
+    } else if (tex === 'char_defend') {
+      this.player.setScale(0.14);
+      this.player.setOrigin(0.5, 1.0);
+    } else {
+      this.player.setScale(1.0);
+      this.player.setOrigin(0.5, 1.0);
+    }
+  }
+
+  private playPlayerAnim(anim: string) {
+    if (!this.player) return;
+    this.player.setScale(1.0);
+    this.player.play(anim);
+  }
+
   private getIdleTexture(): string {
     if (this.hasSword && this.hasShield) return 'char_run_sword_shield_1';
     if (this.hasSword) return 'char_run_sword_1';
@@ -468,7 +543,7 @@ export default class GameScene extends Phaser.Scene {
   spawnPlayer() {
     this.pIndex = this.levelData.playerStartX;
     this.player = this.add.sprite(0, 0, this.getIdleTexture()).setOrigin(0.5, 1);
-    this.player.setScale(1.0); // Use fixed scale so different animations keep physical proportions
+    this.setPlayerIdle();
     this.updatePlayerVisuals(false);
   }
 
@@ -479,7 +554,7 @@ export default class GameScene extends Phaser.Scene {
     return new Promise<void>((resolve) => {
       if (animate) {
         if (jump) {
-          this.player.play('jump');
+          this.playPlayerAnim('jump');
           
           this.tweens.add({
             targets: this.player,
@@ -497,12 +572,12 @@ export default class GameScene extends Phaser.Scene {
               this.player.y = targetY;
               this.player.stop();
               
-              this.player.setTexture(this.getIdleTexture());
+              this.setPlayerIdle();
               resolve();
             }
           });
         } else {
-          this.player.play(this.getRunAnim());
+          this.playPlayerAnim(this.getRunAnim());
           this.tweens.add({
             targets: this.player,
             x: targetX,
@@ -510,7 +585,7 @@ export default class GameScene extends Phaser.Scene {
             ease: 'Linear',
             onComplete: () => {
               this.player.stop();
-              this.player.setTexture(this.getIdleTexture());
+              this.setPlayerIdle();
               resolve();
             }
           });
@@ -525,7 +600,7 @@ export default class GameScene extends Phaser.Scene {
       } else {
         this.player.setPosition(targetX, targetY);
         this.player.stop();
-        this.player.setTexture(this.getIdleTexture());
+        this.setPlayerIdle();
         this.cameras.main.centerOn(
           Math.max(targetX, this.scale.width / 2),
           this.scale.height / 2
@@ -657,52 +732,68 @@ export default class GameScene extends Phaser.Scene {
     if (cmd.type === 'DEFEND') {
       const shield = this.add.circle(this.player.x, this.player.y - 20, 35, 0x55aaff, 0.5);
       shield.setStrokeStyle(2, 0xaaddff);
-      await new Promise(r => setTimeout(r, 300));
+      await new Promise(r => setTimeout(r, 1200));
       shield.destroy();
       return 'OK';
     }
 
-    // RUN, JUMP, ATTACK: all advance exactly 1 tile forward
-    const nextIndex = this.pIndex + 1;
-    if (nextIndex >= this.levelData.length) return 'OK';
-    
-    const nextTile = this.levelData.tiles[nextIndex];
-    this.pIndex = nextIndex;
-
     if (cmd.type === 'RUN') {
-      await this.updatePlayerVisuals(true, false);
-      // Run survives on: GROUND, TOTEM_FINAL
-      // Run dies on: FIRE, GOBLIN, TOTEM_FIRE, TOTEM_GOBLIN
-      if (nextTile === TileType.FIRE || nextTile === TileType.GOBLIN ||
-          nextTile === TileType.TOTEM_FIRE || nextTile === TileType.TOTEM_GOBLIN) {
-        await this.playerFallDeath();
-        return 'FAILED';
-      }
-      return 'OK';
+      const nextIndex = this.pIndex + 1;
+      if (nextIndex >= this.levelData.length) return 'OK';
+      const nextTile = this.levelData.tiles[nextIndex];
+      this.pIndex = nextIndex;
 
-    } else if (cmd.type === 'JUMP') {
-      await this.updatePlayerVisuals(true, true);
-      // Jump survives on: FIRE, TOTEM_FIRE, GROUND, TOTEM_FINAL
-      // Jump dies on: GOBLIN, TOTEM_GOBLIN (can't jump past a goblin)
-      if (nextTile === TileType.GOBLIN || nextTile === TileType.TOTEM_GOBLIN) {
+      await this.updatePlayerVisuals(true, false);
+      if (nextTile === TileType.FIRE || nextTile === TileType.GOBLIN) {
         await this.playerFallDeath();
         return 'FAILED';
       }
       return 'OK';
 
     } else if (cmd.type === 'ATTACK') {
-      // Dash attack animation
-      await this.updatePlayerVisuals(true, false);
+      const nextIndex = this.pIndex + 1;
+      if (nextIndex >= this.levelData.length) return 'OK';
+      const nextTile = this.levelData.tiles[nextIndex];
+      this.pIndex = nextIndex;
+
+      this.setPlayerTextureScale('char_attack_2');
+      const targetX = this.startX + this.pIndex * TILE_W + TILE_W / 2;
       await new Promise<void>((resolve) => {
         this.tweens.add({
-          targets: this.player, x: this.player.x + 30,
-          duration: 100, yoyo: true, ease: 'Power2',
-          onComplete: () => resolve()
+          targets: this.player, x: targetX,
+          duration: 300, ease: 'Power2',
+          onComplete: () => {
+            this.setPlayerIdle();
+            resolve();
+          }
         });
       });
-      // Attack survives on: GOBLIN, TOTEM_GOBLIN, GROUND, TOTEM_FINAL
-      // Attack dies on: FIRE, TOTEM_FIRE (fire burns you)
+
       if (nextTile === TileType.FIRE || nextTile === TileType.TOTEM_FIRE) {
+        await this.playerFallDeath();
+        return 'FAILED';
+      }
+      return 'OK';
+
+    } else if (cmd.type === 'JUMP') {
+      const skipIndex = this.pIndex + 1;
+      const landIndex = this.pIndex + 2;
+      if (landIndex >= this.levelData.length) {
+         await this.jumpInPlace();
+         return 'OK';
+      }
+      const skipTile = this.levelData.tiles[skipIndex];
+      const landTile = this.levelData.tiles[landIndex];
+      
+      this.pIndex = landIndex;
+      await this.updatePlayerVisuals(true, true);
+
+      if (skipTile === TileType.GOBLIN || skipTile === TileType.TOTEM_GOBLIN) {
+        await this.playerFallDeath();
+        return 'FAILED';
+      }
+      if (landTile === TileType.GOBLIN || landTile === TileType.TOTEM_GOBLIN || 
+          landTile === TileType.FIRE || landTile === TileType.TOTEM_FIRE) {
         await this.playerFallDeath();
         return 'FAILED';
       }
@@ -717,6 +808,7 @@ export default class GameScene extends Phaser.Scene {
     if (cmd.type === 'EQUIP') {
       const currentTile = this.levelData.tiles[this.pIndex];
       let didEquip = false;
+
       if (currentTile === TileType.ITEM_SWORD && !this.hasSword) {
         this.hasSword = true;
         didEquip = true;
@@ -726,38 +818,36 @@ export default class GameScene extends Phaser.Scene {
       }
 
       if (didEquip) {
-        // Hide the item sprite
         const sprite = this.itemSprites.get(this.pIndex);
         if (sprite) {
-          this.tweens.add({ targets: sprite, alpha: 0, y: sprite.y - 20, duration: 300, onComplete: () => sprite.destroy() });
+          this.tweens.add({
+            targets: sprite, alpha: 0, y: sprite.y - 20, duration: 300,
+            onComplete: () => sprite.destroy()
+          });
           this.itemSprites.delete(this.pIndex);
         }
-        // Update character visual
-        this.player.setTexture(this.getIdleTexture());
-        // Quick bob animation
+
+        this.setPlayerIdle();
         await new Promise<void>((resolve) => {
-          this.tweens.add({ targets: this.player, y: this.player.y - 20, yoyo: true, duration: 150, onComplete: () => resolve() });
+          this.tweens.add({
+            targets: this.player, y: this.player.y - 20, yoyo: true, duration: 150,
+            onComplete: () => resolve()
+          });
         });
       }
       return 'OK';
     }
 
     if (cmd.type === 'ATTACK') {
-      if (!this.hasSword) {
-        await this.playerFallDeath();
-        return 'FAILED'; // Cannot attack without sword
-      }
-      if (this.levelData.beast && this.pIndex !== this.levelData.beast.positionIndex - 2) {
+      if (!this.hasSword || !this.isAtBeastCombatPosition()) {
         await this.playerFallDeath();
         return 'FAILED';
       }
       return this.handleAttack();
-    } else if (cmd.type === 'DEFEND') {
-      if (!this.hasShield) {
-        await this.playerFallDeath();
-        return 'FAILED'; // Cannot defend without shield
-      }
-      if (this.levelData.beast && this.pIndex !== this.levelData.beast.positionIndex - 2) {
+    }
+
+    if (cmd.type === 'DEFEND') {
+      if (!this.hasShield || !this.isAtBeastCombatPosition()) {
         await this.playerFallDeath();
         return 'FAILED';
       }
@@ -772,109 +862,150 @@ export default class GameScene extends Phaser.Scene {
       await this.updatePlayerVisuals(true, false);
 
       const nextTile = this.levelData.tiles[nextIndex];
-      if (this.levelData.beast && nextIndex >= this.levelData.beast.positionIndex) {
+      if (this.isBeyondBeastCombatPosition(nextIndex)) {
         await this.playerFallDeath();
         return 'FAILED';
       }
       if (nextTile === TileType.GOAL) return 'LEVEL_COMPLETE';
       return 'OK';
+    }
 
-    } else if (cmd.type === 'JUMP') {
-      const nextIndex = this.pIndex + 1;
-      if (nextIndex >= this.levelData.length) {
-        await this.jumpInPlace();
-        return 'OK';
-      }
-
-      const nextTile = this.levelData.tiles[nextIndex];
-      // Since Level 2 is continuous, jump just advances by 2 safely unless it hits beast
+    if (cmd.type === 'JUMP') {
       const landIndex = this.pIndex + 2;
       if (landIndex >= this.levelData.length) {
         await this.jumpInPlace();
         return 'OK';
       }
+
       this.pIndex = landIndex;
       await this.updatePlayerVisuals(true, true);
 
-      const landTile = this.levelData.tiles[landIndex];
-      if (this.levelData.beast && landIndex >= this.levelData.beast.positionIndex) {
+      if (this.isBeyondBeastCombatPosition(landIndex)) {
         await this.playerFallDeath();
         return 'FAILED';
       }
+      const landTile = this.levelData.tiles[landIndex];
       if (landTile === TileType.GOAL) return 'LEVEL_COMPLETE';
       return 'OK';
     }
+
     return 'OK';
   }
 
   private async handleAttack(): Promise<string> {
-    const startX = this.player.x;
-    const attackX = startX + 40;
-    
-    await new Promise<void>((resolve) => {
-      this.tweens.add({
-        targets: this.player,
-        x: attackX,
-        duration: 300,
-        yoyo: true,
-        ease: 'Power2',
-        onComplete: () => resolve()
-      });
-    });
+    if (!this.levelData.beast) return 'OK';
 
-    if (this.levelData.beast) {
-      if (this.isBeastVulnerable()) {
-        this.beastHp--;
-        // Flash beast white
-        if (this.beastVisual) {
-          const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
-          body.setTintFill(0xffffff);
-          setTimeout(() => { body.clearTint(); }, 150);
-        }
-        
-        if (this.beastHp <= 0) {
-          if (this.beastVisual) {
-            this.tweens.add({
-              targets: this.beastVisual,
-              alpha: 0, y: this.beastVisual.y + 50,
-              duration: 500
-            });
-          }
-          await new Promise(r => setTimeout(r, 600));
-          return 'LEVEL_COMPLETE';
-        }
-      } else {
-        // Shielded → beast counter-attacks
-        if (this.beastVisual) {
-          const bx = this.beastVisual.x;
-          await new Promise<void>((resolve) => {
-            this.tweens.add({
-              targets: this.beastVisual,
-              x: bx - 40,
-              duration: 300,
-              yoyo: true,
-              onComplete: () => resolve()
-            });
-          });
-        }
-        
-        await this.playerFallDeath();
-        return 'FAILED';
+    const vulnerable = this.isBeastVulnerable();
+
+    // Hero strikes first. A shielded beast gets a counterattack; a vulnerable
+    // beast takes damage and never plays an attack animation.
+    this.setPlayerTextureScale('char_attack_1');
+    await new Promise(r => setTimeout(r, 600));
+    this.setPlayerTextureScale('char_attack_2');
+    await new Promise(r => setTimeout(r, 500));
+
+    if (vulnerable) {
+      this.beastHp--;
+
+      if (this.beastVisual) {
+        const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
+        body.setTintFill(0xffffff);
+        this.time.delayedCall(160, () => { if (body.active) body.clearTint(); });
+        this.setBeastTexture(body, this.beastHp <= 0
+          ? 'beast_dead'
+          : this.beastHp === 3
+            ? 'beast_full'
+            : this.beastHp === 2
+              ? 'beast_50'
+              : 'beast_10');
+
+        const impact = this.add.circle(this.beastVisual.x - 90, this.beastVisual.y - 130, 18, 0xffffff, 0.9);
+        this.tweens.add({
+          targets: impact, scale: 3, alpha: 0, duration: 220,
+          onComplete: () => impact.destroy()
+        });
       }
+
+      this.setPlayerIdle();
+
+      if (this.beastHp <= 0) {
+        await new Promise(r => setTimeout(r, 900));
+        return 'LEVEL_COMPLETE';
+      }
+    } else {
+      this.setPlayerIdle();
+
+      if (this.beastVisual) {
+        const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
+        const isSmash = this.turnCount === 1 || this.turnCount === 5;
+        this.setBeastTexture(
+          body,
+          isSmash ? 'beast_smash_1' : 'beast_swipe_1'
+        );
+
+        await new Promise(r => setTimeout(r, 400));
+
+        this.setBeastTexture(
+          body,
+          isSmash ? 'beast_smash_2' : 'beast_swipe_2'
+        );
+
+        this.cameras.main.shake(280, 0.018);
+
+        await new Promise(r => setTimeout(r, 550));
+      }
+
+      await this.playerFallDeath();
+      return 'FAILED';
     }
-    
+
     this.turnCount++;
     this.updateBeastVisuals();
     return 'OK';
   }
 
   private async handleDefend(): Promise<string> {
-    const shield = this.add.circle(this.player.x, this.player.y - 70, 70, 0x55aaff, 0.5);
-    shield.setStrokeStyle(4, 0xaaddff);
-    
-    await new Promise(r => setTimeout(r, 300));
+    if (!this.levelData.beast) return 'OK';
+
+    this.setPlayerTextureScale('char_defend');
+
+    const shield = this.add.circle(this.player.x + 35, this.player.y - 72, 62, 0x55aaff, 0.32);
+    shield.setStrokeStyle(5, 0xaaddff);
+
+    const isSmash = this.turnCount === 1 || this.turnCount === 5;
+    const isSwipe = this.turnCount === 2;
+
+    if (this.beastVisual && (isSmash || isSwipe)) {
+      const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
+      this.setBeastTexture(
+        body,
+        isSmash ? 'beast_smash_1' : 'beast_swipe_1'
+      );
+
+      await new Promise(r => setTimeout(r, 400));
+
+      this.setBeastTexture(
+        body,
+        isSmash ? 'beast_smash_2' : 'beast_swipe_2'
+      );
+
+      this.cameras.main.shake(
+        isSmash ? 260 : 160,
+        isSmash ? 0.016 : 0.01
+      );
+
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    await new Promise<void>((resolve) => {
+      this.tweens.add({
+        targets: shield, alpha: 0, scale: 1.35, duration: 350,
+        onComplete: () => resolve()
+      });
+    });
     shield.destroy();
-    
+    this.setPlayerIdle();
+
     this.turnCount++;
     this.updateBeastVisuals();
     return 'OK';
@@ -882,7 +1013,7 @@ export default class GameScene extends Phaser.Scene {
 
   // ──── Shared Animations ────
   private async playerFallDeath(): Promise<void> {
-    this.player.play('fall');
+    this.playPlayerAnim('fall');
     this.tweens.add({
       targets: this.player,
       y: this.player.y + 400,
@@ -890,11 +1021,11 @@ export default class GameScene extends Phaser.Scene {
       duration: 600,
       ease: 'Power2'
     });
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 1000));
   }
 
   private jumpInPlace(): Promise<void> {
-    this.player.play('jump');
+    this.playPlayerAnim('jump');
     
     return new Promise((resolve) => {
       this.tweens.add({
@@ -906,7 +1037,7 @@ export default class GameScene extends Phaser.Scene {
         onComplete: () => {
           this.player.stop();
           
-          this.player.setTexture(this.getIdleTexture());
+          this.setPlayerIdle();
           resolve();
         }
       });
@@ -934,7 +1065,7 @@ export default class GameScene extends Phaser.Scene {
         this.pIndex = nextIndex;
         const targetX = this.startX + this.pIndex * TILE_W + TILE_W / 2;
         const targetY = (this.tileHeights && this.tileHeights.length > this.pIndex ? this.tileHeights[this.pIndex] : this.groundY) + 5;
-        this.player.play('jump');
+        this.playPlayerAnim('jump');
         
         
         await new Promise<void>((resolve) => {
@@ -948,7 +1079,7 @@ export default class GameScene extends Phaser.Scene {
             onComplete: () => {
               this.player.stop();
               
-              this.player.setTexture(this.getIdleTexture());
+              this.setPlayerIdle();
               resolve();
             }
           });
@@ -964,7 +1095,7 @@ export default class GameScene extends Phaser.Scene {
         this.pIndex = nextIndex;
         const targetX = this.startX + this.pIndex * TILE_W + TILE_W / 2;
         const targetY = (this.tileHeights && this.tileHeights.length > this.pIndex ? this.tileHeights[this.pIndex] : this.groundY) + 5;
-        this.player.play('fall');
+        this.playPlayerAnim('fall');
         
         await new Promise<void>((resolve) => {
           this.tweens.add({
@@ -977,7 +1108,7 @@ export default class GameScene extends Phaser.Scene {
             onComplete: () => {
               this.player.stop();
               
-              this.player.setTexture(this.getIdleTexture());
+              this.setPlayerIdle();
               resolve();
             }
           });
@@ -995,7 +1126,7 @@ export default class GameScene extends Phaser.Scene {
           targets: glow, alpha: 0, scale: 2, duration: 400,
           onComplete: () => glow.destroy()
         });
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 800));
         
         this.pIndex = nextIndex;
         await this.updatePlayerVisuals(true, false);
@@ -1016,6 +1147,4 @@ export default class GameScene extends Phaser.Scene {
     return 'OK';
   }
 }
-
-
 

@@ -36,3 +36,23 @@ html, body {
   text-security: disc !important;
 }
 
+/* Allow scrolling when Round 2 or pages request it */
+html.round2-scroll-active,
+body.round2-scroll-active {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  max-height: none !important;
+  overscroll-behavior: auto !important;
+}
+
+html.round2-scroll-active #root,
+body.round2-scroll-active #root {
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+  max-height: none !important;
+  overscroll-behavior: auto !important;
+}
+
+

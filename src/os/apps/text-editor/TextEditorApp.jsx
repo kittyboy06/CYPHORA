@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Save, Check, FileText, WrapText } from 'lucide-react';
 import { useOS } from '../../state/OSContext.jsx';
 import './TextEditorApp.css';
@@ -10,6 +10,7 @@ export function TextEditorApp({ meta = {} }) {
   const [isDirty, setIsDirty] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
   const [wordWrap, setWordWrap] = useState(true);
+  const lineNumbersRef = useRef(null);
 
   // Load file content on mount
   useEffect(() => {
@@ -87,7 +88,7 @@ export function TextEditorApp({ meta = {} }) {
 
       {/* Editor area with line numbers */}
       <div className="te-editor-wrapper">
-        <div className="te-line-numbers">
+        <div className="te-line-numbers" ref={lineNumbersRef}>
           {Array.from({ length: Math.max(1, lineCount) }).map((_, i) => (
             <div key={i} className="te-line-num">{i + 1}</div>
           ))}
@@ -95,6 +96,11 @@ export function TextEditorApp({ meta = {} }) {
         <textarea
           className={`te-textarea ${wordWrap ? 'wrap' : 'nowrap'}`}
           value={content}
+          onScroll={(e) => {
+            if (lineNumbersRef.current) {
+              lineNumbersRef.current.scrollTop = e.target.scrollTop;
+            }
+          }}
           onChange={(e) => {
             setContent(e.target.value);
             setIsDirty(true);

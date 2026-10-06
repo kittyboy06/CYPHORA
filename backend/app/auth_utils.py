@@ -79,7 +79,7 @@ async def get_current_team(
         except Exception:
             pass
 
-    hdr_name = request.headers.get("X-Team-Name")
+    hdr_name = request.headers.get("X-Team-Name") or request.query_params.get("team") or request.query_params.get("team_name")
     if hdr_name:
         clean_name = hdr_name.strip()
         from sqlalchemy import func
