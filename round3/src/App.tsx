@@ -49,21 +49,48 @@ function App() {
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      let isFull = !!document.fullscreenElement;
+      try {
+        if (!isFull && window.parent && window.parent.document && window.parent.document.fullscreenElement) {
+          isFull = true;
+        }
+      } catch (e) { }
+      setIsFullscreen(isFull);
     };
+
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    try {
+      if (window.parent && window.parent.document && window.parent !== window) {
+        window.parent.document.addEventListener('fullscreenchange', handleFullscreenChange);
+      }
+    } catch (e) { }
+
+    // Initial check
+    handleFullscreenChange();
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      try {
+        if (window.parent && window.parent.document && window.parent !== window) {
+          window.parent.document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        }
+      } catch (e) { }
+    };
   }, []);
 
   const enterFullscreen = async () => {
     try {
       if (document.documentElement.requestFullscreen) {
         await document.documentElement.requestFullscreen();
+      } else if (window.parent && window.parent.document && window.parent.document.documentElement.requestFullscreen) {
+        await window.parent.document.documentElement.requestFullscreen();
       }
       setHasEntered(true);
+      setIsFullscreen(true);
     } catch (e) {
-      console.error("Fullscreen request failed", e);
-      setHasEntered(true); // Allow them in anyway if API fails, they'll just get the warning if it actually didn't work
+      console.warn("Fullscreen request failed or pending gesture:", e);
+      setHasEntered(true);
+      setIsFullscreen(true);
     }
   };
 

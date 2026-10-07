@@ -7,6 +7,85 @@ import { APP_REGISTRY } from '../apps/registry.js';
 const OSContext = createContext(null);
 const SESSION_STORAGE_KEY = 'cyphora_os_session';
 
+export const ROUND2_APP_IDS = [
+  'round2',
+  'image-navigation',
+  'vision-target',
+  'prompt-studio',
+  'image-evaluator',
+  'mission-prologue'
+];
+
+export const ROUND3_APP_IDS = [
+  'round3',
+  'jungle-code',
+  'temple-trials'
+];
+
+export const isRound2ActiveHelper = (windows = [], initialAppId = null) => {
+  // 1. Initial app parameter indicates Round 2
+  if (initialAppId && ROUND2_APP_IDS.includes(initialAppId)) {
+    return true;
+  }
+
+  // 2. Open windows contain any Round 2 application
+  if (Array.isArray(windows) && windows.some(w => ROUND2_APP_IDS.includes(w.appId))) {
+    return true;
+  }
+
+  // 3. Browser environment checks (URL or Session Storage)
+  if (typeof window !== 'undefined') {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const roundParam = params.get('round');
+      const stageParam = params.get('stage');
+      const appParam = params.get('app');
+
+      if (roundParam === '2' || stageParam === 'round2' || appParam === 'round2' || (appParam && ROUND2_APP_IDS.includes(appParam))) {
+        return true;
+      }
+
+      if (sessionStorage.getItem('cyphora_active_round') === '2') {
+        return true;
+      }
+    } catch (e) { }
+  }
+
+  return false;
+};
+
+export const isRound3ActiveHelper = (windows = [], initialAppId = null) => {
+  // 1. Initial app parameter indicates Round 3
+  if (initialAppId && ROUND3_APP_IDS.includes(initialAppId)) {
+    return true;
+  }
+
+  // 2. Open windows contain any Round 3 application
+  if (Array.isArray(windows) && windows.some(w => ROUND3_APP_IDS.includes(w.appId))) {
+    return true;
+  }
+
+  // 3. Browser environment checks (URL or Session Storage)
+  if (typeof window !== 'undefined') {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const roundParam = params.get('round');
+      const stageParam = params.get('stage');
+      const appParam = params.get('app');
+
+      if (roundParam === '3' || stageParam === 'round3' || appParam === 'round3' || (appParam && ROUND3_APP_IDS.includes(appParam))) {
+        return true;
+      }
+
+      if (sessionStorage.getItem('cyphora_active_round') === '3') {
+        return true;
+      }
+    } catch (e) { }
+  }
+
+  return false;
+};
+
 export function OSProvider({
   children,
   teamData,
@@ -15,7 +94,8 @@ export function OSProvider({
   setRound1State,
   liveExplorers = [],
   isWsConnected = false,
-  fetchLeaderboard = () => { }
+  fetchLeaderboard = () => { },
+  initialAppId = null
 }) {
   const [state, dispatch] = useReducer(osReducer, INITIAL_OS_STATE, (init) => {
     try {
@@ -61,8 +141,49 @@ export function OSProvider({
 
   const unlockCooldownRef = useRef(0);
   const hasEnteredFullscreenRef = useRef(false);
+  const initialAppIdRef = useRef(initialAppId);
+  const windowsRef = useRef(state.windows);
+  windowsRef.current = state.windows;
+
+  useEffect(() => {
+    initialAppIdRef.current = initialAppId;
+    if (initialAppId && ROUND2_APP_IDS.includes(initialAppId)) {
+      try {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('cyphora_active_round', '2');
+          sessionStorage.removeItem('cyphora_os_locked');
+        }
+      } catch (e) { }
+      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
+    } else if (initialAppId && ROUND3_APP_IDS.includes(initialAppId)) {
+      try {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('cyphora_active_round', '3');
+          sessionStorage.removeItem('cyphora_os_locked');
+        }
+      } catch (e) { }
+      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
+    }
+  }, [initialAppId]);
+
+  const isRound2Active = () => {
+    return isRound2ActiveHelper(windowsRef.current, initialAppIdRef.current);
+  };
+
+  const isRound3Active = () => {
+    return isRound3ActiveHelper(windowsRef.current, initialAppIdRef.current);
+  };
+
+  const isProtectedRoundActive = () => {
+    return isRound2Active() || isRound3Active();
+  };
 
   const triggerLock = (reason = 'FULLSCREEN_EXIT') => {
+    // If Round 2 or Round 3 is active, do not lock
+    if (isProtectedRoundActive()) {
+      return;
+    }
+
     // If within post-unlock immunity grace period (3.5s), ignore trigger
     if (Date.now() < unlockCooldownRef.current) {
       return;
@@ -115,9 +236,14 @@ export function OSProvider({
       }
     } catch (e) { }
 
-    // If an initial lock exists, restore it.
-    // Otherwise, do NOT immediately lock! Check if in fullscreen or allow user to transition.
-    if (initialLock) {
+    if (isProtectedRoundActive()) {
+      try {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.removeItem('cyphora_os_locked');
+        }
+      } catch (e) { }
+      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
+    } else if (initialLock) {
       triggerLock(initialLock);
     } else {
       dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
@@ -134,6 +260,7 @@ export function OSProvider({
       if (isFull) {
         hasEnteredFullscreenRef.current = true;
       } else {
+        if (isProtectedRoundActive()) return;
         // Only trigger lock if the user was previously in fullscreen and explicitly exited
         if (hasEnteredFullscreenRef.current && Date.now() >= unlockCooldownRef.current) {
           triggerLock('FULLSCREEN_EXIT');
@@ -143,6 +270,7 @@ export function OSProvider({
 
     // 3. Tab switch / visibility monitor
     const handleVisibilityChange = () => {
+      if (isProtectedRoundActive()) return;
       if (Date.now() < unlockCooldownRef.current) return;
       if (document.hidden || document.visibilityState === 'hidden') {
         triggerLock('TAB_SWITCH');
@@ -151,9 +279,11 @@ export function OSProvider({
 
     // 4. Window blur monitor (switching to other apps or desktop)
     const handleWindowBlur = () => {
+      if (isProtectedRoundActive()) return;
       if (Date.now() < unlockCooldownRef.current) return;
       // Brief debounce to prevent false triggers during OS transitions or browser dialogs
       setTimeout(() => {
+        if (isProtectedRoundActive()) return;
         if (Date.now() < unlockCooldownRef.current) return;
         if (document.hidden || document.visibilityState === 'hidden') {
           triggerLock('TAB_SWITCH');
@@ -163,6 +293,7 @@ export function OSProvider({
 
     // 5. Workstation reload / refresh interceptor (browser reload button, closing/leaving tab)
     const handleBeforeUnload = (e) => {
+      if (isProtectedRoundActive()) return;
       try {
         if (typeof sessionStorage !== 'undefined') {
           sessionStorage.setItem('cyphora_os_locked', 'PAGE_RELOAD_ATTEMPT');
@@ -176,6 +307,7 @@ export function OSProvider({
 
     // 6. Security keyboard shortcuts: Screenshots, Reload, DevTools Inspector
     const handleSecurityKeyDown = (e) => {
+      if (isProtectedRoundActive()) return;
       if (Date.now() < unlockCooldownRef.current) return;
 
       const isCtrlOrMeta = e.ctrlKey || e.metaKey;
@@ -246,6 +378,7 @@ export function OSProvider({
     };
 
     const handleSecurityKeyUp = (e) => {
+      if (isProtectedRoundActive()) return;
       if (Date.now() < unlockCooldownRef.current) return;
       if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
         triggerLock('SCREENSHOT_ATTEMPT');
@@ -254,6 +387,7 @@ export function OSProvider({
 
     // 7. Global Context Menu Block (Blocks native browser right-click Inspect menu)
     const handleGlobalContextMenu = (e) => {
+      if (isProtectedRoundActive()) return;
       // Allow legitimate custom in-app context menus (File Manager)
       if (e.target && e.target.closest && e.target.closest('.fm-container, .fm-content-pane, .fm-sidebar, .fm-context-menu')) {
         return;
@@ -264,6 +398,7 @@ export function OSProvider({
 
     // 8. Docked DevTools Inspector Detection (Outer vs Inner Viewport Dimension Delta)
     const checkDevTools = () => {
+      if (isProtectedRoundActive()) return;
       if (Date.now() < unlockCooldownRef.current) return;
 
       const widthDelta = window.outerWidth - window.innerWidth;
@@ -315,6 +450,24 @@ export function OSProvider({
       return;
     }
 
+    if (ROUND2_APP_IDS.includes(appId)) {
+      try {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('cyphora_active_round', '2');
+          sessionStorage.removeItem('cyphora_os_locked');
+        }
+      } catch (e) { }
+      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
+    } else if (ROUND3_APP_IDS.includes(appId)) {
+      try {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('cyphora_active_round', '3');
+          sessionStorage.removeItem('cyphora_os_locked');
+        }
+      } catch (e) { }
+      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
+    }
+
     const title = options.title || (options.meta?.filePath ? `${appDef.title} - ${options.meta.filePath.split('/').pop()}` : appDef.title);
 
     dispatch({
@@ -337,6 +490,33 @@ export function OSProvider({
       eventBus.emit('APP_CLOSED', { appId: win.appId, windowId: id });
     }
     dispatch({ type: OS_ACTIONS.CLOSE_WINDOW, payload: { id } });
+
+    // If closing a Round 2 or Round 3 app and no other Round 2 or Round 3 window remains open, reset active round
+    const remainingWindows = state.windows.filter(w => w.id !== id);
+    const hasOtherRound2 = remainingWindows.some(w => ROUND2_APP_IDS.includes(w.appId));
+    const hasOtherRound3 = remainingWindows.some(w => ROUND3_APP_IDS.includes(w.appId));
+
+    if (ROUND3_APP_IDS.includes(win?.appId) || ROUND2_APP_IDS.includes(win?.appId)) {
+      if (hasOtherRound3) {
+        try {
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem('cyphora_active_round', '3');
+          }
+        } catch (e) { }
+      } else if (hasOtherRound2) {
+        try {
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem('cyphora_active_round', '2');
+          }
+        } catch (e) { }
+      } else if (!initialAppIdRef.current || (!ROUND2_APP_IDS.includes(initialAppIdRef.current) && !ROUND3_APP_IDS.includes(initialAppIdRef.current))) {
+        try {
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem('cyphora_active_round', '1');
+          }
+        } catch (e) { }
+      }
+    }
   };
 
   const minimizeWindow = (id) => {
@@ -390,6 +570,7 @@ export function OSProvider({
     try {
       if (typeof sessionStorage !== 'undefined') {
         sessionStorage.removeItem('cyphora_os_locked');
+        sessionStorage.removeItem('cyphora_active_round');
       }
     } catch (e) { }
     if (typeof onReturnToHub === 'function') {
@@ -421,7 +602,10 @@ export function OSProvider({
     unlockGate,
     onReturnToHub: handleReturnToHub,
     round1State: round1State || null,
-    setRound1State: setRound1State || (() => { })
+    setRound1State: setRound1State || (() => { }),
+    isRound2Active,
+    isRound3Active,
+    isProtectedRoundActive
   };
 
   return <OSContext.Provider value={value}>{children}</OSContext.Provider>;
@@ -457,6 +641,9 @@ export function useOS() {
       onReturnToHub: () => {},
       round1State: null,
       setRound1State: () => {},
+      isRound2Active: () => false,
+      isRound3Active: () => false,
+      isProtectedRoundActive: () => false,
       vfs,
       eventBus,
       teamData: null,

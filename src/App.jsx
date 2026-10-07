@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Terminal, Users, X, ChevronRight, Shield, Compass, LogOut, Key, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Terminal, Users, X, ChevronRight, Shield, Compass, LogOut, Key, Eye, EyeOff, AlertCircle, Code2 } from 'lucide-react';
 import { BootScreen } from './os/boot/BootScreen.jsx';
 import { OSContainer } from './os/OSContainer.jsx';
 import { Prologue } from './components/Story/Prologue.jsx';
@@ -100,6 +100,12 @@ function App({ initialStage = null, defaultAppId = null }) {
             sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true' ||
             localStorage.getItem('cyphora_round2_supervisor_override') === 'true'
           ),
+          round3Unlocked: (
+            sessionStorage.getItem('cyphora_round3_unlocked') === 'true' ||
+            localStorage.getItem('cyphora_round3_unlocked') === 'true' ||
+            sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true' ||
+            localStorage.getItem('cyphora_round3_supervisor_override') === 'true'
+          ),
         };
       }
     }
@@ -112,6 +118,7 @@ function App({ initialStage = null, defaultAppId = null }) {
       score: 0,
       isSelected: false,
       round2Unlocked: false,
+      round3Unlocked: false,
     };
   });
   const [round1State, setRound1State] = useState(() => {
@@ -821,7 +828,12 @@ function App({ initialStage = null, defaultAppId = null }) {
                 const self = payload.data.find(e => (savedId && e.id === savedId) || (searchName && e.name.toLowerCase() === searchName));
                 if (self) {
                   const isR2Auth = Boolean(self.round2_unlocked || (self.current_stage && self.current_stage >= 2));
+                  const isR3Auth = Boolean(self.round3_unlocked || (self.current_stage && self.current_stage >= 3));
                   localStorage.setItem('cyphora_round2_unlocked', String(isR2Auth));
+                  if (self.round3_unlocked !== undefined) {
+                    localStorage.setItem('cyphora_round3_unlocked', String(isR3Auth));
+                    sessionStorage.setItem('cyphora_round3_unlocked', String(isR3Auth));
+                  }
                   setTeamData(prev => {
                     if (self.name && self.name !== prev.name) {
                       localStorage.setItem('cyphora_team_name', self.name);
@@ -834,7 +846,8 @@ function App({ initialStage = null, defaultAppId = null }) {
                       member2: self.member2 || prev.member2,
                       standing: formatOrdinal(self.rank),
                       score: self.score,
-                      round2Unlocked: isR2Auth
+                      round2Unlocked: isR2Auth,
+                      round3Unlocked: self.round3_unlocked !== undefined ? isR3Auth : prev.round3Unlocked
                     };
                   });
                 }
@@ -871,6 +884,26 @@ function App({ initialStage = null, defaultAppId = null }) {
               localStorage.setItem('cyphora_round2_unlocked', String(isR2Auth));
               setTeamData(prev => ({ ...prev, round2Unlocked: isR2Auth }));
               window.dispatchEvent(new CustomEvent('cyphora_round2_access_changed', { detail: updateData }));
+            } else if (payload.event === 'ROUND3_ACCESS_UPDATE') {
+              const cur = teamDataRef.current;
+              const savedId = parseInt(localStorage.getItem('cyphora_team_id'), 10) || cur.id;
+              const searchName = (localStorage.getItem('cyphora_team_name') || cur.name || '').toLowerCase();
+              const updateData = payload.data || {};
+              if ((updateData.team_id && updateData.team_id === savedId) ||
+                  (updateData.team_name && updateData.team_name.toLowerCase() === searchName)) {
+                const isR3Auth = Boolean(updateData.unlocked);
+                localStorage.setItem('cyphora_round3_unlocked', String(isR3Auth));
+                sessionStorage.setItem('cyphora_round3_unlocked', String(isR3Auth));
+                setTeamData(prev => ({ ...prev, round3Unlocked: isR3Auth }));
+                window.dispatchEvent(new CustomEvent('cyphora_round3_access_changed', { detail: updateData }));
+              }
+            } else if (payload.event === 'ROUND3_ACCESS_UPDATE_ALL') {
+              const updateData = payload.data || {};
+              const isR3Auth = Boolean(updateData.unlocked);
+              localStorage.setItem('cyphora_round3_unlocked', String(isR3Auth));
+              sessionStorage.setItem('cyphora_round3_unlocked', String(isR3Auth));
+              setTeamData(prev => ({ ...prev, round3Unlocked: isR3Auth }));
+              window.dispatchEvent(new CustomEvent('cyphora_round3_access_changed', { detail: updateData }));
             }
           } catch (e) {
             console.error('Failed to parse WS payload', e);
@@ -1239,6 +1272,7 @@ function App({ initialStage = null, defaultAppId = null }) {
     // Clear any previous session lock flag when legitimately beginning expedition
     try {
       sessionStorage.removeItem('cyphora_os_locked');
+      sessionStorage.setItem('cyphora_active_round', '1');
     } catch (e) { }
 
     // Transition to OS boot sequence - timer only starts when player lands on OS desktop
@@ -1258,6 +1292,7 @@ function App({ initialStage = null, defaultAppId = null }) {
     if (level === 1) {
       try {
         sessionStorage.removeItem('cyphora_os_locked');
+        sessionStorage.setItem('cyphora_active_round', '1');
       } catch (e) {}
       if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
@@ -1280,11 +1315,35 @@ function App({ initialStage = null, defaultAppId = null }) {
       }
       try {
         sessionStorage.removeItem('cyphora_os_locked');
+        sessionStorage.setItem('cyphora_active_round', '2');
       } catch (e) {}
       if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
       setInitialAppId('round2');
+      setStage('os-boot');
+      return;
+    }
+    if (level === 3) {
+      const isR3Auth = Boolean(
+        teamData?.round3Unlocked ||
+        sessionStorage.getItem('cyphora_round3_unlocked') === 'true' ||
+        localStorage.getItem('cyphora_round3_unlocked') === 'true' ||
+        sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true' ||
+        localStorage.getItem('cyphora_round3_supervisor_override') === 'true'
+      );
+      if (!isR3Auth) {
+        alert('Round 3 is locked! Your team must receive administrator clearance to enter Round 3.');
+        return;
+      }
+      try {
+        sessionStorage.removeItem('cyphora_os_locked');
+        sessionStorage.setItem('cyphora_active_round', '3');
+      } catch (e) {}
+      if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+      setInitialAppId('round3');
       setStage('os-boot');
       return;
     }
@@ -1297,6 +1356,14 @@ function App({ initialStage = null, defaultAppId = null }) {
     localStorage.getItem('cyphora_round2_unlocked') === 'true' ||
     sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true' ||
     localStorage.getItem('cyphora_round2_supervisor_override') === 'true'
+  );
+
+  const isStage3Unlocked = Boolean(
+    teamData?.round3Unlocked ||
+    sessionStorage.getItem('cyphora_round3_unlocked') === 'true' ||
+    localStorage.getItem('cyphora_round3_unlocked') === 'true' ||
+    sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true' ||
+    localStorage.getItem('cyphora_round3_supervisor_override') === 'true'
   );
 
   const explorerList = Array.isArray(liveExplorers)
@@ -1745,6 +1812,23 @@ function App({ initialStage = null, defaultAppId = null }) {
                   <ChevronRight size={16} />
                 </button>
               </div>
+
+              {/* Round 3 — The Temple Trials */}
+              <div className={`level-card ${isStage3Unlocked ? 'unlocked' : 'locked'}`} onClick={() => handleLevelClick(3, isStage3Unlocked)}>
+                <div className="icon-container"><Code2 size={48} /></div>
+                <h2>The Temple Trials</h2>
+                <p>Round 3</p>
+                <button
+                  className="enter-os-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleLevelClick(3, isStage3Unlocked);
+                  }}
+                >
+                  <span>{isStage3Unlocked ? 'Enter Round 3' : 'Locked (Admin Req)'}</span>
+                  <ChevronRight size={16} />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1769,6 +1853,10 @@ function App({ initialStage = null, defaultAppId = null }) {
           setStage={setStage}
           teamData={teamData}
           onReturnToHub={() => {
+            try {
+              sessionStorage.removeItem('cyphora_active_round');
+              sessionStorage.removeItem('cyphora_os_locked');
+            } catch (e) {}
             setInitialAppId(null);
             setStage('main');
           }}
@@ -1782,7 +1870,7 @@ function App({ initialStage = null, defaultAppId = null }) {
       )}
 
       {/* ── ROUND 1 TIME EXPIRED FULL-SCREEN LOCKOUT ── */}
-      {isRound1LockedByTimer && !proctorOverrideRound1 && (stage === 'os-desktop' || stage === 'os-boot') && (
+      {isRound1LockedByTimer && !proctorOverrideRound1 && (stage === 'os-desktop' || stage === 'os-boot') && !(typeof sessionStorage !== 'undefined' && (sessionStorage.getItem('cyphora_active_round') === '2' || sessionStorage.getItem('cyphora_active_round') === '3')) && (
         <RoundTimerLockScreen
           round={1}
           roundName="Round 1 — OS Navigation"

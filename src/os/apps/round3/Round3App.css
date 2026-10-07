@@ -1,0 +1,357 @@
+/* =========================================================================
+   CYPHORA ROUND 3 INTEGRATION STYLES (PURE FULLSCREEN & PERMISSION GATE)
+   ========================================================================= */
+
+.round3-kiosk-view {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99999 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  outline: none !important;
+  background: #080c06 !important;
+  overflow: hidden !important;
+}
+
+.round3-kiosk-frame {
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+  background: #080c06 !important;
+}
+
+/* Floating Return to OS Button (Top Left) */
+.round3-floating-exit-btn {
+  position: fixed !important;
+  top: 12px !important;
+  left: 14px !important;
+  z-index: 100000 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: rgba(8, 12, 6, 0.88) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(223, 177, 37, 0.4) !important;
+  color: #dfb125 !important;
+  padding: 6px 14px !important;
+  border-radius: 4px !important;
+  font-family: 'Fira Code', 'Courier New', monospace !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 10px rgba(223, 177, 37, 0.15) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  user-select: none !important;
+}
+
+.round3-floating-exit-btn:hover {
+  background: rgba(223, 177, 37, 0.22) !important;
+  border-color: #dfb125 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px) scale(1.02) !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.8), 0 0 16px rgba(223, 177, 37, 0.35) !important;
+}
+
+.round3-floating-exit-btn:active {
+  transform: translateY(1px) scale(0.98) !important;
+}
+
+/* =========================================================================
+   ROUND 3 CLEARANCE PERMISSION MODAL
+   ========================================================================= */
+
+.round3-modal-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99998 !important;
+  background: rgba(3, 6, 3, 0.88) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
+  animation: r3FadeIn 0.22s ease-out forwards !important;
+}
+
+.round3-modal-card {
+  position: relative !important;
+  width: 100% !important;
+  max-width: 540px !important;
+  background: linear-gradient(180deg, rgba(14, 20, 12, 0.96) 0%, rgba(8, 12, 6, 0.98) 100%) !important;
+  border: 1px solid rgba(223, 177, 37, 0.5) !important;
+  border-radius: 6px !important;
+  padding: 32px 30px !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(223, 177, 37, 0.12) !important;
+  text-align: center !important;
+  animation: r3PopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+.round3-modal-close {
+  position: absolute !important;
+  top: 14px !important;
+  right: 14px !important;
+  background: transparent !important;
+  border: none !important;
+  color: rgba(234, 224, 200, 0.5) !important;
+  cursor: pointer !important;
+  padding: 6px !important;
+  border-radius: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: color 0.15s ease, background 0.15s ease !important;
+}
+
+.round3-modal-close:hover {
+  color: #dfb125 !important;
+  background: rgba(223, 177, 37, 0.1) !important;
+}
+
+.round3-modal-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding: 4px 12px !important;
+  background: rgba(223, 177, 37, 0.12) !important;
+  border: 1px solid rgba(223, 177, 37, 0.35) !important;
+  border-radius: 100px !important;
+  color: #dfb125 !important;
+  font-family: 'Fira Code', monospace !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  margin-bottom: 14px !important;
+}
+
+.round3-modal-title {
+  font-family: 'Cinzel', serif, system-ui !important;
+  font-size: 1.55rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.12em !important;
+  color: #eae0c8 !important;
+  margin: 0 0 6px 0 !important;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7) !important;
+}
+
+.round3-modal-subtitle {
+  font-family: 'Fira Code', monospace !important;
+  font-size: 0.75rem !important;
+  color: #dfb125 !important;
+  letter-spacing: 0.14em !important;
+  text-transform: uppercase !important;
+  margin: 0 0 20px 0 !important;
+  opacity: 0.9 !important;
+}
+
+.round3-modal-team-box {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 10px 16px !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid rgba(115, 90, 17, 0.4) !important;
+  border-radius: 4px !important;
+  margin-bottom: 20px !important;
+}
+
+.team-box-label {
+  font-family: 'Fira Code', monospace !important;
+  font-size: 10px !important;
+  color: rgba(234, 224, 200, 0.6) !important;
+  letter-spacing: 0.08em !important;
+}
+
+.team-box-name {
+  font-family: 'Fira Code', monospace !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #dfb125 !important;
+}
+
+.round3-warning-box {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+  background: rgba(223, 177, 37, 0.06) !important;
+  border-left: 3px solid #dfb125 !important;
+  padding: 12px 14px !important;
+  border-radius: 0 4px 4px 0 !important;
+  margin-bottom: 22px !important;
+  text-align: left !important;
+}
+
+.warning-box-icon {
+  color: #dfb125 !important;
+  flex-shrink: 0 !important;
+  margin-top: 2px !important;
+}
+
+.warning-box-text p {
+  margin: 0 0 4px 0 !important;
+  font-size: 12.5px !important;
+  line-height: 1.45 !important;
+  color: #eae0c8 !important;
+}
+
+.warning-box-text .warning-note {
+  margin: 0 !important;
+  font-size: 11px !important;
+  color: rgba(234, 224, 200, 0.65) !important;
+}
+
+.round3-auth-form {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  text-align: left !important;
+}
+
+.round3-auth-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-family: 'Fira Code', monospace !important;
+  font-size: 11px !important;
+  color: rgba(234, 224, 200, 0.8) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+.round3-input-wrapper {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.round3-auth-input {
+  width: 100% !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  border: 1px solid rgba(115, 90, 17, 0.6) !important;
+  border-radius: 4px !important;
+  padding: 10px 40px 10px 14px !important;
+  color: #eae0c8 !important;
+  font-family: 'Fira Code', monospace !important;
+  font-size: 13px !important;
+  outline: none !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.round3-auth-input:focus {
+  border-color: #dfb125 !important;
+  box-shadow: 0 0 14px rgba(223, 177, 37, 0.25) !important;
+}
+
+.round3-auth-input.has-error {
+  border-color: #ef4444 !important;
+}
+
+.round3-eye-btn {
+  position: absolute !important;
+  right: 10px !important;
+  background: transparent !important;
+  border: none !important;
+  color: rgba(234, 224, 200, 0.5) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 4px !important;
+}
+
+.round3-eye-btn:hover {
+  color: #dfb125 !important;
+}
+
+.round3-auth-error {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  color: #ef4444 !important;
+  font-family: 'Fira Code', monospace !important;
+  font-size: 11px !important;
+}
+
+.round3-modal-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+  margin-top: 10px !important;
+}
+
+.round3-btn-cancel {
+  background: transparent !important;
+  border: 1px solid rgba(234, 224, 200, 0.25) !important;
+  border-radius: 4px !important;
+  color: rgba(234, 224, 200, 0.8) !important;
+  padding: 9px 18px !important;
+  font-family: 'Fira Code', monospace !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.round3-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(234, 224, 200, 0.4) !important;
+  color: #eae0c8 !important;
+}
+
+.round3-btn-submit {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: linear-gradient(135deg, #dfb125 0%, #b8860b 100%) !important;
+  border: none !important;
+  border-radius: 4px !important;
+  color: #080c06 !important;
+  padding: 9px 22px !important;
+  font-family: 'Fira Code', monospace !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 18px rgba(223, 177, 37, 0.3) !important;
+  transition: all 0.2s ease !important;
+}
+
+.round3-btn-submit:hover:not(:disabled) {
+  filter: brightness(1.1) !important;
+  box-shadow: 0 6px 22px rgba(223, 177, 37, 0.45) !important;
+  transform: translateY(-1px) !important;
+}
+
+.round3-btn-submit:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+@keyframes r3FadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes r3PopIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}

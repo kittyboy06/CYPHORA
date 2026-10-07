@@ -25,6 +25,7 @@ class TeamOut(BaseModel):
     score: int
     current_stage: int
     round2_unlocked: Optional[int] = 0
+    round3_unlocked: Optional[int] = 0
     status: str
     notes: Optional[str] = None
     last_ip: Optional[str] = None
@@ -55,6 +56,7 @@ class LeaderboardItem(BaseModel):
     status: str
     current_stage: int
     round2_unlocked: Optional[bool] = False
+    round3_unlocked: Optional[bool] = False
     last_ip: Optional[str] = None
     notes: Optional[str] = None
     started_at: Optional[str] = None
@@ -104,5 +106,8 @@ class EventConfigUpdate(BaseModel):
     value: str
 
 class AdminRound2AccessRequest(BaseModel):
+    unlocked: bool
+
+class AdminRound3AccessRequest(BaseModel):
     unlocked: bool
 

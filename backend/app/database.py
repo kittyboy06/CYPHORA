@@ -68,6 +68,8 @@ async def migrate_columns():
             await conn.execute(text("ALTER TABLE teams ADD COLUMN started_at TIMESTAMP;"))
         if "round2_unlocked" not in existing_cols:
             await conn.execute(text("ALTER TABLE teams ADD COLUMN round2_unlocked INTEGER DEFAULT 0;"))
+        if "round3_unlocked" not in existing_cols:
+            await conn.execute(text("ALTER TABLE teams ADD COLUMN round3_unlocked INTEGER DEFAULT 0;"))
         if "raw_pin" not in existing_cols:
             await conn.execute(text("ALTER TABLE teams ADD COLUMN raw_pin TEXT;"))
 

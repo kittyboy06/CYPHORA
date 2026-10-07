@@ -15,8 +15,25 @@ import { PromptStudioApp } from './round2/PromptStudioApp.jsx';
 import { ImageEvaluatorApp } from './round2/ImageEvaluatorApp.jsx';
 import { LeaderboardApp } from './round2/LeaderboardApp.jsx';
 import { PrologueApp } from './round2/PrologueApp.jsx';
+import { Round3App } from './round3/Round3App.jsx';
 
 export const APP_REGISTRY = {
+  'round3': {
+    id: 'round3',
+    title: 'Round 3: The Jungle Code',
+    icon: 'Code2',
+    category: 'Expedition',
+    defaultBounds: { width: 1100, height: 720 },
+    component: Round3App
+  },
+  'jungle-code': {
+    id: 'jungle-code',
+    title: 'Round 3: The Jungle Code',
+    icon: 'Code2',
+    category: 'Expedition',
+    defaultBounds: { width: 1100, height: 720 },
+    component: Round3App
+  },
   'round2': {
     id: 'round2',
     title: 'Round 2: Image Navigation',

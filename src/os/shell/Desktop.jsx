@@ -19,7 +19,8 @@ import {
   Eye,
   Sparkles,
   Zap,
-  BookOpen
+  BookOpen,
+  Code2
 } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
 import { SET_PRESENTATIONS } from '../../round1/taskContent.js';
@@ -107,6 +108,12 @@ export function Desktop() {
       title: 'Round 2',
       icon: <Compass size={32} className="desktop-icon-svg folder-color" />,
       action: () => openApp('round2')
+    },
+    {
+      id: 'round3',
+      title: 'Round 3',
+      icon: <Code2 size={32} className="desktop-icon-svg editor-color" />,
+      action: () => openApp('round3')
     },
     {
       id: 'converter',

@@ -21,7 +21,8 @@ import {
   Zap,
   Trophy,
   BookOpen,
-  LogOut
+  LogOut,
+  Code2
 } from 'lucide-react';
 import { useOS } from '../state/OSContext.jsx';
 import { APP_REGISTRY } from '../apps/registry.js';
@@ -33,7 +34,7 @@ export function StartMenu() {
   if (!isStartMenuOpen) return null;
 
   const appList = Object.values(APP_REGISTRY).filter(
-    app => !['vision-target', 'prompt-studio', 'image-evaluator', 'leaderboard'].includes(app.id)
+    app => !['vision-target', 'prompt-studio', 'image-evaluator', 'leaderboard', 'jungle-code', 'image-navigation'].includes(app.id)
   );
   const filteredApps = appList.filter(app =>
     app.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -49,6 +50,7 @@ export function StartMenu() {
       case 'Zap': return <Zap size={20} className="start-app-icon settings" />;
       case 'Trophy': return <Trophy size={20} className="start-app-icon folder" />;
       case 'BookOpen': return <BookOpen size={20} className="start-app-icon" />;
+      case 'Code2': return <Code2 size={20} className="start-app-icon text" />;
       case 'Terminal': return <Terminal size={20} className="start-app-icon" />;
       case 'Folder': return <Folder size={20} className="start-app-icon folder" />;
       case 'FileText': return <FileText size={20} className="start-app-icon text" />;

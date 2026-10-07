@@ -14,6 +14,7 @@ class Team(Base):
     score = Column(Integer, default=0, index=True)
     current_stage = Column(Integer, default=1)
     round2_unlocked = Column(Integer, default=0)
+    round3_unlocked = Column(Integer, default=0)
     status = Column(String(20), default="active")  # 'active' | 'idle'
     last_ip = Column(String(45), nullable=True)
     member1 = Column(String(64), nullable=True)

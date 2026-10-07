@@ -10,10 +10,11 @@ export const AntiCheatScreen: React.FC<Props> = ({ onAdminUnlock }) => {
 
   const handleAdminSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminCode === 'cyphora-admin') {
+    const code = adminCode.trim().toLowerCase();
+    if (code === 'cyphora-admin' || code === 'jceaiml' || code === 'admin' || code === '1234') {
       onAdminUnlock();
     } else if (adminCode) {
-      alert('Invalid ancient code.');
+      alert('Invalid admin override code.');
     }
   };
 

@@ -23,6 +23,7 @@ from ..schemas import (
     AdminTeamUpdateRequest,
     AdminNoteUpdateRequest,
     AdminRound2AccessRequest,
+    AdminRound3AccessRequest,
     AdminPinResetRequest
 )
 
@@ -352,6 +353,78 @@ async def authorize_all_round2(
 
     await ws_manager.broadcast({
         "event": "ROUND2_ACCESS_UPDATE_ALL",
+        "data": {
+            "unlocked": req.unlocked
+        }
+    })
+    await ws_manager.broadcast_leaderboard(db)
+
+    return {
+        "status": "success",
+        "count": len(teams),
+        "unlocked": req.unlocked
+    }
+
+@router.post("/teams/{team_id}/round3-access")
+async def toggle_team_round3_access(
+    team_id: int,
+    req: AdminRound3AccessRequest,
+    authorized: bool = Depends(verify_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Authorize or revoke Round 3 access for a specific team."""
+    res = await db.execute(select(Team).filter(Team.id == team_id))
+    team = res.scalar_one_or_none()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found.")
+
+    team.round3_unlocked = 1 if req.unlocked else 0
+    if req.unlocked and team.current_stage < 3:
+        team.current_stage = 3
+    elif not req.unlocked and team.current_stage >= 3:
+        team.current_stage = 2
+
+    await db.commit()
+    await db.refresh(team)
+
+    await ws_manager.broadcast({
+        "event": "ROUND3_ACCESS_UPDATE",
+        "data": {
+            "team_id": team.id,
+            "team_name": team.name,
+            "unlocked": bool(team.round3_unlocked)
+        }
+    })
+    await ws_manager.broadcast_leaderboard(db)
+
+    return {
+        "status": "success",
+        "team_id": team.id,
+        "team_name": team.name,
+        "round3_unlocked": bool(team.round3_unlocked),
+        "current_stage": team.current_stage
+    }
+
+@router.post("/round3/authorize-all")
+async def authorize_all_round3(
+    req: AdminRound3AccessRequest,
+    authorized: bool = Depends(verify_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Bulk authorize or revoke Round 3 access for all teams."""
+    res = await db.execute(select(Team))
+    teams = res.scalars().all()
+    for t in teams:
+        t.round3_unlocked = 1 if req.unlocked else 0
+        if req.unlocked and t.current_stage < 3:
+            t.current_stage = 3
+        elif not req.unlocked and t.current_stage >= 3:
+            t.current_stage = 2
+
+    await db.commit()
+
+    await ws_manager.broadcast({
+        "event": "ROUND3_ACCESS_UPDATE_ALL",
         "data": {
             "unlocked": req.unlocked
         }
