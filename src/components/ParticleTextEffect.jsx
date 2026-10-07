@@ -1,6 +1,8 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
+import { ChevronRight } from "lucide-react"
+import "./ParticleTextEffect.css"
 
 class Particle {
   constructor() {
@@ -133,7 +135,8 @@ class Particle {
 
 const DEFAULT_WORDS = ["BEGIN JOURNEY"]
 
-export function ParticleTextEffect({ words = DEFAULT_WORDS, onClick }) {
+export function ParticleTextEffect({ words = DEFAULT_WORDS, onStart, onClick }) {
+  const [showStartBtn, setShowStartBtn] = useState(false)
   const canvasRef = useRef(null)
   const animationRef = useRef(null)
   const particlesRef = useRef([])
@@ -143,6 +146,15 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS, onClick }) {
 
   const pixelSteps = 6
   const drawAsPoints = true
+
+  // Fade in the START button after the "BEGIN JOURNEY" particles form on screen (~2.2s)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowStartBtn(true)
+    }, 2200)
+
+    return () => clearTimeout(timer)
+  }, [])
 
   const generateRandomPos = (x, y, mag, width, height) => {
     const randomX = Math.random() * width
@@ -172,9 +184,10 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS, onClick }) {
     offscreenCanvas.height = canvas.height
     const offscreenCtx = offscreenCanvas.getContext("2d")
 
-    // Draw text
+    // Draw text with responsive scaling to fit any viewport
     offscreenCtx.fillStyle = "white"
-    offscreenCtx.font = "bold 80px Arial"
+    const targetFontSize = Math.min(80, Math.max(34, Math.floor(canvas.width / 13)))
+    offscreenCtx.font = `bold ${targetFontSize}px Arial`
     offscreenCtx.textAlign = "center"
     offscreenCtx.textBaseline = "middle"
     offscreenCtx.fillText(word, canvas.width / 2, canvas.height / 2)
@@ -182,12 +195,11 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS, onClick }) {
     const imageData = offscreenCtx.getImageData(0, 0, canvas.width, canvas.height)
     const pixels = imageData.data
 
-    // Generate new color
-    // We want a golden color similar to the button #d4af37
+    // Generate new color: glowing expedition gold #d4af37
     const newColor = {
-      r: 212, // Math.random() * 255,
-      g: 175, // Math.random() * 255,
-      b: 55,  // Math.random() * 255,
+      r: 212,
+      g: 175,
+      b: 55,
     }
 
     const particles = particlesRef.current
@@ -261,10 +273,7 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS, onClick }) {
     const ctx = canvas.getContext("2d")
     const particles = particlesRef.current
 
-    // Background with motion blur (transparent so it matches app background, or slightly dark)
-    // Wait, if it's transparent, we want to see the app's background. 
-    // Using rgba(0,0,0, 0.1) creates a trail effect but relies on black background.
-    // The initial screen seems to have a black background.
+    // Background with motion blur
     ctx.fillStyle = "rgba(0, 0, 0, 0.2)"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
@@ -288,28 +297,89 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS, onClick }) {
     }
 
     // Handle mouse interaction
-    if (mouseRef.current.isPressed && mouseRef.current.isRightClick) {
-      particles.forEach((particle) => {
-        const distance = Math.sqrt(
-          Math.pow(particle.pos.x - mouseRef.current.x, 2) + Math.pow(particle.pos.y - mouseRef.current.y, 2),
-        )
-        if (distance < 50) {
-          particle.kill(canvas.width, canvas.height)
-        }
-      })
+    if (mouseRef.current.isPressed) {
+      if (mouseRef.current.isRightClick) {
+        particles.forEach((particle) => {
+          const distance = Math.sqrt(
+            Math.pow(particle.pos.x - mouseRef.current.x, 2) + Math.pow(particle.pos.y - mouseRef.current.y, 2),
+          )
+          if (distance < 50) {
+            particle.kill(canvas.width, canvas.height)
+          }
+        })
+      } else {
+        // Left-click repulsion: creates an interactive golden ripple rather than leaving screen
+        particles.forEach((particle) => {
+          const dx = particle.pos.x - mouseRef.current.x
+          const dy = particle.pos.y - mouseRef.current.y
+          const distance = Math.sqrt(dx * dx + dy * dy)
+          if (distance < 90 && distance > 0) {
+            const force = ((90 - distance) / 90) * 8
+            particle.acc.x += (dx / distance) * force
+            particle.acc.y += (dy / distance) * force
+          }
+        })
+      }
     }
 
     // Auto-advance words if we have more than one
     if (words.length > 1) {
-        frameCountRef.current++
-        if (frameCountRef.current % 240 === 0) {
-            wordIndexRef.current = (wordIndexRef.current + 1) % words.length
-            nextWord(words[wordIndexRef.current], canvas)
-        }
+      frameCountRef.current++
+      if (frameCountRef.current % 240 === 0) {
+        wordIndexRef.current = (wordIndexRef.current + 1) % words.length
+        nextWord(words[wordIndexRef.current], canvas)
+      }
     }
 
     animationRef.current = requestAnimationFrame(animate)
   }
+
+  // Handle explicit START button activation
+  const handleStartClick = (e) => {
+    if (e) {
+      e.stopPropagation()
+    }
+
+    // Subtle audio chime
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext
+      if (AudioCtx) {
+        const ctx = new AudioCtx()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = "sine"
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime) // C5
+        osc.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.15) // E5
+        gain.gain.setValueAtTime(0.06, ctx.currentTime)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25)
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start()
+        osc.stop(ctx.currentTime + 0.25)
+      }
+    } catch (err) {
+      // Audio autoplay policy catch
+    }
+
+    if (onStart) {
+      onStart(e)
+    } else if (onClick) {
+      onClick(e)
+    }
+  }
+
+  // Keyboard accessibility: Enter or Space activates START once visible
+  useEffect(() => {
+    if (!showStartBtn) return
+    const handleKeyDown = (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault()
+        handleStartClick(e)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [showStartBtn, onStart, onClick])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -329,18 +399,13 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS, onClick }) {
     // Start animation
     animate()
 
-    // Mouse event handlers
+    // Mouse event handlers — clicking canvas only interacts with particles and does NOT advance step
     const handleMouseDown = (e) => {
       mouseRef.current.isPressed = true
       mouseRef.current.isRightClick = e.button === 2
       const rect = canvas.getBoundingClientRect()
       mouseRef.current.x = e.clientX - rect.left
       mouseRef.current.y = e.clientY - rect.top
-      
-      // If left click, trigger onClick
-      if (e.button === 0 && onClick) {
-          onClick(e)
-      }
     }
 
     const handleMouseUp = () => {
@@ -350,7 +415,6 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS, onClick }) {
 
     const handleMouseMove = (e) => {
       const rect = canvas.getBoundingClientRect()
-      // Adjust mouse pos based on canvas scaling
       const scaleX = canvas.width / rect.width
       const scaleY = canvas.height / rect.height
       mouseRef.current.x = (e.clientX - rect.left) * scaleX
@@ -379,24 +443,26 @@ export function ParticleTextEffect({ words = DEFAULT_WORDS, onClick }) {
   }, [words])
 
   return (
-    <div 
-        onClick={onClick}
-        style={{ 
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100vh',
-            width: '100%',
-            cursor: 'pointer',
-            position: 'relative',
-            zIndex: 10
-        }}
-    >
+    <div className="particle-stage-container">
       <canvas
         ref={canvasRef}
-        style={{ width: "100%", height: "100%", display: "block" }}
+        className="particle-canvas"
       />
+
+      {/* START Button fading in after BEGIN JOURNEY animation */}
+      <div className={`start-btn-wrapper ${showStartBtn ? "visible" : ""}`}>
+        <button
+          type="button"
+          className="start-journey-btn"
+          onClick={handleStartClick}
+          aria-label="Start Expedition"
+        >
+          <span className="start-btn-text">START</span>
+          <ChevronRight size={18} className="start-btn-icon" />
+        </button>
+        <span className="start-btn-hint">PRESS ENTER TO START</span>
+      </div>
     </div>
   )
 }
+

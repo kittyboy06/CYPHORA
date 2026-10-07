@@ -5,12 +5,34 @@
 @tailwind utilities;
 
 :root {
+  --pansage-cursor: url('/assets/cursor/pansage.cur') 0 0, url('/pansage.cur') 0 0, url('/assets/cursor/pansage.png') 0 0, auto;
   --bg-dark: #080c06;
   --bg-panel: rgba(14, 18, 12, 0.85);
   --border-gold: #735a11;
   --accent-gold: #dfb125;
   --text-primary: #eae0c8;
   --text-muted: #888888;
+}
+
+html, body,
+*, *::before, *::after,
+button, input, select, textarea, a, [role="button"], label {
+  cursor: var(--pansage-cursor) !important;
+}
+
+html.has-custom-cursor,
+html.has-custom-cursor body,
+html.has-custom-cursor *,
+html.has-custom-cursor *::before,
+html.has-custom-cursor *::after,
+html.has-custom-cursor button,
+html.has-custom-cursor input,
+html.has-custom-cursor select,
+html.has-custom-cursor textarea,
+html.has-custom-cursor a,
+html.has-custom-cursor [role="button"],
+html.has-custom-cursor label {
+  cursor: none !important;
 }
 
 body {

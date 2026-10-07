@@ -76,7 +76,7 @@ function OSContent({ stage, setStage, teamData, round1State, initialAppId }) {
   const isR2 = typeof isRound2Active === 'function' ? isRound2Active() : false;
   const isProtected = typeof isProtectedRoundActive === 'function'
     ? isProtectedRoundActive()
-    : (isR2 || Boolean(round3Window));
+    : isR2;
 
   return (
     <div className="os-desktop-root">

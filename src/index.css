@@ -1,5 +1,34 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Montserrat:wght@400;600&display=swap');
 
+/* ============================================================
+   PANSAGE ANIMATED CURSOR CONFIGURATION (pansage s.ani)
+   ============================================================ */
+:root {
+  --pansage-cursor: url('/assets/cursor/pansage.cur') 0 0, url('/pansage.cur') 0 0, url('/assets/cursor/pansage.png') 0 0, auto;
+}
+
+html, body,
+*, *::before, *::after,
+button, input, select, textarea, a, [role="button"], label {
+  cursor: var(--pansage-cursor) !important;
+}
+
+/* When hardware-accelerated animated custom cursor overlay is active */
+html.has-custom-cursor,
+html.has-custom-cursor body,
+html.has-custom-cursor *,
+html.has-custom-cursor *::before,
+html.has-custom-cursor *::after,
+html.has-custom-cursor button,
+html.has-custom-cursor input,
+html.has-custom-cursor select,
+html.has-custom-cursor textarea,
+html.has-custom-cursor a,
+html.has-custom-cursor [role="button"],
+html.has-custom-cursor label {
+  cursor: none !important;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -53,6 +82,51 @@ body.round2-scroll-active #root {
   height: auto !important;
   max-height: none !important;
   overscroll-behavior: auto !important;
+}
+
+/* Allow scrolling ONLY in admin page */
+html.admin-scroll-active,
+body.admin-scroll-active {
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  height: auto !important;
+  min-height: 100vh !important;
+  max-height: none !important;
+  overscroll-behavior: auto !important;
+}
+
+html.admin-scroll-active #root,
+body.admin-scroll-active #root,
+#root.admin-scroll-active {
+  overflow-y: visible !important;
+  overflow-x: visible !important;
+  height: auto !important;
+  min-height: 100vh !important;
+  max-height: none !important;
+  overscroll-behavior: auto !important;
+}
+
+/* Admin Scrollbar styling */
+html.admin-scroll-active::-webkit-scrollbar,
+body.admin-scroll-active::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html.admin-scroll-active::-webkit-scrollbar-track,
+body.admin-scroll-active::-webkit-scrollbar-track {
+  background: #080b07;
+}
+
+html.admin-scroll-active::-webkit-scrollbar-thumb,
+body.admin-scroll-active::-webkit-scrollbar-thumb {
+  background: rgba(223, 177, 37, 0.35);
+  border-radius: 4px;
+}
+
+html.admin-scroll-active::-webkit-scrollbar-thumb:hover,
+body.admin-scroll-active::-webkit-scrollbar-thumb:hover {
+  background: rgba(223, 177, 37, 0.75);
 }
 
 

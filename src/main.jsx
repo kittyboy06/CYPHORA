@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import AdminPortal from './admin/AdminPortal.jsx'
+import CustomCursor from './components/CustomCursor.jsx'
 import './index.css'
 
 function RootRouter() {
@@ -34,11 +35,18 @@ function RootRouter() {
     };
   }, []);
 
-  if (currentRoute === 'admin') return <AdminPortal />;
-  if (currentRoute === 'round2') {
-    return <App initialStage="os-desktop" defaultAppId="round2" />;
-  }
-  return <App />;
+  return (
+    <>
+      <CustomCursor />
+      {currentRoute === 'admin' ? (
+        <AdminPortal />
+      ) : currentRoute === 'round2' ? (
+        <App initialStage="os-desktop" defaultAppId="round2" />
+      ) : (
+        <App />
+      )}
+    </>
+  );
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(

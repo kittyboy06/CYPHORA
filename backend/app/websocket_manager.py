@@ -69,6 +69,9 @@ class WebSocketManager:
         leaderboard_data = []
         for rank, team in enumerate(teams, start=1):
             team.standing = rank
+            r1_s = getattr(team, 'round1_score', 0) or 0
+            r2_s = getattr(team, 'round2_score', 0) or 0
+            r3_s = getattr(team, 'round3_score', 0) or 0
             leaderboard_data.append({
                 "rank": rank,
                 "id": team.id,
@@ -76,9 +79,14 @@ class WebSocketManager:
                 "member1": team.member1,
                 "member2": team.member2,
                 "score": team.score,
+                "round1_score": r1_s,
+                "round2_score": r2_s,
+                "round3_score": r3_s,
+                "final_score": r2_s + r3_s,
                 "status": team.status,
                 "current_stage": team.current_stage,
                 "round2_unlocked": bool(getattr(team, 'round2_unlocked', 0) or (team.current_stage and team.current_stage >= 2)),
+                "round3_unlocked": bool(getattr(team, 'round3_unlocked', 0) or (team.current_stage and team.current_stage >= 3)),
                 "notes": team.notes,
                 "last_ip": team.last_ip,
                 "started_at": team.started_at.isoformat() if team.started_at else None,

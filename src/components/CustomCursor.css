@@ -1,0 +1,45 @@
+/* ============================================================
+   PANSAGE ANIMATED CURSOR COMPONENT STYLES
+   ============================================================ */
+
+.pansage-cursor-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  pointer-events: none;
+  z-index: 2147483647; /* Top-most layer above all modals, overlays, BSOD */
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: transform;
+  transform: translate3d(-100px, -100px, 0);
+  transition: opacity 0.12s ease;
+}
+
+.pansage-cursor-container.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.pansage-cursor-sprite {
+  width: 32px;
+  height: 32px;
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  pointer-events: none;
+  transform-origin: 0 0;
+  transition: transform 0.08s ease, filter 0.12s ease;
+}
+
+/* Subtle click feedback */
+.pansage-cursor-container.is-clicking .pansage-cursor-sprite {
+  transform: scale(0.92) translate(1px, 1px);
+}
+
+/* Subtle glowing highlight when hovering interactive buttons, links, inputs */
+.pansage-cursor-container.is-pointer .pansage-cursor-sprite {
+  filter: drop-shadow(0 0 5px rgba(74, 222, 128, 0.85));
+}

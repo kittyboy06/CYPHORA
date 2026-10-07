@@ -8,7 +8,7 @@ import { LandingScreen } from './components/LandingScreen';
 import { AntiCheatScreen } from './components/AntiCheatScreen';
 import { useGameStore } from './state/gameStore';
 import { executeCode } from './blockly/interpreter';
-import { Play, RotateCcw, Wand2 } from 'lucide-react';
+import { Play, RotateCcw, Wand2, Clock } from 'lucide-react';
 import { SOLUTIONS } from './blockly/solutions';
 import * as Blockly from 'blockly';
 import { PromptDialog, AlertDialog } from './components/PromptDialog';
@@ -16,16 +16,19 @@ import { PromptDialog, AlertDialog } from './components/PromptDialog';
 function App() {
   const [hasEntered, setHasEntered] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showStory, setShowStory] = useState(true);
+  const [showStory, setShowStory] = useState(() => {
+    return typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round3_story_finished') !== 'true';
+  });
   const [showTutorial, setShowTutorial] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
+  const [round3DurationMinutes, setRound3DurationMinutes] = useState(30);
+  const [adminCode, setAdminCode] = useState('');
   const blocklyRef = useRef<any>(null);
   const gameRef = useRef<any>(null);
   const level = useGameStore((state) => state.level);
   const setStatus = useGameStore((state) => state.setStatus);
   const timeRemaining = useGameStore((state) => state.timeRemaining);
-  const tickTime = useGameStore((state) => state.tickTime);
 
   const [promptConfig, setPromptConfig] = useState<{ message: string, defaultValue: string, isPassword?: boolean, callback: (result: string | null) => void } | null>(null);
   const [alertConfig, setAlertConfig] = useState<{ message: string, callback?: () => void } | null>(null);
@@ -40,12 +43,47 @@ function App() {
     });
   }, []);
 
+  // Fetch admin configured duration for Round 3
   useEffect(() => {
-    if (!showStory && !showTutorial) {
-      const timer = setInterval(() => tickTime(), 1000);
-      return () => clearInterval(timer);
+    const fetchTimer = async () => {
+      try {
+        const res = await fetch('/api/teams/timer?round=3');
+        if (res.ok) {
+          const data = await res.json();
+          const r3 = data.round3 || data;
+          const mins = r3.duration_minutes || 30;
+          setRound3DurationMinutes(mins);
+        }
+      } catch (e) {}
+    };
+    fetchTimer();
+  }, []);
+
+  // Round 3 countdown timer — starts ONLY after finishing the beginning story
+  useEffect(() => {
+    const isStoryFinished = typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round3_story_finished') === 'true';
+    if (!isStoryFinished || showStory) return;
+
+    let storedStart = localStorage.getItem('cyphora_round3_started_at');
+    if (!storedStart) {
+      storedStart = String(Date.now());
+      localStorage.setItem('cyphora_round3_started_at', storedStart);
     }
-  }, [showStory, showTutorial, tickTime]);
+    const startedAtMs = parseInt(storedStart, 10);
+    const totalSec = round3DurationMinutes * 60;
+
+    const tick = () => {
+      const elapsed = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
+      const rem = Math.max(0, totalSec - elapsed);
+      useGameStore.setState({ timeLimit: totalSec, timeRemaining: rem });
+    };
+
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [showStory, round3DurationMinutes]);
+
+  const [lockReason, setLockReason] = useState('FULLSCREEN_EXIT');
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -56,9 +94,92 @@ function App() {
         }
       } catch (e) { }
       setIsFullscreen(isFull);
+      if (!isFull && hasEntered) {
+        setLockReason('FULLSCREEN_EXIT');
+        try {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'CYPHORA_TRIGGER_LOCK', reason: 'FULLSCREEN_EXIT' }, '*');
+          }
+        } catch (e) { }
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (!hasEntered) return;
+      if (document.hidden || document.visibilityState === 'hidden') {
+        setLockReason('TAB_SWITCH');
+        setIsFullscreen(false);
+        try {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'CYPHORA_TRIGGER_LOCK', reason: 'TAB_SWITCH' }, '*');
+          }
+        } catch (e) { }
+      }
+    };
+
+    const handleSecurityKeyDown = (e: KeyboardEvent) => {
+      if (!hasEntered) return;
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+
+      // 1. Reload shortcuts: F5, Ctrl+R, Cmd+R
+      if (e.key === 'F5' || e.keyCode === 116 || (isCtrlOrMeta && (e.key === 'r' || e.key === 'R'))) {
+        e.preventDefault();
+        e.stopPropagation();
+        setLockReason('PAGE_RELOAD_ATTEMPT');
+        setIsFullscreen(false);
+        try {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'CYPHORA_TRIGGER_LOCK', reason: 'PAGE_RELOAD_ATTEMPT' }, '*');
+          }
+        } catch (err) { }
+        return;
+      }
+
+      // 2. Screenshot shortcuts: PrintScreen, Win+Shift+S, Cmd+Shift+3/4/5
+      if (e.key === 'PrintScreen' || (isCtrlOrMeta && e.shiftKey && (e.key === 'S' || e.key === 's'))) {
+        e.preventDefault();
+        e.stopPropagation();
+        setLockReason('SCREENSHOT_ATTEMPT');
+        setIsFullscreen(false);
+        try {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'CYPHORA_TRIGGER_LOCK', reason: 'SCREENSHOT_ATTEMPT' }, '*');
+          }
+        } catch (err) { }
+        return;
+      }
+
+      // 3. DevTools shortcuts: F12, Ctrl+Shift+I/J/C/K, Ctrl+U
+      if (e.key === 'F12' || (isCtrlOrMeta && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c', 'K', 'k'].includes(e.key)) || (isCtrlOrMeta && (e.key === 'u' || e.key === 'U'))) {
+        e.preventDefault();
+        e.stopPropagation();
+        setLockReason('INSPECTOR_DEVTOOLS');
+        setIsFullscreen(false);
+        try {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'CYPHORA_TRIGGER_LOCK', reason: 'INSPECTOR_DEVTOOLS' }, '*');
+          }
+        } catch (err) { }
+        return;
+      }
+    };
+
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+
+    const handleParentMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'CYPHORA_GATE_UNLOCKED') {
+        setIsFullscreen(true);
+      }
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('keydown', handleSecurityKeyDown, true);
+    window.addEventListener('contextmenu', handleContextMenu, true);
+    window.addEventListener('message', handleParentMessage);
+
     try {
       if (window.parent && window.parent.document && window.parent !== window) {
         window.parent.document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -70,13 +191,17 @@ function App() {
 
     return () => {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('keydown', handleSecurityKeyDown, true);
+      window.removeEventListener('contextmenu', handleContextMenu, true);
+      window.removeEventListener('message', handleParentMessage);
       try {
         if (window.parent && window.parent.document && window.parent !== window) {
           window.parent.document.removeEventListener('fullscreenchange', handleFullscreenChange);
         }
       } catch (e) { }
     };
-  }, []);
+  }, [hasEntered]);
 
   const enterFullscreen = async () => {
     try {
@@ -85,13 +210,16 @@ function App() {
       } else if (window.parent && window.parent.document && window.parent.document.documentElement.requestFullscreen) {
         await window.parent.document.documentElement.requestFullscreen();
       }
-      setHasEntered(true);
-      setIsFullscreen(true);
     } catch (e) {
       console.warn("Fullscreen request failed or pending gesture:", e);
-      setHasEntered(true);
-      setIsFullscreen(true);
     }
+    setHasEntered(true);
+    setIsFullscreen(true);
+    try {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'CYPHORA_UNLOCK_GATE' }, '*');
+      }
+    } catch (e) { }
   };
 
   const handleSolve = () => {
@@ -118,9 +246,36 @@ function App() {
     }
   };
 
+  const [levelElapsedSec, setLevelElapsedSec] = useState(0);
+
+  // Initialize and track level solve timer
+  useEffect(() => {
+    const isFinished = typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round3_story_finished') === 'true';
+    if (isFinished && !showStory && !showTutorial) {
+      const key = `cyphora_r3_level_${level}_start_time`;
+      if (!localStorage.getItem(key)) {
+        localStorage.setItem(key, String(Date.now()));
+      }
+    }
+    const updateElapsed = () => {
+      const key = `cyphora_r3_level_${level}_start_time`;
+      const startMs = parseInt(localStorage.getItem(key) || '0', 10);
+      if (startMs > 0) {
+        setLevelElapsedSec(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
+      } else {
+        setLevelElapsedSec(0);
+      }
+    };
+    updateElapsed();
+    const interval = setInterval(updateElapsed, 1000);
+    return () => clearInterval(interval);
+  }, [level, showStory, showTutorial]);
+
   const handleNextLevel = (nextLevel: number) => {
     setStatus('idle');
     useGameStore.getState().setLevel(nextLevel);
+    // Initialize timestamp for next level
+    localStorage.setItem(`cyphora_r3_level_${nextLevel}_start_time`, String(Date.now()));
     if (gameRef.current) gameRef.current.resetLevel();
   };
 
@@ -138,15 +293,65 @@ function App() {
 
   // Anti-Cheat is disabled:
   if (!isFullscreen) {
-    return <AntiCheatScreen onAdminUnlock={enterFullscreen} />;
+    return <AntiCheatScreen reason={lockReason} onAdminUnlock={enterFullscreen} />;
   }
 
   if (showStory) {
-    return <StoryIntro onComplete={() => { setShowStory(false); setShowTutorial(true); }} />;
+    return (
+      <StoryIntro
+        onComplete={() => {
+          setShowStory(false);
+          setShowTutorial(true);
+          localStorage.setItem('cyphora_round3_story_finished', 'true');
+          if (!localStorage.getItem('cyphora_round3_started_at')) {
+            localStorage.setItem('cyphora_round3_started_at', String(Date.now()));
+          }
+        }}
+      />
+    );
   }
 
   if (showTutorial) {
     return <TutorialScreen onComplete={() => setShowTutorial(false)} />;
+  }
+
+  if (timeRemaining <= 0 && localStorage.getItem('cyphora_round3_story_finished') === 'true' && !isAdminUnlocked) {
+    return (
+      <div className="absolute inset-0 bg-red-950/95 flex flex-col items-center justify-center p-4 md:p-8 z-[200] backdrop-blur-md">
+        <div className="max-w-3xl w-full text-center space-y-6 md:space-y-8 bg-black/80 p-8 md:p-12 border border-red-500/50 rounded-sm shadow-2xl">
+          <Clock size={64} className="text-red-500 mx-auto animate-pulse" />
+          <h1 className="text-2xl md:text-4xl font-cinzel text-red-500 tracking-widest">
+            ROUND 3 TIME EXPIRED
+          </h1>
+          <p className="text-base md:text-xl font-cinzel text-[var(--text-primary)] leading-relaxed italic">
+            "The temple gates have closed. Your trial in the Blockly Forest has concluded."
+          </p>
+          <p className="text-xs md:text-sm font-mono text-red-400/80 uppercase tracking-widest mt-2">
+            Round 3 time limit reached. Please await jury evaluation and final championship tally.
+          </p>
+          <div className="pt-6 mt-6 border-t border-red-900/30">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const code = adminCode.trim().toUpperCase();
+              if (['JCEAIML', 'CYPHORA-ADMIN', '8080', 'ADMIN', '1234'].includes(code)) {
+                setIsAdminUnlocked(true);
+              } else {
+                alert('Invalid admin override code.');
+              }
+            }} className="flex flex-col items-center gap-2">
+              <label className="text-[10px] text-red-500/50 uppercase tracking-widest font-mono">Supervisor Proctor Unlock</label>
+              <input
+                type="password"
+                value={adminCode}
+                onChange={(e) => setAdminCode(e.target.value)}
+                placeholder="Access Code"
+                className="bg-black/50 border border-red-900/50 text-red-500 text-center text-xs font-mono px-3 py-2 outline-none focus:border-red-500 w-48 transition-colors"
+              />
+            </form>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -172,8 +377,16 @@ function App() {
               {typeof window !== 'undefined' ? (localStorage.getItem('cyphora_team_name') || 'Explorer') : 'Explorer'}
             </p>
             <div className="mt-1.5 pt-1.5 border-t border-[var(--border-gold)]/30">
-              <p className="text-[10px] text-[var(--text-muted)] font-mono uppercase tracking-wider">Stage {level} Score</p>
-              <p className="text-lg text-[var(--accent-gold)] font-cinzel font-bold">{useGameStore.getState().score || '\u2014'}</p>
+              <div className="flex justify-between items-center text-[10px] text-[var(--text-muted)] font-mono mb-1">
+                <span>Level {level} Time:</span>
+                <span className="text-[var(--accent-gold)] font-bold">
+                  {Math.floor(levelElapsedSec / 60)}:{(levelElapsedSec % 60).toString().padStart(2, '0')}
+                </span>
+              </div>
+              <p className="text-[10px] text-[var(--text-muted)] font-mono uppercase tracking-wider">Level {level} Score</p>
+              <p className="text-lg text-[var(--accent-gold)] font-cinzel font-bold">
+                {useGameStore.getState().score ? `${useGameStore.getState().score} / 500` : '\u2014'}
+              </p>
             </div>
           </div>
         </div>
@@ -215,6 +428,14 @@ function App() {
               </p>
             </>
           )}
+          <div className="inline-flex items-center gap-2 mt-2 px-2.5 py-1 rounded bg-black/50 border border-[var(--border-gold)]/30 text-[11px] font-mono">
+            <span className="text-[var(--text-muted)] uppercase tracking-wider text-[10px]">Optimal Target:</span>
+            <span className="text-green-400 font-bold">{level === 1 ? '14' : level === 2 ? '17' : '27'} Blocks</span>
+            <span className="text-zinc-600">•</span>
+            <span className="text-yellow-400 font-bold">{level === 1 ? '3m' : level === 2 ? '5m' : '7m'} Par Time</span>
+            <span className="text-zinc-600">•</span>
+            <span className="text-[var(--accent-gold)] font-bold">Max 500 Scores</span>
+          </div>
         </div>
         {/* Level Selector & Run / Reset buttons */}
         <div className="flex gap-4 ml-6 shrink-0 items-center">

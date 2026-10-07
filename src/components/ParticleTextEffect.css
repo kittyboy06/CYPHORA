@@ -1,0 +1,169 @@
+/* ParticleTextEffect.css - CYPHORA Initial Experience */
+
+.particle-stage-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100%;
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+  background-color: #000;
+  user-select: none;
+  cursor: default;
+}
+
+.particle-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: default;
+}
+
+/* ── START Button Wrapper with Fade Animation ── */
+.start-btn-wrapper {
+  position: absolute;
+  top: calc(50% + 95px);
+  left: 50%;
+  transform: translate(-50%, 18px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+              filter 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: blur(8px);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.start-btn-wrapper.visible {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+  filter: blur(0px);
+}
+
+/* ── START Button ── */
+.start-journey-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  font-family: 'Cinzel', serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 7px;
+  text-transform: uppercase;
+  color: #dfb125;
+  background: rgba(14, 18, 12, 0.78);
+  border: 1px solid rgba(223, 177, 37, 0.55);
+  padding: 0.95rem 3.4rem 0.95rem 3.8rem;
+  border-radius: 3px;
+  cursor: pointer;
+  outline: none;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.85),
+              0 0 15px rgba(223, 177, 37, 0.2),
+              inset 0 0 10px rgba(223, 177, 37, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ambient pulsing aura once visible */
+.start-btn-wrapper.visible .start-journey-btn {
+  animation: startBtnGlowPulse 3s ease-in-out infinite alternate;
+}
+
+@keyframes startBtnGlowPulse {
+  0% {
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.85),
+                0 0 12px rgba(223, 177, 37, 0.2),
+                inset 0 0 8px rgba(223, 177, 37, 0.08);
+    border-color: rgba(223, 177, 37, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 35px rgba(0, 0, 0, 0.95),
+                0 0 26px rgba(223, 177, 37, 0.45),
+                inset 0 0 18px rgba(223, 177, 37, 0.22);
+    border-color: rgba(223, 177, 37, 0.85);
+  }
+}
+
+.start-journey-btn:hover {
+  background: rgba(223, 177, 37, 0.16);
+  border-color: #dfb125;
+  color: #fff;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 35px rgba(223, 177, 37, 0.45),
+              inset 0 0 20px rgba(223, 177, 37, 0.25);
+  text-shadow: 0 0 14px rgba(223, 177, 37, 0.85);
+}
+
+.start-journey-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.start-journey-btn .start-btn-icon {
+  color: #dfb125;
+  transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.start-journey-btn:hover .start-btn-icon {
+  color: #fff;
+  transform: translateX(4px);
+}
+
+/* Shimmer gleam */
+.start-journey-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(223, 177, 37, 0.22),
+    transparent
+  );
+  transition: left 0.75s ease;
+}
+
+.start-journey-btn:hover::before {
+  left: 120%;
+}
+
+/* Subtle shortcut hint */
+.start-btn-hint {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 2px;
+  color: rgba(223, 177, 37, 0.6);
+  text-transform: uppercase;
+  opacity: 0.85;
+  pointer-events: none;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
+}
+
+/* Responsive adjustment */
+@media (max-width: 768px) {
+  .start-btn-wrapper {
+    top: calc(50% + 75px);
+  }
+
+  .start-journey-btn {
+    font-size: 1rem;
+    padding: 0.85rem 2.6rem 0.85rem 2.9rem;
+    letter-spacing: 5px;
+  }
+}

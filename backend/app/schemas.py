@@ -53,6 +53,10 @@ class LeaderboardItem(BaseModel):
     member1: Optional[str] = None
     member2: Optional[str] = None
     score: int
+    round1_score: Optional[int] = 0
+    round2_score: Optional[int] = 0
+    round3_score: Optional[int] = 0
+    final_score: Optional[int] = 0
     status: str
     current_stage: int
     round2_unlocked: Optional[bool] = False
@@ -68,6 +72,16 @@ class LeaderboardResponse(BaseModel):
     total_explorers: int
     timer: Optional[dict] = None
     timers: Optional[dict] = None
+
+class Stage3SubmitRequest(BaseModel):
+    level: int = Field(..., description="Stage 3 Blockly Level (1, 2, 3)")
+    blocks_used: int = Field(..., description="Number of blocks used")
+    efficiency: Optional[str] = Field("Acceptable", description="Efficiency rating")
+    score: int = Field(..., description="Score awarded for level (Max 500)")
+    time_used_seconds: Optional[int] = Field(None, description="Time taken to solve level in seconds")
+    block_score: Optional[int] = Field(None, description="Score from block efficiency (max 250)")
+    time_score: Optional[int] = Field(None, description="Score from time efficiency (max 250)")
+    team_name: Optional[str] = None
 
 # Task Submissions (Stage 1 OS Navigation)
 class TaskSubmitRequest(BaseModel):

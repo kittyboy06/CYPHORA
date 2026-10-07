@@ -84,30 +84,110 @@ export const executeCode = async (code: string, gameRef: any, blocklyRef: any, b
       const state = useGameStore.getState();
       state.setStatus('success');
       
-      // Per-level par block counts (optimal solution size)
+      // Per-level par block counts (optimal solution size: L1=14, L2=17, L3=27)
       const PAR_BLOCKS: Record<number, number> = {
-        1: 8,   // variables + while-loop + nested repeat + run + jump
-        2: 17,  // item pickups, long approach, and five-hit beast fight
-        3: 12,  // repeat(3) with for-loop, if/elseif/else, mod checks, totem
+        1: 14,
+        2: 17,
+        3: 27,
+      };
+
+      // Per-level par times in seconds (L1=3m, L2=5m, L3=7m)
+      const PAR_TIME_SECONDS: Record<number, number> = {
+        1: 180,
+        2: 300,
+        3: 420,
       };
       
       const level = state.level;
-      const par = PAR_BLOCKS[level] || 10;
+      const parBlocks = PAR_BLOCKS[level] || 15;
+      const parTime = PAR_TIME_SECONDS[level] || 300;
+
+      // Calculate time used to solve this level
+      const startKey = `cyphora_r3_level_${level}_start_time`;
+      let startMs = parseInt(localStorage.getItem(startKey) || '0', 10);
+      if (!startMs || isNaN(startMs)) {
+        startMs = Date.now() - 10000;
+        localStorage.setItem(startKey, String(startMs));
+      }
+      const timeUsedSeconds = Math.max(1, Math.round((Date.now() - startMs) / 1000));
+
+      // 1. Block Efficiency Score (Max 250 pts)
+      const excessBlocks = Math.max(0, blockCount - parBlocks);
+      const blockScore = Math.max(50, 250 - (excessBlocks * 15));
+
+      // 2. Time Used / Speed Score (Max 250 pts)
+      const excessTime = Math.max(0, timeUsedSeconds - parTime);
+      const timeScore = Math.max(50, Math.round(250 - (excessTime * 0.3)));
+
+      // 3. Total Level Score (Maximum 500 Scores)
+      const calculatedScore = Math.min(500, Math.max(100, blockScore + timeScore));
       
-      // Score: Full 1000 if at/under par, -50 per excess block, min 200
-      const excessBlocks = Math.max(0, blockCount - par);
-      const calculatedScore = Math.max(200, 1000 - (excessBlocks * 50));
-      
-      // Efficiency label
+      // Efficiency rating
       let efficiencyLabel = 'Acceptable';
-      if (blockCount <= par) {
+      if (calculatedScore >= 450) {
         efficiencyLabel = 'Excellent';
-      } else if (blockCount <= par + 4) {
+      } else if (calculatedScore >= 350) {
         efficiencyLabel = 'Good';
       }
       
-      state.setEfficiency(efficiencyLabel);
-      state.setScore(calculatedScore);
+      state.setScoreBreakdown({
+        score: calculatedScore,
+        blockScore,
+        timeScore,
+        timeUsedSeconds,
+        parBlocks,
+        parTimeSeconds: parTime,
+        efficiency: efficiencyLabel
+      });
+
+      // Automatically report level score to CYPHORA backend
+      try {
+        const token = localStorage.getItem('cyphora_token') ||
+                      sessionStorage.getItem('cyphora_token') ||
+                      localStorage.getItem('cyphora_auth_token') ||
+                      sessionStorage.getItem('cyphora_auth_token') || '';
+        const teamName = localStorage.getItem('cyphora_team_name') ||
+                         sessionStorage.getItem('cyphora_team_name') || '';
+        const teamId = localStorage.getItem('cyphora_team_id') ||
+                       sessionStorage.getItem('cyphora_team_id') || '';
+
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        if (teamId) headers['X-Team-Id'] = teamId;
+        if (teamName) headers['X-Team-Name'] = teamName;
+
+        fetch('/api/teams/stage3/submit', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            level,
+            blocks_used: blockCount,
+            time_used_seconds: timeUsedSeconds,
+            block_score: blockScore,
+            time_score: timeScore,
+            efficiency: efficiencyLabel,
+            score: calculatedScore,
+            team_name: teamName
+          })
+        }).catch(() => {});
+      } catch (_) {}
+
+      // Post message to parent OS window if embedded in OS iframe
+      try {
+        if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'CYPHORA_ROUND3_LEVEL_COMPLETE',
+            level,
+            blocks_used: blockCount,
+            time_used_seconds: timeUsedSeconds,
+            block_score: blockScore,
+            time_score: timeScore,
+            efficiency: efficiencyLabel,
+            score: calculatedScore
+          }, '*');
+        }
+      } catch (_) {}
+
       return;
     } else {
       throw e;

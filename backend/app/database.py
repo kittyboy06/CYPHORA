@@ -72,6 +72,20 @@ async def migrate_columns():
             await conn.execute(text("ALTER TABLE teams ADD COLUMN round3_unlocked INTEGER DEFAULT 0;"))
         if "raw_pin" not in existing_cols:
             await conn.execute(text("ALTER TABLE teams ADD COLUMN raw_pin TEXT;"))
+        if "round1_score" not in existing_cols:
+            await conn.execute(text("ALTER TABLE teams ADD COLUMN round1_score INTEGER DEFAULT 0;"))
+        if "round2_score" not in existing_cols:
+            await conn.execute(text("ALTER TABLE teams ADD COLUMN round2_score INTEGER DEFAULT 0;"))
+        if "round3_score" not in existing_cols:
+            await conn.execute(text("ALTER TABLE teams ADD COLUMN round3_score INTEGER DEFAULT 0;"))
+
+        # Synchronize / backfill round scores from existing task_submissions
+        await conn.execute(text("""
+            UPDATE teams SET
+                round1_score = COALESCE((SELECT SUM(points_awarded) FROM task_submissions WHERE task_submissions.team_id = teams.id AND task_submissions.stage = 1), 0),
+                round2_score = COALESCE((SELECT SUM(points_awarded) FROM task_submissions WHERE task_submissions.team_id = teams.id AND task_submissions.stage = 2), 0),
+                round3_score = COALESCE((SELECT SUM(points_awarded) FROM task_submissions WHERE task_submissions.team_id = teams.id AND task_submissions.stage = 3), 0);
+        """))
 
 async def init_db():
     """Initializes tables, confirms WAL mode, and migrates columns. Only stores real teams."""

@@ -1,0 +1,129 @@
+.blue-screen-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1.2rem;
+  padding: clamp(2rem, 8vw, 8rem);
+  background-color: #0078d7;
+  color: #ffffff;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  box-sizing: border-box;
+  user-select: none;
+  overflow: hidden;
+}
+
+.blue-screen-face {
+  font-size: clamp(5rem, 12vw, 9rem);
+  line-height: 0.8;
+  font-weight: 300;
+  margin-bottom: 0.5rem;
+}
+
+.blue-screen-gate h1 {
+  max-width: 800px;
+  margin: 0;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 300;
+  line-height: 1.25;
+}
+
+.blue-screen-gate p {
+  max-width: 720px;
+  margin: 0;
+  font-size: clamp(1rem, 1.6vw, 1.2rem);
+  line-height: 1.6;
+  opacity: 0.95;
+}
+
+.blue-screen-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: min(450px, 100%);
+  margin-top: 0.5rem;
+}
+
+.blue-screen-form label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+  opacity: 0.85;
+  font-weight: 600;
+}
+
+.blue-screen-input-group {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.blue-screen-form input {
+  flex: 1;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.25);
+  color: #ffffff;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-family: inherit;
+  outline: none;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.blue-screen-form input:focus {
+  border-color: #ffffff;
+  background: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+}
+
+.pin-mask-input {
+  -webkit-text-security: disc !important;
+  text-security: disc !important;
+}
+
+.blue-screen-form button {
+  border: 2px solid #ffffff;
+  background: #ffffff;
+  color: #0078d7;
+  padding: 0.75rem 1.25rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.blue-screen-form button:hover {
+  background: #f0f0f0;
+  border-color: #f0f0f0;
+}
+
+.blue-screen-error {
+  color: #ffcccc;
+  background: rgba(180, 0, 0, 0.35);
+  border: 1px solid rgba(255, 100, 100, 0.5);
+  padding: 0.5rem 0.75rem;
+  border-radius: 2px;
+  font-size: 0.88rem;
+  margin-top: 0.25rem;
+}
+
+.blue-screen-details {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.blue-screen-details small {
+  opacity: 0.8;
+  letter-spacing: 0.08rem;
+  font-weight: 600;
+  font-size: 0.82rem;
+}

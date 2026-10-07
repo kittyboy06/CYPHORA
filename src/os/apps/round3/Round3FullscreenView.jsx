@@ -10,7 +10,6 @@ export function Round3FullscreenView({ onClose, teamData }) {
     try {
       if (typeof sessionStorage !== 'undefined') {
         sessionStorage.setItem('cyphora_active_round', '3');
-        sessionStorage.removeItem('cyphora_os_locked');
       }
     } catch (e) { }
 
@@ -27,7 +26,36 @@ export function Round3FullscreenView({ onClose, teamData }) {
     const origOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
+    // Sync team data to storage for the Round 3 iframe
+    try {
+      if (teamData) {
+        if (teamData.token) {
+          localStorage.setItem('cyphora_auth_token', teamData.token);
+          sessionStorage.setItem('cyphora_auth_token', teamData.token);
+        }
+        if (teamData.name) {
+          localStorage.setItem('cyphora_team_name', teamData.name);
+          sessionStorage.setItem('cyphora_team_name', teamData.name);
+        }
+        if (teamData.id) {
+          localStorage.setItem('cyphora_team_id', String(teamData.id));
+          sessionStorage.setItem('cyphora_team_id', String(teamData.id));
+        }
+      }
+    } catch (e) { }
+
+    // Listen for level complete events from iframe
+    const handleMessage = (e) => {
+      if (e.data?.type === 'CYPHORA_ROUND3_LEVEL_COMPLETE') {
+        const detail = e.data;
+        console.log('[OS Round 3] Level completed:', detail);
+        window.dispatchEvent(new CustomEvent('cyphora_team_score_updated', { detail }));
+      }
+    };
+    window.addEventListener('message', handleMessage);
+
     return () => {
+      window.removeEventListener('message', handleMessage);
       document.body.style.overflow = origOverflow;
       try {
         if (typeof sessionStorage !== 'undefined') {
@@ -35,7 +63,7 @@ export function Round3FullscreenView({ onClose, teamData }) {
         }
       } catch (e) { }
     };
-  }, []);
+  }, [teamData]);
 
   const handleReturnToOS = () => {
     if (typeof onClose === 'function') {

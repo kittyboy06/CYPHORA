@@ -159,10 +159,8 @@ export function OSProvider({
       try {
         if (typeof sessionStorage !== 'undefined') {
           sessionStorage.setItem('cyphora_active_round', '3');
-          sessionStorage.removeItem('cyphora_os_locked');
         }
       } catch (e) { }
-      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
     }
   }, [initialAppId]);
 
@@ -175,11 +173,12 @@ export function OSProvider({
   };
 
   const isProtectedRoundActive = () => {
-    return isRound2Active() || isRound3Active();
+    // Only Round 2 is exempt from blue screen (user needs to upload device image from local machine)
+    return isRound2Active();
   };
 
   const triggerLock = (reason = 'FULLSCREEN_EXIT') => {
-    // If Round 2 or Round 3 is active, do not lock
+    // If Round 2 is active, do not lock
     if (isProtectedRoundActive()) {
       return;
     }
@@ -224,6 +223,17 @@ export function OSProvider({
     } catch (err) {
       console.warn('[OS] Fullscreen request error:', err);
     }
+
+    // 6. Notify active child iframes (such as Round 3) to clear any local lock/anti-cheat screens
+    try {
+      window.postMessage({ type: 'CYPHORA_GATE_UNLOCKED' }, '*');
+      const iframes = document.querySelectorAll('iframe');
+      iframes.forEach((iframe) => {
+        try {
+          iframe.contentWindow?.postMessage({ type: 'CYPHORA_GATE_UNLOCKED' }, '*');
+        } catch (e) { }
+      });
+    } catch (e) { }
   };
 
   // Track security triggers: Fullscreen exit, Screenshots, Tab Switch, DevTools Inspector, Page Reload
@@ -416,6 +426,15 @@ export function OSProvider({
 
     const devToolsInterval = setInterval(checkDevTools, 1000);
 
+    // Listen for security triggers or unlock requests from child iframes (Round 3)
+    const handleChildSecurityMessage = (e) => {
+      if (e.data?.type === 'CYPHORA_TRIGGER_LOCK') {
+        triggerLock(e.data?.reason || 'FULLSCREEN_EXIT');
+      } else if (e.data?.type === 'CYPHORA_UNLOCK_GATE') {
+        unlockGate();
+      }
+    };
+
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('contextmenu', handleGlobalContextMenu, true);
@@ -424,6 +443,7 @@ export function OSProvider({
     window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('keydown', handleSecurityKeyDown, true);
     window.addEventListener('keyup', handleSecurityKeyUp, true);
+    window.addEventListener('message', handleChildSecurityMessage);
 
     return () => {
       clearInterval(devToolsInterval);
@@ -435,6 +455,7 @@ export function OSProvider({
       window.removeEventListener('blur', handleWindowBlur);
       window.removeEventListener('keydown', handleSecurityKeyDown, true);
       window.removeEventListener('keyup', handleSecurityKeyUp, true);
+      window.removeEventListener('message', handleChildSecurityMessage);
     };
   }, []);
 

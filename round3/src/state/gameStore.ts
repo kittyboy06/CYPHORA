@@ -1,7 +1,12 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 
 interface GameState {
   score: number;
+  blockScore: number;
+  timeScore: number;
+  timeUsedSeconds: number;
+  parBlocks: number;
+  parTimeSeconds: number;
   efficiency: string;
   health: number;
   level: number;
@@ -12,6 +17,15 @@ interface GameState {
   executedCommands: number;
   
   setScore: (score: number) => void;
+  setScoreBreakdown: (data: {
+    score: number;
+    blockScore: number;
+    timeScore: number;
+    timeUsedSeconds: number;
+    parBlocks: number;
+    parTimeSeconds: number;
+    efficiency: string;
+  }) => void;
   setEfficiency: (efficiency: string) => void;
   setHealth: (health: number) => void;
   setStatus: (status: 'idle' | 'running' | 'success' | 'failed') => void;
@@ -23,6 +37,11 @@ interface GameState {
 
 export const useGameStore = create<GameState>((set) => ({
   score: 0,
+  blockScore: 0,
+  timeScore: 0,
+  timeUsedSeconds: 0,
+  parBlocks: 14,
+  parTimeSeconds: 180,
   efficiency: 'Excellent',
   health: 3,
   level: 1,
@@ -33,6 +52,7 @@ export const useGameStore = create<GameState>((set) => ({
   executedCommands: 0,
 
   setScore: (score) => set({ score }),
+  setScoreBreakdown: (data) => set({ ...data }),
   setEfficiency: (efficiency) => set({ efficiency }),
   setHealth: (health) => set({ health }),
   setStatus: (status) => set({ status }),

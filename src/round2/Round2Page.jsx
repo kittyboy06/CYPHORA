@@ -621,36 +621,33 @@ export function Round2Page({ onReturnToHub }) {
     };
   }, []);
 
-  // Synchronized Round 2 Countdown Tick Hook
+  // Synchronized Round 2 Countdown Tick Hook — starts ONLY after enters Round 2 app
   useEffect(() => {
-    if (!backendRound2Timer) return;
-
-    if (backendRound2Timer.action === 'start' && backendRound2Timer.ends_at) {
-      const tick = () => {
-        const rem = Math.max(0, Math.floor((new Date(backendRound2Timer.ends_at).getTime() - Date.now()) / 1000));
-        setSecondsRemaining(rem);
-        setIsTimerRunning(rem > 0);
-        if (rem <= 0 && !proctorUnlockedRound2) {
-          setIsRound2TimerExpired(true);
-        } else if (rem > 0) {
-          setIsRound2TimerExpired(false);
-        }
-      };
-      tick();
-      const interval = setInterval(tick, 1000);
-      return () => clearInterval(interval);
-    } else if (backendRound2Timer.action === 'pause') {
-      const rem = backendRound2Timer.remaining_seconds !== undefined ? backendRound2Timer.remaining_seconds : 1800;
-      setSecondsRemaining(rem);
-      setIsTimerRunning(false);
-    } else if (backendRound2Timer.action === 'reset') {
-      const dur = (backendRound2Timer.duration_minutes || 30) * 60;
-      setSecondsRemaining(dur);
-      setIsTimerRunning(false);
-      setIsRound2TimerExpired(false);
-      setProctorUnlockedRound2(false);
+    let storedStart = localStorage.getItem('cyphora_round2_started_at');
+    if (!storedStart) {
+      storedStart = String(Date.now());
+      localStorage.setItem('cyphora_round2_started_at', storedStart);
     }
-  }, [backendRound2Timer, proctorUnlockedRound2]);
+    const startedAtMs = parseInt(storedStart, 10);
+    const durMinutes = backendRound2Timer?.duration_minutes || 30;
+    const totalSec = durMinutes * 60;
+
+    const tick = () => {
+      const elapsed = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
+      const rem = Math.max(0, totalSec - elapsed);
+      setSecondsRemaining(rem);
+      setIsTimerRunning(rem > 0);
+      if (rem <= 0 && !proctorUnlockedRound2) {
+        setIsRound2TimerExpired(true);
+      } else if (rem > 0) {
+        setIsRound2TimerExpired(false);
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [backendRound2Timer?.duration_minutes, proctorUnlockedRound2]);
 
   // Object URL cleanup
   useEffect(() => {
@@ -723,6 +720,7 @@ export function Round2Page({ onReturnToHub }) {
         'cyphora_round2_phase',
         'cyphora_round2_score',
         'cyphora_round2_start_time',
+        'cyphora_round2_started_at',
         'cyphora_round2_prompt',
         'cyphora_round2_image1_cached_url',
         'cyphora_round2_image1_data',

@@ -110,6 +110,9 @@ async def list_admin_teams(
 
     out = []
     for rank, t in enumerate(teams, start=1):
+        r1_s = getattr(t, 'round1_score', 0) or 0
+        r2_s = getattr(t, 'round2_score', 0) or 0
+        r3_s = getattr(t, 'round3_score', 0) or 0
         out.append({
             "rank": rank,
             "id": t.id,
@@ -117,9 +120,14 @@ async def list_admin_teams(
             "member1": t.member1,
             "member2": t.member2,
             "score": t.score,
+            "round1_score": r1_s,
+            "round2_score": r2_s,
+            "round3_score": r3_s,
+            "final_score": r2_s + r3_s,
             "status": t.status,
             "current_stage": t.current_stage,
             "round2_unlocked": bool(getattr(t, 'round2_unlocked', 0) or (t.current_stage and t.current_stage >= 2)),
+            "round3_unlocked": bool(getattr(t, 'round3_unlocked', 0) or (t.current_stage and t.current_stage >= 3)),
             "pin": getattr(t, 'raw_pin', None) or "—",
             "notes": t.notes,
             "last_ip": t.last_ip,
@@ -148,13 +156,21 @@ async def update_team_score(
     elif req.points_delta is not None:
         team.score = max(0, team.score + req.points_delta)
 
+    delta = team.score - old_score
+    if team.current_stage == 3:
+        team.round3_score = max(0, (getattr(team, 'round3_score', 0) or 0) + delta)
+    elif team.current_stage == 2:
+        team.round2_score = max(0, (getattr(team, 'round2_score', 0) or 0) + delta)
+    else:
+        team.round1_score = max(0, (getattr(team, 'round1_score', 0) or 0) + delta)
+
     # Record submission audit log if reason provided
     if req.reason:
         sub = TaskSubmission(
             team_id=team.id,
             stage=team.current_stage,
             task_key=f"admin_adjust_{datetime.utcnow().strftime('%H%M%S')}",
-            points_awarded=team.score - old_score,
+            points_awarded=delta,
             metadata_json=f'{{"reason": "{req.reason}", "admin": true}}'
         )
         db.add(sub)
@@ -467,6 +483,42 @@ async def get_team_submissions(
         })
     return {"team_id": team_id, "submissions": out, "total_submissions": len(out)}
 
+@router.get("/submissions/feed")
+async def get_all_submissions_feed(
+    authorized: bool = Depends(verify_admin),
+    db: AsyncSession = Depends(get_db),
+    limit: int = 200
+):
+    """Retrieve global real-time activity/audit feed across all teams with details."""
+    import json
+    stmt = (
+        select(TaskSubmission, Team.name.label("team_name"))
+        .join(Team, TaskSubmission.team_id == Team.id, isouter=True)
+        .order_by(desc(TaskSubmission.submitted_at))
+        .limit(limit)
+    )
+    res = await db.execute(stmt)
+    rows = res.all()
+    feed = []
+    for sub, team_name in rows:
+        meta = {}
+        if sub.metadata_json:
+            try:
+                meta = json.loads(sub.metadata_json)
+            except Exception:
+                meta = {"raw": sub.metadata_json}
+        feed.append({
+            "id": sub.id,
+            "team_id": sub.team_id,
+            "team_name": team_name or f"Team #{sub.team_id}",
+            "stage": sub.stage,
+            "task_key": sub.task_key,
+            "points_awarded": sub.points_awarded,
+            "metadata": meta,
+            "submitted_at": sub.submitted_at.isoformat() if sub.submitted_at else None
+        })
+    return {"feed": feed, "count": len(feed)}
+
 @router.post("/reset-leaderboard")
 async def reset_leaderboard(
     authorized: bool = Depends(verify_admin),
@@ -500,6 +552,10 @@ async def export_leaderboard_csv(
         "Team Name",
         "Member 1",
         "Member 2",
+        "Round 1 Score",
+        "Round 2 Score",
+        "Round 3 Score",
+        "Final Score (R2+R3)",
         "Total Score",
         "Stage",
         "Status",
@@ -510,11 +566,18 @@ async def export_leaderboard_csv(
     ])
 
     for rank, t in enumerate(teams, start=1):
+        r1_s = getattr(t, 'round1_score', 0) or 0
+        r2_s = getattr(t, 'round2_score', 0) or 0
+        r3_s = getattr(t, 'round3_score', 0) or 0
         writer.writerow([
             rank,
             t.name,
             t.member1 or "N/A",
             t.member2 or "N/A",
+            r1_s,
+            r2_s,
+            r3_s,
+            r2_s + r3_s,
             t.score,
             f"Stage {t.current_stage}",
             t.status,
@@ -551,6 +614,10 @@ async def export_leaderboard_json(
             "name": t.name,
             "member1": t.member1,
             "member2": t.member2,
+            "round1_score": getattr(t, 'round1_score', 0) or 0,
+            "round2_score": getattr(t, 'round2_score', 0) or 0,
+            "round3_score": getattr(t, 'round3_score', 0) or 0,
+            "final_score": (getattr(t, 'round2_score', 0) or 0) + (getattr(t, 'round3_score', 0) or 0),
             "score": t.score,
             "current_stage": t.current_stage,
             "status": t.status,
@@ -567,10 +634,8 @@ def _default_timer(round_num: int):
     mins = 60 if round_num == 1 else 30
     return {
         "round": round_num,
-        "action": "reset",
+        "action": "configured",
         "duration_minutes": mins,
-        "started_at": None,
-        "ends_at": None,
         "remaining_seconds": mins * 60,
         "updated_at": datetime.utcnow().isoformat()
     }
@@ -609,18 +674,23 @@ async def get_admin_event_timer(
 ):
     r1 = await _fetch_timer(db, 1)
     r2 = await _fetch_timer(db, 2)
+    r3 = await _fetch_timer(db, 3)
     if round == 1:
         return r1
     if round == 2:
         return r2
+    if round == 3:
+        return r3
 
     return {
         "round1": r1,
         "round2": r2,
+        "round3": r3,
         **r1,
         "all_timers": {
             "round1": r1,
-            "round2": r2
+            "round2": r2,
+            "round3": r3
         }
     }
 
@@ -628,38 +698,31 @@ async def get_admin_event_timer(
 async def configure_event_timer(
     round: int = 1,
     duration_minutes: int = 60,
-    action: str = "start", # "start" | "pause" | "resume" | "reset"
+    action: str = "set", # "set" | "reset" | "configured"
     remaining_seconds: Optional[int] = None,
     authorized: bool = Depends(verify_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Sets or synchronizes the countdown timer for Round 1 or Round 2 across all workstations."""
+    """Configures the duration limit for Round 1, Round 2, or Round 3 across all workstations.
+    Timers start dynamically per workstation when teams reach their respective milestone:
+    - Round 1: after team enters the OS desktop
+    - Round 2: after team enters the Round 2 app
+    - Round 3: after finishing the beginning story in Round 3
+    """
     import json
-    from datetime import datetime, timedelta
+    from datetime import datetime
 
-    round_num = 2 if int(round) == 2 else 1
+    round_num = int(round) if int(round) in (1, 2, 3) else 1
     now = datetime.utcnow()
-    ends_at = None
 
-    if action == "start":
-        ends_at = now + timedelta(minutes=duration_minutes)
-        rem_sec = duration_minutes * 60
-    elif action == "resume":
-        sec = remaining_seconds if remaining_seconds is not None else (duration_minutes * 60)
-        ends_at = now + timedelta(seconds=sec)
-        rem_sec = sec
-    elif action == "pause":
-        rem_sec = remaining_seconds if remaining_seconds is not None else (duration_minutes * 60)
-    else:  # reset
-        rem_sec = duration_minutes * 60
+    if action == "reset":
+        duration_minutes = 60 if round_num == 1 else 30
 
     timer_payload = {
         "round": round_num,
-        "action": action,
+        "action": "configured",
         "duration_minutes": duration_minutes,
-        "started_at": now.isoformat(),
-        "ends_at": ends_at.isoformat() if ends_at else None,
-        "remaining_seconds": rem_sec,
+        "remaining_seconds": duration_minutes * 60,
         "updated_at": now.isoformat()
     }
     raw = json.dumps(timer_payload)
@@ -685,6 +748,7 @@ async def configure_event_timer(
 
     r1 = await _fetch_timer(db, 1)
     r2 = await _fetch_timer(db, 2)
+    r3 = await _fetch_timer(db, 3)
 
     # Broadcast timer update over WebSocket to all 100 computers
     await ws_manager.broadcast({
@@ -693,7 +757,8 @@ async def configure_event_timer(
             **timer_payload,
             "all_timers": {
                 "round1": r1,
-                "round2": r2
+                "round2": r2,
+                "round3": r3
             }
         }
     })
@@ -704,7 +769,8 @@ async def configure_event_timer(
         "round": round_num,
         "all_timers": {
             "round1": r1,
-            "round2": r2
+            "round2": r2,
+            "round3": r3
         }
     }
 
