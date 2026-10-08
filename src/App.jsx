@@ -679,6 +679,14 @@ function App({ initialStage = null, defaultAppId = null }) {
 
           const self = data.teams.find(e => (savedId && e.id === savedId) || (searchName && e.name.toLowerCase() === searchName));
           if (self) {
+            const completedTasks = Array.isArray(round1StateRef.current?.tasks)
+              ? round1StateRef.current.tasks.filter(t => t.status === 'COMPLETED').length
+              : 0;
+            const r1Done = round1StateRef.current?.round1Status === 'COMPLETED' || completedTasks >= 12;
+
+            const isR2Auth = Boolean(self.round2_unlocked || (r1Done && self.current_stage && self.current_stage >= 2));
+            const isR3Auth = Boolean(self.round3_unlocked || (r1Done && self.current_stage && self.current_stage >= 3));
+
             setTeamData(prev => {
               if (self.name && self.name !== prev.name) {
                 localStorage.setItem('cyphora_team_name', self.name);
@@ -690,7 +698,9 @@ function App({ initialStage = null, defaultAppId = null }) {
                 member1: self.member1 || prev.member1,
                 member2: self.member2 || prev.member2,
                 standing: formatOrdinal(self.rank),
-                score: self.score
+                score: self.score,
+                round2Unlocked: isR2Auth,
+                round3Unlocked: isR3Auth
               };
             });
           }

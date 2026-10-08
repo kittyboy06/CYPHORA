@@ -180,8 +180,8 @@ async def submit_stage3_level(
 
     # Cap each level score strictly at maximum 500 points
     points = min(500, max(0, req.score))
-    current_team.score += points
     current_team.round3_score = (getattr(current_team, 'round3_score', 0) or 0) + points
+    current_team.score = (getattr(current_team, 'round1_score', 0) or 0) + (getattr(current_team, 'round2_score', 0) or 0) + (getattr(current_team, 'round3_score', 0) or 0)
     current_team.current_stage = 3
     current_team.status = "active"
 
