@@ -98,6 +98,10 @@ async def migrate_columns():
                 round2_score = COALESCE((SELECT SUM(points_awarded) FROM task_submissions WHERE task_submissions.team_id = teams.id AND task_submissions.stage = 2), 0),
                 round3_score = COALESCE((SELECT SUM(points_awarded) FROM task_submissions WHERE task_submissions.team_id = teams.id AND task_submissions.stage = 3), 0);
         """))
+        await conn.execute(text("""
+            UPDATE teams SET
+                score = COALESCE(round1_score, 0) + COALESCE(round2_score, 0) + COALESCE(round3_score, 0);
+        """))
 
         # Reset historical runaway started_at timestamps where started_at == created_at and team hasn't actually started
         await conn.execute(text("""
