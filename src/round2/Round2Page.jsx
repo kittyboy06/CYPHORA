@@ -624,15 +624,33 @@ export function Round2Page({ onReturnToHub }) {
   // Synchronized Round 2 Countdown Tick Hook — starts ONLY after enters Round 2 app
   useEffect(() => {
     let storedStart = localStorage.getItem('cyphora_round2_started_at');
+    const isNewStart = !storedStart;
     if (!storedStart) {
       storedStart = String(Date.now());
       localStorage.setItem('cyphora_round2_started_at', storedStart);
     }
+
+    if (isNewStart) {
+      const token = localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token');
+      fetch(`${API_BASE}/api/teams/timer/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ round: 2 })
+      }).catch(() => {});
+    }
+
     const startedAtMs = parseInt(storedStart, 10);
     const durMinutes = backendRound2Timer?.duration_minutes || 30;
     const totalSec = durMinutes * 60;
 
     const tick = () => {
+      if (backendRound2Timer?.action === 'pause') {
+        setIsTimerRunning(false);
+        return;
+      }
       const elapsed = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
       const rem = Math.max(0, totalSec - elapsed);
       setSecondsRemaining(rem);
@@ -647,7 +665,7 @@ export function Round2Page({ onReturnToHub }) {
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [backendRound2Timer?.duration_minutes, proctorUnlockedRound2]);
+  }, [backendRound2Timer?.duration_minutes, backendRound2Timer?.action, proctorUnlockedRound2]);
 
   // Object URL cleanup
   useEffect(() => {
@@ -844,11 +862,11 @@ export function Round2Page({ onReturnToHub }) {
 
     try {
       const hostname = window.location.hostname || 'localhost';
-      const isDev = window.location.port === '5173';
-      const apiBase = isDev ? `http://${hostname}:8000` : '';
-      const token = localStorage.getItem('cyphora_token') || '';
-      const teamId = localStorage.getItem('cyphora_team_id') || '';
-      const storedTeamName = localStorage.getItem('cyphora_team_name') || teamName || '';
+      const isDevPort = window.location.port && window.location.port !== '8000';
+      const apiBase = isDevPort ? `http://${hostname}:8000` : '';
+      const token = localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token') || '';
+      const teamId = localStorage.getItem('cyphora_team_id') || sessionStorage.getItem('cyphora_team_id') || '';
+      const storedTeamName = localStorage.getItem('cyphora_team_name') || sessionStorage.getItem('cyphora_team_name') || teamName || '';
 
       const getBase64 = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -956,11 +974,11 @@ export function Round2Page({ onReturnToHub }) {
 
     try {
       const hostname = window.location.hostname || 'localhost';
-      const isDev = window.location.port === '5173';
-      const apiBase = isDev ? `http://${hostname}:8000` : '';
-      const token = localStorage.getItem('cyphora_token') || '';
-      const teamId = localStorage.getItem('cyphora_team_id') || '';
-      const storedTeamName = localStorage.getItem('cyphora_team_name') || teamName || '';
+      const isDevPort = window.location.port && window.location.port !== '8000';
+      const apiBase = isDevPort ? `http://${hostname}:8000` : '';
+      const token = localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token') || '';
+      const teamId = localStorage.getItem('cyphora_team_id') || sessionStorage.getItem('cyphora_team_id') || '';
+      const storedTeamName = localStorage.getItem('cyphora_team_name') || sessionStorage.getItem('cyphora_team_name') || teamName || '';
 
       const getBase64 = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();

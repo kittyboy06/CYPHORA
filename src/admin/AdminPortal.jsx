@@ -240,12 +240,146 @@ export function AdminPortal() {
 
   const getRemainingTimeString = (t) => {
     if (!t) return '60:00';
-    const mins = t.duration_minutes || (t.round === 1 ? 60 : 30);
-    return `${mins.toString().padStart(2, '0')}:00`;
+    const durMins = t.duration_minutes || (t.round === 1 ? 60 : 30);
+    if (t.action === 'start' && t.ends_at) {
+      const diffMs = Math.max(0, new Date(t.ends_at).getTime() - currentTime.getTime());
+      const totalSec = Math.floor(diffMs / 1000);
+      const m = Math.floor(totalSec / 60);
+      const s = totalSec % 60;
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+    if (t.action === 'pause') {
+      const sec = t.remaining_seconds != null ? t.remaining_seconds : durMins * 60;
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+    if (t.action === 'expired') {
+      return '00:00';
+    }
+    return `${durMins.toString().padStart(2, '0')}:00`;
   };
 
   const getTimerStatus = (t) => {
-    return 'configured';
+    if (!t) return { label: 'STOPPED', cls: 'stopped', color: '#8c8268' };
+    if (t.action === 'start') {
+      const diffMs = t.ends_at ? new Date(t.ends_at).getTime() - currentTime.getTime() : 1;
+      if (diffMs <= 0) return { label: 'EXPIRED', cls: 'expired', color: '#ff4757' };
+      return { label: 'RUNNING', cls: 'running', color: '#2ed573' };
+    }
+    if (t.action === 'pause') return { label: 'PAUSED', cls: 'paused', color: '#ffa502' };
+    if (t.action === 'expired') return { label: 'EXPIRED', cls: 'expired', color: '#ff4757' };
+    return { label: 'STANDBY', cls: 'stopped', color: '#dfb125' };
+  };
+
+  // Reset / Restart round timer for a team
+  const handleResetTeamTimer = async (team) => {
+    const curRound = team.current_stage || 1;
+    if (!window.confirm(`Reset Round ${curRound} timer for "${team.name}" to restart clock from 0?`)) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/teams/${team.id}/timer-reset?round_num=${curRound}`, {
+        method: 'POST',
+        headers: { 'X-Admin-Password': HARDCODED_ADMIN_PASS }
+      });
+      if (res.ok) {
+        fetchTeams();
+      } else {
+        alert('Failed to reset team timer');
+      }
+    } catch (e) {
+      alert('Error communicating with backend');
+    }
+  };
+
+  const renderTeamLiveTimer = (t) => {
+    const stage = t.current_stage || 1;
+    const timerCfg = timers[`round${stage}`] || { duration_minutes: stage === 1 ? 60 : 30 };
+    const durationMin = timerCfg.duration_minutes || (stage === 1 ? 60 : 30);
+    const durationSec = durationMin * 60;
+
+    // Has team completed previous stages?
+    const isR1Done = t.current_stage >= 2 || Boolean(t.round1_completed_at);
+    const isR2Done = t.current_stage >= 3 || Boolean(t.round2_completed_at);
+
+    // Determine start timestamp for team's current stage
+    let startStr = null;
+    if (stage === 1) {
+      startStr = t.round1_started_at || (t.score > 0 ? t.started_at : null);
+    } else if (stage === 2) {
+      startStr = t.round2_started_at || (isR1Done ? t.updated_at : null);
+    } else if (stage === 3) {
+      startStr = t.round3_started_at || (isR2Done ? t.updated_at : null);
+    }
+
+    const isRecentActive = t.updated_at && (currentTime.getTime() - new Date(t.updated_at).getTime()) < 90000;
+    const isOnline = Boolean(t.is_connected || (t.status === 'active' && isRecentActive));
+
+    // If no start timestamp for current round: Standby
+    if (!startStr) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+          <span style={{ fontSize: '0.78rem', color: '#888', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <Clock size={11} style={{ opacity: 0.5 }} />
+            R{stage}: Standby
+          </span>
+          <span style={{ fontSize: '0.7rem', color: isOnline ? '#4ade80' : '#666' }}>
+            {isOnline ? '● Online (ready)' : `○ ${formatTimeSince(t.updated_at)}`}
+          </span>
+        </div>
+      );
+    }
+
+    const startMs = new Date(startStr).getTime();
+    const elapsedSec = Math.max(0, Math.floor((currentTime.getTime() - startMs) / 1000));
+    const remainingSec = Math.max(0, durationSec - elapsedSec);
+    const isExpired = elapsedSec >= durationSec;
+
+    const elapM = Math.floor(Math.min(elapsedSec, durationSec) / 60);
+    const elapS = Math.min(elapsedSec, durationSec) % 60;
+    const remM = Math.floor(remainingSec / 60);
+    const remS = remainingSec % 60;
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+        {isExpired ? (
+          <span style={{
+            fontSize: '0.74rem',
+            fontWeight: 700,
+            color: '#f87171',
+            background: 'rgba(239, 68, 68, 0.12)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            padding: '1px 5px',
+            borderRadius: '3px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            width: 'fit-content'
+          }}>
+            <Clock size={10} /> R{stage} Expired ({durationMin}m)
+          </span>
+        ) : (
+          <span style={{
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            color: '#dfb125',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}>
+            <Clock size={11} color="#dfb125" />
+            R{stage}: {remM}m {remS < 10 ? '0' : ''}${remS}s left
+          </span>
+        )}
+
+        <span style={{ fontSize: '0.69rem', color: '#8c8268' }}>
+          Run: {elapM}m {elapS < 10 ? '0' : ''}${elapS}s / {durationMin}m
+        </span>
+
+        <span style={{ fontSize: '0.7rem', color: isOnline ? '#4ade80' : '#666', marginTop: '1px' }}>
+          {isOnline ? '● Online (active)' : `○ Last active: ${formatTimeSince(t.updated_at)}`}
+        </span>
+      </div>
+    );
   };
 
   useEffect(() => {
@@ -367,8 +501,9 @@ export function AdminPortal() {
   };
 
   // Quick Score Update
-  const handleQuickScore = async (teamId, delta) => {
+  const handleQuickScore = async (teamId, delta, targetRound = null) => {
     try {
+      const roundNum = targetRound || (delta === 20 || delta === -5 || delta === -10 ? 1 : delta === 50 ? 2 : null);
       const reasonTag = delta === 20 ? 'Round 1 Task (+20 pts)'
         : delta === 50 ? 'Round 2 Image (+50 pts)'
         : delta === -5 ? 'Hint 1 deduction (-5 pts)'
@@ -381,7 +516,7 @@ export function AdminPortal() {
           'Content-Type': 'application/json',
           'X-Admin-Password': HARDCODED_ADMIN_PASS
         },
-        body: JSON.stringify({ points_delta: delta, reason: reasonTag })
+        body: JSON.stringify({ points_delta: delta, round: roundNum, reason: reasonTag })
       });
       fetchTeams();
     } catch (e) {
@@ -893,13 +1028,14 @@ export function AdminPortal() {
                 { round: 2, label: 'Round 2: Image Recon', timer: timers.round2 },
                 { round: 3, label: 'Round 3: Blockly Forest', timer: timers.round3 }
               ].map(tab => {
+                const sObj = getTimerStatus(tab.timer);
                 return (
                   <button
                     key={tab.round}
                     className={`timer-tab-btn ${activeTimerTab === tab.round ? 'active' : ''}`}
                     onClick={() => setActiveTimerTab(tab.round)}
                   >
-                    <span className="timer-tab-dot running"></span>
+                    <span className={`timer-tab-dot ${sObj.cls}`}></span>
                     <span>{tab.label}</span>
                   </button>
                 );
@@ -910,11 +1046,12 @@ export function AdminPortal() {
           {(() => {
             const currentTimerObj = timers[`round${activeTimerTab}`] || {
               round: activeTimerTab,
-              action: 'configured',
+              action: 'stopped',
               duration_minutes: activeTimerTab === 1 ? 60 : 30,
               remaining_seconds: (activeTimerTab === 1 ? 60 : 30) * 60
             };
             const timeStr = getRemainingTimeString(currentTimerObj);
+            const statusObj = getTimerStatus(currentTimerObj);
             const milestoneHint =
               activeTimerTab === 1
                 ? 'Countdown starts dynamically after team enters into OS'
@@ -927,8 +1064,8 @@ export function AdminPortal() {
                 {/* Clock Display */}
                 <div className="timer-clock-display">
                   <div className="timer-digits">{timeStr}</div>
-                  <span className="timer-status-badge running" style={{ color: '#dfb125', borderColor: '#dfb125' }}>
-                    CONFIGURED
+                  <span className={`timer-status-badge ${statusObj.cls}`} style={{ color: statusObj.color, borderColor: statusObj.color }}>
+                    {statusObj.label}
                   </span>
                 </div>
 
@@ -956,8 +1093,34 @@ export function AdminPortal() {
 
                 {/* Actions */}
                 <div className="timer-hub-controls">
+                  {currentTimerObj.action === 'start' ? (
+                    <button
+                      className="timer-ctrl-btn pause"
+                      onClick={() => handleControlTimer(activeTimerTab, 'pause')}
+                      title={`Pause Round ${activeTimerTab} timer for all workstations`}
+                    >
+                      <Pause size={14} /> Pause Round {activeTimerTab}
+                    </button>
+                  ) : currentTimerObj.action === 'pause' ? (
+                    <button
+                      className="timer-ctrl-btn primary"
+                      onClick={() => handleControlTimer(activeTimerTab, 'resume')}
+                      title={`Resume Round ${activeTimerTab} countdown`}
+                    >
+                      <Play size={14} /> Resume Round {activeTimerTab}
+                    </button>
+                  ) : (
+                    <button
+                      className="timer-ctrl-btn primary"
+                      onClick={() => handleControlTimer(activeTimerTab, 'start')}
+                      title={`Start Round ${activeTimerTab} countdown for all workstations`}
+                    >
+                      <Play size={14} /> Start Round {activeTimerTab}
+                    </button>
+                  )}
+
                   <button
-                    className="timer-ctrl-btn primary"
+                    className="timer-ctrl-btn config"
                     onClick={() => setTimerModal({ open: true, round: activeTimerTab, durationMinutes: currentTimerObj.duration_minutes || (activeTimerTab === 1 ? 60 : 30) })}
                     title="Configure Custom Duration"
                   >
@@ -967,7 +1130,7 @@ export function AdminPortal() {
                   <button
                     className="timer-ctrl-btn reset"
                     onClick={() => handleControlTimer(activeTimerTab, 'reset')}
-                    title="Reset to default duration"
+                    title="Reset timer to default duration"
                   >
                     <RotateCcw size={14} /> Reset Default
                   </button>
@@ -1401,28 +1564,28 @@ export function AdminPortal() {
                           <div className="quick-pts-btns">
                             <button
                               className="quick-pt-btn"
-                              onClick={() => handleQuickScore(t.id, 20)}
+                              onClick={() => handleQuickScore(t.id, 20, 1)}
                               title="Award +20 points (Round 1 Task)"
                             >
                               +20
                             </button>
                             <button
                               className="quick-pt-btn"
-                              onClick={() => handleQuickScore(t.id, 50)}
+                              onClick={() => handleQuickScore(t.id, 50, 2)}
                               title="Award +50 points (Round 2 Image 100%)"
                             >
                               +50
                             </button>
                             <button
                               className="quick-pt-btn minus"
-                              onClick={() => handleQuickScore(t.id, -5)}
+                              onClick={() => handleQuickScore(t.id, -5, 1)}
                               title="Deduct -5 points (1 Hint)"
                             >
                               -5
                             </button>
                             <button
                               className="quick-pt-btn minus"
-                              onClick={() => handleQuickScore(t.id, -10)}
+                              onClick={() => handleQuickScore(t.id, -10, 1)}
                               title="Deduct -10 points (2 Hints)"
                             >
                               -10
@@ -1479,15 +1642,7 @@ export function AdminPortal() {
 
                       {/* Live Timers */}
                       <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
-                          <span style={{ fontSize: '0.78rem', color: '#cac0a8' }}>
-                            <Clock size={11} style={{ display: 'inline', marginRight: '3px' }} />
-                            Run: {formatElapsed(t.started_at || t.created_at)}
-                          </span>
-                          <span style={{ fontSize: '0.7rem', color: '#777' }}>
-                            Last active: {formatTimeSince(t.updated_at)}
-                          </span>
-                        </div>
+                        {renderTeamLiveTimer(t)}
                       </td>
 
                       {/* Admin Notes */}
@@ -1515,6 +1670,15 @@ export function AdminPortal() {
                       {/* Actions */}
                       <td style={{ textAlign: 'right' }}>
                         <div className="row-actions" style={{ justifyContent: 'flex-end' }}>
+                          <button
+                            className="icon-btn"
+                            title={`Restart Round ${t.current_stage || 1} timer for ${t.name}`}
+                            onClick={() => handleResetTeamTimer(t)}
+                            style={{ padding: '0.2rem', color: '#dfb125' }}
+                          >
+                            <RotateCcw size={13} />
+                          </button>
+
                           <button
                             className="icon-btn"
                             title="Edit Team & Members"

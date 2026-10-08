@@ -154,9 +154,9 @@ function App({ initialStage = null, defaultAppId = null }) {
   const syncTaskSubmission = async (taskId, answer, hintsUsed = 0) => {
     if (!taskId) return;
     try {
-      const token = localStorage.getItem('cyphora_token');
-      const teamId = teamDataRef.current.id || localStorage.getItem('cyphora_team_id');
-      const teamName = teamDataRef.current.name || localStorage.getItem('cyphora_team_name');
+      const token = localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token');
+      const teamId = teamDataRef.current?.id || localStorage.getItem('cyphora_team_id') || sessionStorage.getItem('cyphora_team_id');
+      const teamName = teamDataRef.current?.name || localStorage.getItem('cyphora_team_name') || sessionStorage.getItem('cyphora_team_name');
 
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -169,7 +169,8 @@ function App({ initialStage = null, defaultAppId = null }) {
         body: JSON.stringify({
           task_key: taskId,
           proof: answer || null,
-          hints_used: hintsUsed
+          hints_used: hintsUsed,
+          team_name: teamName || undefined
         })
       });
 
@@ -280,7 +281,7 @@ function App({ initialStage = null, defaultAppId = null }) {
             round1DurationMs: durationMs,
             remainingTimeMs: remainingMs,
             isExpired: isExp,
-            isTimerRunning: isDesktop && !isExp && prev.round1Status !== 'COMPLETED'
+            isTimerRunning: isDesktop && !isExp && prev.round1Status !== 'COMPLETED' && timer.action !== 'pause'
           };
         }
         return {
@@ -303,10 +304,10 @@ function App({ initialStage = null, defaultAppId = null }) {
 
       if (event.event === 'TASK_ANSWER_SUBMITTED') {
         const currentState = round1StateRef.current;
-        const activeTask = currentState.tasks.find(t => t.status === 'ACTIVE');
-        if (activeTask && activeTask.validator && activeTask.validator(event.payload)) {
-          const hintsUsed = event.payload.hintsUsed !== undefined ? event.payload.hintsUsed : (activeTask.hintsUsed || 0);
-          syncTaskSubmission(activeTask.id, event.payload.answer, hintsUsed);
+        const targetTask = (currentState?.tasks || []).find(t => t.id === event.payload?.taskId) || (currentState?.tasks || []).find(t => t.status === 'ACTIVE');
+        if (targetTask && targetTask.validator && targetTask.validator(event.payload)) {
+          const hintsUsed = event.payload.hintsUsed !== undefined ? event.payload.hintsUsed : (targetTask.hintsUsed || 0);
+          syncTaskSubmission(targetTask.id, event.payload.answer, hintsUsed);
         }
       }
     });
@@ -317,10 +318,25 @@ function App({ initialStage = null, defaultAppId = null }) {
   useEffect(() => {
     if (stage === 'os-desktop') {
       let storedStart = localStorage.getItem('cyphora_round1_started_at');
+      const isNewStart = !storedStart;
       if (!storedStart) {
         storedStart = String(Date.now());
         localStorage.setItem('cyphora_round1_started_at', storedStart);
       }
+
+      // Notify backend of Round 1 initiation
+      if (isNewStart) {
+        const token = localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token');
+        fetch(`${API_BASE}/api/teams/timer/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ round: 1 })
+        }).catch(() => {});
+      }
+
       const startedAtMs = parseInt(storedStart, 10);
       const configuredMinutes = round1Timer?.duration_minutes || 60;
       const durationMs = configuredMinutes * 60 * 1000;
@@ -343,7 +359,7 @@ function App({ initialStage = null, defaultAppId = null }) {
           round1DurationMs: durationMs,
           remainingTimeMs: remainingMs,
           isExpired: isExp,
-          isTimerRunning: remainingMs > 0 && base.round1Status !== 'COMPLETED'
+          isTimerRunning: remainingMs > 0 && base.round1Status !== 'COMPLETED' && round1Timer?.action !== 'pause'
         };
       });
 
@@ -359,12 +375,13 @@ function App({ initialStage = null, defaultAppId = null }) {
         return prev;
       });
     }
-  }, [stage, teamData.name, round1Timer?.duration_minutes, proctorOverrideRound1]);
+  }, [stage, teamData.name, round1Timer?.duration_minutes, round1Timer?.action, proctorOverrideRound1]);
 
   // Tick interval for Round 1 timer ONLY while on os-desktop
   useEffect(() => {
     if (stage !== 'os-desktop') return;
     if (round1State.round1Status === 'COMPLETED') return;
+    if (round1Timer?.action === 'pause') return;
 
     const tick = () => {
       const storedStart = localStorage.getItem('cyphora_round1_started_at');
@@ -1058,9 +1075,28 @@ function App({ initialStage = null, defaultAppId = null }) {
       localStorage.setItem('cyphora_member2', team.member2);
     }
 
-    const isR2Auth = Boolean(team.round2_unlocked || (team.current_stage && team.current_stage >= 2));
-    sessionStorage.setItem('cyphora_round2_unlocked', String(isR2Auth));
-    localStorage.setItem('cyphora_round2_unlocked', String(isR2Auth));
+    // Rehydrate complete task completion record directly from central database
+    const syncResult = await syncCompletedTasksFromBackend(team.id, team.name, token);
+    const isR1Done = Boolean(syncResult && syncResult.completedCount >= 12);
+
+    const isR2Auth = Boolean(team.round2_unlocked || (isR1Done && team.current_stage && team.current_stage >= 2));
+    const isR3Auth = Boolean(team.round3_unlocked || (isR1Done && team.current_stage && team.current_stage >= 3));
+
+    if (isR2Auth) {
+      sessionStorage.setItem('cyphora_round2_unlocked', 'true');
+      localStorage.setItem('cyphora_round2_unlocked', 'true');
+    } else {
+      sessionStorage.removeItem('cyphora_round2_unlocked');
+      localStorage.removeItem('cyphora_round2_unlocked');
+    }
+
+    if (isR3Auth) {
+      sessionStorage.setItem('cyphora_round3_unlocked', 'true');
+      localStorage.setItem('cyphora_round3_unlocked', 'true');
+    } else {
+      sessionStorage.removeItem('cyphora_round3_unlocked');
+      localStorage.removeItem('cyphora_round3_unlocked');
+    }
 
     setTeamData({
       id: team.id,
@@ -1070,7 +1106,8 @@ function App({ initialStage = null, defaultAppId = null }) {
       standing: team.standing ? formatOrdinal(team.standing) : 'Unranked',
       score: team.score || 0,
       isSelected: true,
-      round2Unlocked: isR2Auth
+      round2Unlocked: isR2Auth,
+      round3Unlocked: isR3Auth
     });
 
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -1079,21 +1116,18 @@ function App({ initialStage = null, defaultAppId = null }) {
 
     setShowTeamModal(false);
 
-    // Rehydrate complete task completion record directly from central database
-    const syncResult = await syncCompletedTasksFromBackend(team.id, team.name, token);
-
     // Clear any previous OS locks and stale session windows so resuming player starts fresh inside the OS
     try {
       sessionStorage.removeItem('cyphora_os_locked');
       sessionStorage.removeItem('cyphora_os_session');
       sessionStorage.setItem('cyphora_current_stage', 'os-desktop');
-      if (isR2Auth || (syncResult && syncResult.completedCount >= 12)) {
+      if (isR1Done) {
         sessionStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
       }
     } catch (e) {}
 
     // Resuming returning players always directly enters the OS!
-    if (isR2Auth || (syncResult && syncResult.completedCount >= 12)) {
+    if (isR2Auth || isR1Done) {
       setInitialAppId('round2');
     } else {
       setInitialAppId('tasks');
@@ -1116,6 +1150,9 @@ function App({ initialStage = null, defaultAppId = null }) {
       localStorage.removeItem('cyphora_member1');
       localStorage.removeItem('cyphora_member2');
       localStorage.removeItem('cyphora_round2_unlocked');
+      localStorage.removeItem('cyphora_round3_unlocked');
+      localStorage.removeItem('cyphora_round2_supervisor_override');
+      localStorage.removeItem('cyphora_round3_supervisor_override');
       localStorage.removeItem('cyphora_vfs_data');
       localStorage.removeItem('cyphora_os_session');
       localStorage.removeItem('cyphora_os_locked');

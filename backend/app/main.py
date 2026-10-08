@@ -3,12 +3,13 @@ import json
 import logging
 from typing import Optional
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import STATIC_DIST_DIR, BASE_DIR
-from .database import init_db, AsyncSessionLocal
+from .database import init_db, AsyncSessionLocal, get_db
 from .websocket_manager import ws_manager
 from .routers import auth, teams, stage1, admin, stage2
 
@@ -67,6 +68,28 @@ app.include_router(teams.router)
 app.include_router(stage1.router)
 app.include_router(stage2.router)
 app.include_router(admin.router)
+
+@app.get("/api/stage3/access-status")
+async def get_stage3_access_status(
+    authorization: Optional[str] = Header(None),
+    x_team_id: Optional[str] = Header(None),
+    x_team_name: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_db)
+):
+    from .routers.stage2 import resolve_team
+    team = await resolve_team(db, authorization, x_team_id, x_team_name)
+    if not team:
+        return {"unlocked": False, "authenticated": False, "message": "No registered team session found."}
+
+    is_unlocked = bool(getattr(team, "round3_unlocked", 0) or (team.current_stage and team.current_stage >= 3))
+    return {
+        "unlocked": is_unlocked,
+        "authenticated": True,
+        "team_id": team.id,
+        "team_name": team.name,
+        "current_stage": team.current_stage,
+        "message": "Round 3 access authorized by administrator." if is_unlocked else "Awaiting administrator clearance for Round 3."
+    }
 
 # Real-time WebSocket Gateway for 100 Workstations
 @app.websocket("/ws/live")

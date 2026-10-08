@@ -404,12 +404,15 @@ export function OSProvider({
       }
     };
 
+    const handleBeforeUnload = (e) => {
+      // Allow seamless reload or exit
+    };
+
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('contextmenu', handleGlobalContextMenu, true);
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('resize', checkDevTools);
-    window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('keydown', handleSecurityKeyDown, true);
     window.addEventListener('keyup', handleSecurityKeyUp, true);
     window.addEventListener('message', handleChildSecurityMessage);
@@ -421,7 +424,6 @@ export function OSProvider({
       document.removeEventListener('contextmenu', handleGlobalContextMenu, true);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('resize', checkDevTools);
-      window.removeEventListener('blur', handleWindowBlur);
       window.removeEventListener('keydown', handleSecurityKeyDown, true);
       window.removeEventListener('keyup', handleSecurityKeyUp, true);
       window.removeEventListener('message', handleChildSecurityMessage);

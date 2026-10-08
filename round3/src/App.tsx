@@ -65,10 +65,24 @@ function App() {
     if (!isStoryFinished || showStory) return;
 
     let storedStart = localStorage.getItem('cyphora_round3_started_at');
+    const isNewStart = !storedStart;
     if (!storedStart) {
       storedStart = String(Date.now());
       localStorage.setItem('cyphora_round3_started_at', storedStart);
     }
+
+    if (isNewStart) {
+      const token = typeof localStorage !== 'undefined' ? (localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token')) : null;
+      fetch('/api/teams/timer/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ round: 3 })
+      }).catch(() => {});
+    }
+
     const startedAtMs = parseInt(storedStart, 10);
     const totalSec = round3DurationMinutes * 60;
 
