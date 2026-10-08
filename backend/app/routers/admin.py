@@ -158,27 +158,46 @@ async def update_team_score(
         raise HTTPException(status_code=404, detail="Team not found.")
 
     old_score = team.score
+    delta = 0
     if req.new_score is not None:
+        delta = req.new_score - team.score
         team.score = max(0, req.new_score)
     elif req.points_delta is not None:
+        delta = req.points_delta
         team.score = max(0, team.score + req.points_delta)
 
-    delta = team.score - old_score
-    if team.current_stage == 3:
+    # Determine target round explicitly or from reason
+    target_round = req.round
+    if not target_round and req.reason:
+        reason_lower = req.reason.lower()
+        if "round 1" in reason_lower or "r1" in reason_lower or "hint" in reason_lower:
+            target_round = 1
+        elif "round 2" in reason_lower or "r2" in reason_lower or "image" in reason_lower:
+            target_round = 2
+        elif "round 3" in reason_lower or "r3" in reason_lower or "level" in reason_lower or "blockly" in reason_lower:
+            target_round = 3
+
+    if not target_round:
+        target_round = team.current_stage or 1
+
+    if target_round == 3:
         team.round3_score = max(0, (getattr(team, 'round3_score', 0) or 0) + delta)
-    elif team.current_stage == 2:
+    elif target_round == 2:
         team.round2_score = max(0, (getattr(team, 'round2_score', 0) or 0) + delta)
     else:
         team.round1_score = max(0, (getattr(team, 'round1_score', 0) or 0) + delta)
+
+    # Mathematically lock total score to sum of individual round scores
+    team.score = (getattr(team, 'round1_score', 0) or 0) + (getattr(team, 'round2_score', 0) or 0) + (getattr(team, 'round3_score', 0) or 0)
 
     # Record submission audit log if reason provided
     if req.reason:
         sub = TaskSubmission(
             team_id=team.id,
-            stage=team.current_stage,
+            stage=target_round,
             task_key=f"admin_adjust_{datetime.utcnow().strftime('%H%M%S')}",
             points_awarded=delta,
-            metadata_json=f'{{"reason": "{req.reason}", "admin": true}}'
+            metadata_json=f'{{"reason": "{req.reason}", "admin": true, "round": {target_round}}}'
         )
         db.add(sub)
 
