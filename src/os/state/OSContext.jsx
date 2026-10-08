@@ -238,81 +238,50 @@ export function OSProvider({
 
   // Track security triggers: Fullscreen exit, Screenshots, Tab Switch, DevTools Inspector, Page Reload
   useEffect(() => {
-    // 1. Initial lock state recovery from sessionStorage
-    let initialLock = null;
+    // 1. Clear any stale lock flags on mount so page refreshes never get stuck in a bluescreen
     try {
       if (typeof sessionStorage !== 'undefined') {
-        initialLock = sessionStorage.getItem('cyphora_os_locked');
+        sessionStorage.removeItem('cyphora_os_locked');
       }
     } catch (e) { }
 
-    if (isProtectedRoundActive()) {
-      try {
-        if (typeof sessionStorage !== 'undefined') {
-          sessionStorage.removeItem('cyphora_os_locked');
-        }
-      } catch (e) { }
-      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
-    } else if (initialLock) {
-      triggerLock(initialLock);
-    } else {
-      dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
-      if (typeof document !== 'undefined' && document.fullscreenElement) {
-        hasEnteredFullscreenRef.current = true;
-        dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: true });
-      }
+    dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
+    if (typeof document !== 'undefined' && document.fullscreenElement) {
+      hasEnteredFullscreenRef.current = true;
+      dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: true });
     }
 
-    // 2. Fullscreen monitor
+    // 2. Fullscreen monitor: Update OS taskbar/state without locking the station on exit
     const handleFullscreenChange = () => {
       const isFull = !!document.fullscreenElement;
       dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: isFull });
       if (isFull) {
         hasEnteredFullscreenRef.current = true;
-      } else {
-        if (isProtectedRoundActive()) return;
-        // Only trigger lock if the user was previously in fullscreen and explicitly exited
-        if (hasEnteredFullscreenRef.current && Date.now() >= unlockCooldownRef.current) {
-          triggerLock('FULLSCREEN_EXIT');
-        }
       }
     };
 
-    // 3. Tab switch / visibility monitor
+    // 3. Tab switch / visibility monitor with 2.5-second debounce
+    // (Prevents false triggers from brief OS blips, browser alerts, or focus switches)
+    let visibilityTimeout = null;
     const handleVisibilityChange = () => {
       if (isProtectedRoundActive()) return;
       if (Date.now() < unlockCooldownRef.current) return;
+
       if (document.hidden || document.visibilityState === 'hidden') {
-        triggerLock('TAB_SWITCH');
+        if (visibilityTimeout) clearTimeout(visibilityTimeout);
+        visibilityTimeout = setTimeout(() => {
+          if ((document.hidden || document.visibilityState === 'hidden') &&
+              !isProtectedRoundActive() &&
+              Date.now() >= unlockCooldownRef.current) {
+            triggerLock('TAB_SWITCH');
+          }
+        }, 2500);
+      } else {
+        if (visibilityTimeout) {
+          clearTimeout(visibilityTimeout);
+          visibilityTimeout = null;
+        }
       }
-    };
-
-    // 4. Window blur monitor (switching to other apps or desktop)
-    const handleWindowBlur = () => {
-      if (isProtectedRoundActive()) return;
-      if (Date.now() < unlockCooldownRef.current) return;
-      // Brief debounce to prevent false triggers during OS transitions or browser dialogs
-      setTimeout(() => {
-        if (isProtectedRoundActive()) return;
-        if (Date.now() < unlockCooldownRef.current) return;
-        if (document.hidden || document.visibilityState === 'hidden') {
-          triggerLock('TAB_SWITCH');
-        }
-      }, 250);
-    };
-
-    // 5. Workstation reload / refresh interceptor (browser reload button, closing/leaving tab)
-    const handleBeforeUnload = (e) => {
-      if (isProtectedRoundActive()) return;
-      try {
-        if (typeof sessionStorage !== 'undefined') {
-          sessionStorage.setItem('cyphora_os_locked', 'PAGE_RELOAD_ATTEMPT');
-        }
-      } catch (err) { }
-      triggerLock('PAGE_RELOAD_ATTEMPT');
-      e.preventDefault();
-      e.returnValue = 'Workstation session active. Reloading the workstation is prohibited.';
-      return e.returnValue;
     };
 
     // 6. Security keyboard shortcuts: Screenshots, Reload, DevTools Inspector

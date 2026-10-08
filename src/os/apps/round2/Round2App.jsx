@@ -547,14 +547,8 @@ export function Round2App({ windowId }) {
       const isDev = window.location.port === '5173';
       const apiBase = isDev ? `http://${hostname}:8000` : '';
       const token = localStorage.getItem('cyphora_token') || '';
-
-      const filename = (image1File?.name || '').toLowerCase();
-      let simValue = 82 + Math.random() * 12;
-      if (filename.includes('target1')) {
-        simValue = 100.0;
-      }
-      let simMatch = simValue.toFixed(1) + '%';
-      let phase1Points = Math.round(MAX_IMAGE_POINTS * (simValue / 100));
+      const teamId = localStorage.getItem('cyphora_team_id') || '';
+      const storedTeamName = localStorage.getItem('cyphora_team_name') || teamName || '';
 
       const getBase64 = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -564,36 +558,44 @@ export function Round2App({ windowId }) {
       });
       const image1Base64 = image1File ? await getBase64(image1File) : null;
 
-      try {
-        const res = await fetch(`${apiBase}/api/stage2/evaluate-image1`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          },
-          body: JSON.stringify({
-            team_name: teamName,
-            prompt: prompt.trim(),
-            image1_filename: image1File?.name || 'image_1.png',
-            image1_base64: image1Base64,
-          })
-        });
-        if (res.ok) {
-          const resJson = await res.json();
-          if (resJson.points !== undefined) {
-            phase1Points = resJson.points;
-          } else if (resJson.similarity) {
-            const simParsed = parseFloat(resJson.similarity.replace('%', ''));
-            if (!isNaN(simParsed)) {
-              phase1Points = Math.round(MAX_IMAGE_POINTS * (simParsed / 100));
-            }
-          }
-          if (resJson.similarity) {
-            simMatch = resJson.similarity;
-          }
+      let simMatch = '0%';
+      let phase1Points = 0;
+
+      const res = await fetch(`${apiBase}/api/stage2/evaluate-image1`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(teamId ? { 'X-Team-Id': String(teamId) } : {}),
+          ...(storedTeamName ? { 'X-Team-Name': storedTeamName } : {})
+        },
+        body: JSON.stringify({
+          team_name: storedTeamName || teamName,
+          prompt: prompt.trim(),
+          image1_filename: image1File?.name || 'image_1.png',
+          image1_base64: image1Base64,
+        })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || `Evaluation server responded with error ${res.status}`);
+      }
+
+      const resJson = await res.json();
+      if (resJson.points !== undefined) {
+        phase1Points = resJson.points;
+      } else if (resJson.similarity) {
+        const simParsed = parseFloat(resJson.similarity.replace('%', ''));
+        if (!isNaN(simParsed)) {
+          phase1Points = Math.round(MAX_IMAGE_POINTS * (simParsed / 100));
         }
-      } catch {
-        // Fallback local evaluation
+      }
+      if (resJson.similarity) {
+        simMatch = resJson.similarity;
+      }
+      if (resJson.new_total_score !== undefined) {
+        localStorage.setItem('cyphora_team_score', resJson.new_total_score.toString());
       }
 
       const evalData = {
@@ -634,8 +636,8 @@ export function Round2App({ windowId }) {
       localStorage.removeItem('cyphora_round2_prompt');
 
       setPhaseSuccessNotice(`✓ Image 1 evaluated (+${phase1Points}/50 pts)! Slot for Image 2 is now unlocked.`);
-    } catch {
-      setFormGlobalError('Error communicating with evaluation server. Please retry.');
+    } catch (err) {
+      setFormGlobalError(err?.message || 'Error communicating with evaluation server. Please retry.');
     } finally {
       setIsSubmitting(false);
     }
@@ -655,24 +657,16 @@ export function Round2App({ windowId }) {
     setIsSubmitting(true);
 
     const finalElapsed = ROUND_2_DURATION_SECONDS - secondsRemaining;
-
-    const filename2 = (image2File?.name || '').toLowerCase();
-    let image2SimValue = 85 + Math.random() * 12;
-    if (filename2.includes('target2')) {
-      image2SimValue = 100.0;
-    }
-    let image2Similarity = image2SimValue.toFixed(1) + '%';
-    let image2Points = Math.round(MAX_IMAGE_POINTS * (image2SimValue / 100));
-
-    const image1Points = image1EvaluatedData?.score || 50;
-    let finalTotalPoints = image1Points + image2Points;
     const formattedSpeed = formatTime(finalElapsed);
+    const image1Points = image1EvaluatedData?.score || 0;
 
     try {
       const hostname = window.location.hostname || 'localhost';
       const isDev = window.location.port === '5173';
       const apiBase = isDev ? `http://${hostname}:8000` : '';
       const token = localStorage.getItem('cyphora_token') || '';
+      const teamId = localStorage.getItem('cyphora_team_id') || '';
+      const storedTeamName = localStorage.getItem('cyphora_team_name') || teamName || '';
 
       const getBase64 = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -682,45 +676,54 @@ export function Round2App({ windowId }) {
       });
       const slot3Base64 = image2File ? await getBase64(image2File) : null;
 
-      try {
-        const res = await fetch(`${apiBase}/api/stage2/submit`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          },
-          body: JSON.stringify({
-            team_name: teamName,
-            prompt: prompt.trim(),
-            slot2_filename: image1EvaluatedData?.fileName || 'image_1.png',
-            slot3_filename: image2File.name,
-            slot3_base64: slot3Base64,
-            elapsed_seconds: finalElapsed,
-            remaining_seconds: secondsRemaining,
-            calculated_points: finalTotalPoints,
-          })
-        });
+      let image2Points = 0;
+      let image2Similarity = '0%';
+      let finalTotalPoints = image1Points;
 
-        if (res.ok) {
-          const resData = await res.json();
-          if (resData.image2_points !== undefined) {
-            image2Points = resData.image2_points;
-            finalTotalPoints = image1Points + image2Points;
-          } else if (resData.points_awarded !== undefined) {
-            image2Points = resData.points_awarded;
-            finalTotalPoints = image1Points + image2Points;
-          } else if (resData.image2_similarity) {
-            const simParsed = parseFloat(resData.image2_similarity.replace('%', ''));
-            if (!isNaN(simParsed)) {
-              image2Points = Math.round(MAX_IMAGE_POINTS * (simParsed / 100));
-              finalTotalPoints = image1Points + image2Points;
-            }
-          }
-          if (resData.image2_similarity) {
-            image2Similarity = resData.image2_similarity;
-          }
+      const res = await fetch(`${apiBase}/api/stage2/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(teamId ? { 'X-Team-Id': String(teamId) } : {}),
+          ...(storedTeamName ? { 'X-Team-Name': storedTeamName } : {})
+        },
+        body: JSON.stringify({
+          team_name: storedTeamName || teamName,
+          prompt: prompt.trim(),
+          slot2_filename: image1EvaluatedData?.fileName || 'image_1.png',
+          slot3_filename: image2File.name,
+          slot3_base64: slot3Base64,
+          elapsed_seconds: finalElapsed,
+          remaining_seconds: secondsRemaining,
+          calculated_points: 0,
+        })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || `Evaluation server responded with error ${res.status}`);
+      }
+
+      const resData = await res.json();
+      if (resData.image2_points !== undefined) {
+        image2Points = resData.image2_points;
+      } else if (resData.points_awarded !== undefined) {
+        image2Points = resData.points_awarded;
+      } else if (resData.image2_similarity) {
+        const simParsed = parseFloat(resData.image2_similarity.replace('%', ''));
+        if (!isNaN(simParsed)) {
+          image2Points = Math.round(MAX_IMAGE_POINTS * (simParsed / 100));
         }
-      } catch {}
+      }
+      finalTotalPoints = image1Points + image2Points;
+
+      if (resData.image2_similarity) {
+        image2Similarity = resData.image2_similarity;
+      }
+      if (resData.new_total_score !== undefined) {
+        localStorage.setItem('cyphora_team_score', resData.new_total_score.toString());
+      }
 
       setEvaluatedScore(finalTotalPoints);
       setTeamPoints(finalTotalPoints);
@@ -874,14 +877,20 @@ export function Round2App({ windowId }) {
               <form onSubmit={handleAdminSupervisorLogin} className="supervisor-auth-form">
                 <div className="supervisor-input-group">
                   <input
-                    type="password"
+                    type="text"
+                    name="supervisor_override_code"
                     placeholder="Enter Admin Password..."
                     value={adminAuthCode}
                     onChange={(e) => setAdminAuthCode(e.target.value)}
-                    className="supervisor-input"
+                    className="supervisor-input pin-mask-input"
                     maxLength={32}
                     autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
                     spellCheck="false"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-form-type="other"
                   />
                   <button
                     type="submit"

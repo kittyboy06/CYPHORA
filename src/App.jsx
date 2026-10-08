@@ -1437,10 +1437,11 @@ function App({ initialStage = null, defaultAppId = null }) {
                     </label>
                     <div className="pin-input-container">
                       <input
-                        type={showRegisterPin ? 'text' : 'password'}
-                        name="reg_team_pin"
+                        type="text"
+                        name="reg_team_pin_code"
                         id="reg_team_pin"
-                        className="team-input"
+                        className={`team-input ${showRegisterPin ? '' : 'pin-mask-input'}`}
+                        inputMode="numeric"
                         value={registerPinInput}
                         onChange={(e) => setRegisterPinInput(e.target.value)}
                         placeholder="Create 4-digit PIN"
@@ -1450,6 +1451,8 @@ function App({ initialStage = null, defaultAppId = null }) {
                         autoCapitalize="off"
                         spellCheck="false"
                         data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-form-type="other"
                         required
                       />
                       <button
@@ -1597,17 +1600,22 @@ function App({ initialStage = null, defaultAppId = null }) {
                     </label>
                     <div className="pin-input-container">
                       <input
-                        type={showResumePin ? 'text' : 'password'}
-                        name="resume_team_pin"
+                        type="text"
+                        name="resume_team_pin_code"
                         id="resume_team_pin"
-                        className="team-input"
+                        className={`team-input ${showResumePin ? '' : 'pin-mask-input'}`}
+                        inputMode="numeric"
                         value={resumePinInput}
                         onChange={(e) => setResumePinInput(e.target.value)}
                         placeholder="Enter 4-digit PIN"
                         maxLength={16}
                         autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
                         spellCheck="false"
                         data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-form-type="other"
                         required
                       />
                       <button

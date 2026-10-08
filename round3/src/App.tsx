@@ -291,9 +291,9 @@ function App() {
     return <LandingScreen onEnter={enterFullscreen} />;
   }
 
-  // Anti-Cheat is disabled:
-  if (!isFullscreen) {
-    return <AntiCheatScreen reason={lockReason} onAdminUnlock={enterFullscreen} />;
+  // Fullscreen is recommended but not blocking; AntiCheatScreen only for explicit security locks
+  if (isTabSwitched && lockReason) {
+    return <AntiCheatScreen reason={lockReason} onAdminUnlock={() => { setIsTabSwitched(false); setLockReason(''); }} />;
   }
 
   if (showStory) {
