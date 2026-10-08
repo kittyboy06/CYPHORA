@@ -2,6 +2,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import func
 
 from ..database import get_db
 from ..models import Team, TaskSubmission
@@ -265,6 +266,17 @@ async def submit_stage1_task(
     res = await db.execute(stmt)
     already_done = res.scalar_one_or_none()
     if already_done:
+        # Guarantee round1_score is in sync with database records
+        stmt_sum = select(func.coalesce(func.sum(TaskSubmission.points_awarded), 0)).filter(
+            TaskSubmission.team_id == current_team.id,
+            TaskSubmission.stage == 1
+        )
+        r1_actual = (await db.execute(stmt_sum)).scalar() or 0
+        if (current_team.round1_score or 0) != r1_actual:
+            current_team.round1_score = r1_actual
+            current_team.score = (current_team.round1_score or 0) + (getattr(current_team, 'round2_score', 0) or 0) + (getattr(current_team, 'round3_score', 0) or 0)
+            await db.commit()
+            await ws_manager.broadcast_leaderboard(db)
         return TaskSubmitResponse(
             success=True,
             task_key=resolved_key,
@@ -279,7 +291,8 @@ async def submit_stage1_task(
     points = max(0, base_points - hint_penalty)
 
     # Award points & update stage
-    current_team.score += points
+    current_team.round1_score = (getattr(current_team, 'round1_score', 0) or 0) + points
+    current_team.score = (getattr(current_team, 'round1_score', 0) or 0) + (getattr(current_team, 'round2_score', 0) or 0) + (getattr(current_team, 'round3_score', 0) or 0)
     current_team.status = "active"
     target_stage = task_info.get("stage", 1)
     if target_stage > current_team.current_stage:

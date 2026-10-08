@@ -275,6 +275,16 @@ export function normalizeRound1State(state) {
   merged.isExpired = snapshot.isExpired;
   merged.isTimerRunning = snapshot.isTimerRunning;
 
+  const isCelebrationDismissed = Boolean(
+    merged.celebrationDismissed ||
+    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round1_celebration_dismissed') === 'true') ||
+    (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round1_celebration_dismissed') === 'true')
+  );
+  if (isCelebrationDismissed) {
+    merged.finalMemoryVisible = false;
+    merged.celebrationDismissed = true;
+  }
+
   if (!merged.round1StartedAt || merged.isExpired || merged.round1Status === 'COMPLETED') {
     merged.isTimerRunning = false;
   }
@@ -391,6 +401,19 @@ const EVENT_TYPE_MAP = {
 
 export function processRound1Event(state, eventName, payload = {}) {
   const next = normalizeRound1State(state || buildDefaultRound1State());
+
+  if (eventName === 'DISMISS_ROUND1_CELEBRATION') {
+    next.finalMemoryVisible = false;
+    next.celebrationDismissed = true;
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
+    }
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
+    }
+    return recalculateRound1State(next);
+  }
+
   if (next.isCompleted || next.round1Status === 'COMPLETED') {
     return next;
   }
@@ -508,7 +531,13 @@ export function processRound1Event(state, eventName, payload = {}) {
     nextState.isCompleted = true;
     nextState.journeyProgress = 100;
     nextState.lightReached = true;
-    nextState.finalMemoryVisible = true;
+    const isDismissed = Boolean(
+      state?.celebrationDismissed ||
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round1_celebration_dismissed') === 'true') ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round1_celebration_dismissed') === 'true')
+    );
+    nextState.finalMemoryVisible = !isDismissed;
+    nextState.celebrationDismissed = isDismissed;
     nextState.memoryFragmentRecovered = true;
     nextState.isTimerRunning = false;
     nextState.remainingTimeMs = Math.max(0, nextState.remainingTimeMs);

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Lock, Key, X, Check, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import './Round3App.css';
 
 const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
 const isDevPort = typeof window !== 'undefined' && window.location.port && window.location.port !== '8000';
 const API_BASE = isDevPort ? `http://${hostname}:8000` : '';
 
-export function Round3PermissionModal({ teamData, onAuthorized, onCancel }) {
+export function Round3PermissionModal({ teamData, round1State, onAuthorized, onCancel }) {
   const [adminCode, setAdminCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -13,6 +14,14 @@ export function Round3PermissionModal({ teamData, onAuthorized, onCancel }) {
 
   const teamName = teamData?.name || localStorage.getItem('cyphora_team_name') || 'Explorer';
   const teamId = teamData?.id || localStorage.getItem('cyphora_team_id');
+
+  const completedTasksCount = Array.isArray(round1State?.tasks)
+    ? round1State.tasks.filter(t => t.status === 'COMPLETED').length
+    : (Array.isArray(round1State?.completedTaskIds) ? round1State.completedTaskIds.length : 0);
+  const isRound1Completed = Boolean(
+    round1State?.round1Status === 'COMPLETED' ||
+    completedTasksCount >= 12
+  );
 
   useEffect(() => {
     const handleAccessChange = (e) => {
@@ -76,8 +85,11 @@ export function Round3PermissionModal({ teamData, onAuthorized, onCancel }) {
       return;
     }
 
-    // Persist authorization in storage
+    // Persist authorization in storage scoped to session
     try {
+      if (teamId) {
+        sessionStorage.setItem(`cyphora_round3_override_${teamId}`, 'true');
+      }
       localStorage.setItem('cyphora_round3_unlocked', 'true');
       sessionStorage.setItem('cyphora_round3_unlocked', 'true');
       localStorage.setItem('cyphora_round3_supervisor_override', 'true');
@@ -97,6 +109,12 @@ export function Round3PermissionModal({ teamData, onAuthorized, onCancel }) {
         });
       }
     } catch (err) { }
+
+    try {
+      window.dispatchEvent(new CustomEvent('cyphora_round3_access_changed', {
+        detail: { unlocked: true, team_id: teamId, team_name: teamName }
+      }));
+    } catch (e) { }
 
     setIsVerifying(false);
     if (typeof onAuthorized === 'function') {
@@ -135,16 +153,51 @@ export function Round3PermissionModal({ teamData, onAuthorized, onCancel }) {
         </div>
 
         <div className="round3-modal-body">
-          <div className="round3-warning-box">
+          <div className={`round3-warning-box ${isRound1Completed ? 'completed' : ''}`}>
             <Lock className="warning-box-icon" size={20} />
             <div className="warning-box-text">
-              <p>
-                Access to <strong>Round 3 (The Temple Trials / The Jungle Code)</strong> requires clearance from the competition administrator or event proctor.
-              </p>
-              <p className="warning-note">
-                Please wait for the administrator to unlock your team remotely, or have an event proctor enter the station authorization master key below.
-              </p>
+              {!isRound1Completed ? (
+                <>
+                  <p>
+                    <strong>ROUND 1 IN PROGRESS ({completedTasksCount}/12 Subsystems Restored)</strong>
+                  </p>
+                  <p>
+                    This workstation is actively assigned to <strong>Round 1: OS Navigation</strong>. All 12 subsystem challenges must be solved before Round 3 (The Temple Trials / The Jungle Code) can be accessed.
+                  </p>
+                  <div className="round3-progress-wrap">
+                    <div className="round3-progress-bar">
+                      <div
+                        className="round3-progress-fill"
+                        style={{ width: `${Math.round((completedTasksCount / 12) * 100)}%` }}
+                      />
+                    </div>
+                    <span className="round3-progress-text">
+                      {completedTasksCount} of 12 Subsystems Restored ({Math.round((completedTasksCount / 12) * 100)}%)
+                    </span>
+                  </div>
+                  <p className="warning-note">
+                    Wait for administrator clearance from the Central Dashboard, or have an event proctor enter the station authorization master key below.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>
+                    <strong>ROUND 1 COMPLETE (12/12) &bull; AWAITING ADMINISTRATOR CLEARANCE</strong>
+                  </p>
+                  <p>
+                    Station subsystems are restored! Access to <strong>Round 3 (The Temple Trials / The Jungle Code)</strong> requires clearance from the competition administrator or event proctor.
+                  </p>
+                  <p className="warning-note">
+                    Please wait for the administrator to unlock your team remotely, or have an event proctor enter the station authorization master key below.
+                  </p>
+                </>
+              )}
             </div>
+          </div>
+
+          <div className="round3-beacon-indicator">
+            <span className="round3-beacon-pulse" />
+            <span>Listening for real-time clearance signal from Admin Command...</span>
           </div>
 
           <form onSubmit={handleAuthorize} className="round3-auth-form" autoComplete="off">
@@ -156,14 +209,14 @@ export function Round3PermissionModal({ teamData, onAuthorized, onCancel }) {
             <div className="round3-input-wrapper">
               <input
                 id="r3_admin_code"
-                type="text"
+                type={showPassword ? 'text' : 'password'}
                 value={adminCode}
                 onChange={(e) => {
                   setAdminCode(e.target.value);
                   setError('');
                 }}
                 placeholder="Enter Proctor Key..."
-                className={`round3-auth-input ${showPassword ? '' : 'pin-mask-input'} ${error ? 'has-error' : ''}`}
+                className={`round3-auth-input ${error ? 'has-error' : ''}`}
                 autoFocus
                 disabled={isVerifying}
                 autoComplete="off"
@@ -221,3 +274,5 @@ export function Round3PermissionModal({ teamData, onAuthorized, onCancel }) {
     </div>
   );
 }
+
+export default Round3PermissionModal;

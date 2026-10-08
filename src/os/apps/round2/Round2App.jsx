@@ -41,25 +41,36 @@ const MAX_IMAGE_POINTS = 50; // 50 points max per image for 100% accuracy
 export function Round2App({ windowId }) {
   const { openApp, closeWindow, vfs, eventBus, teamData, fetchLeaderboard, requestFullscreen, round1State } = useOS();
 
-  const isRound1Completed = round1State?.round1Status === 'COMPLETED' ||
-    (Array.isArray(round1State?.tasks) && round1State.tasks.filter(t => t.status === 'COMPLETED').length === 12);
   const completedTasksCount = Array.isArray(round1State?.tasks)
     ? round1State.tasks.filter(t => t.status === 'COMPLETED').length
-    : 0;
+    : (Array.isArray(round1State?.completedTaskIds) ? round1State.completedTaskIds.length : 0);
+  const isRound1Completed = Boolean(
+    round1State?.round1Status === 'COMPLETED' ||
+    completedTasksCount >= 12 ||
+    (Array.isArray(round1State?.completedTaskIds) && round1State.completedTaskIds.length >= 12)
+  );
+
+  const teamId = teamData?.id || (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : null);
 
   const [isSupervisorOverridden, setIsSupervisorOverridden] = useState(() => {
+    if (typeof sessionStorage === 'undefined') return false;
     return Boolean(
-      localStorage.getItem('cyphora_round2_supervisor_override') === 'true' ||
+      (teamId && sessionStorage.getItem(`cyphora_round2_override_${teamId}`) === 'true') ||
       sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true'
     );
   });
 
   const [isRound2Authorized, setIsRound2Authorized] = useState(() => {
-    return Boolean(
-      teamData?.round2Unlocked ||
-      localStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-      sessionStorage.getItem('cyphora_round2_unlocked') === 'true'
-    );
+    if (teamData?.round2Unlocked || teamData?.round2_unlocked) return true;
+    if (typeof sessionStorage !== 'undefined') {
+      if (teamId && sessionStorage.getItem(`cyphora_round2_override_${teamId}`) === 'true') return true;
+      if (sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true') return true;
+    }
+    // Only allow persistent storage if Round 1 is verified complete
+    if (isRound1Completed) {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round2_unlocked') === 'true') return true;
+    }
+    return false;
   });
 
   const [adminAuthCode, setAdminAuthCode] = useState('');
@@ -145,17 +156,24 @@ export function Round2App({ windowId }) {
       const myId = teamData?.id || parseInt(localStorage.getItem('cyphora_team_id'), 10);
       const myName = (teamData?.name || localStorage.getItem('cyphora_team_name') || '').toLowerCase();
       if (detail.unlocked !== undefined) {
-        if (!detail.team_id && !detail.team_name) {
+        const matches = (!detail.team_id && !detail.team_name) ||
+          ((detail.team_id && detail.team_id === myId) || (detail.team_name && detail.team_name.toLowerCase() === myName));
+        if (matches) {
           setIsRound2Authorized(Boolean(detail.unlocked));
           if (detail.unlocked) {
             localStorage.setItem('cyphora_round2_unlocked', 'true');
             sessionStorage.setItem('cyphora_round2_unlocked', 'true');
-          }
-        } else if ((detail.team_id && detail.team_id === myId) || (detail.team_name && detail.team_name.toLowerCase() === myName)) {
-          setIsRound2Authorized(Boolean(detail.unlocked));
-          if (detail.unlocked) {
-            localStorage.setItem('cyphora_round2_unlocked', 'true');
-            sessionStorage.setItem('cyphora_round2_unlocked', 'true');
+          } else {
+            setIsSupervisorOverridden(false);
+            if (teamId) {
+              try { sessionStorage.removeItem(`cyphora_round2_override_${teamId}`); } catch (_) {}
+            }
+            try {
+              localStorage.removeItem('cyphora_round2_unlocked');
+              sessionStorage.removeItem('cyphora_round2_unlocked');
+              localStorage.removeItem('cyphora_round2_supervisor_override');
+              sessionStorage.removeItem('cyphora_round2_supervisor_override');
+            } catch (_) {}
           }
         }
       }

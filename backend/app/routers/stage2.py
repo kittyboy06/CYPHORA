@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter, Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import func
 
 import os
 from pathlib import Path
@@ -256,7 +257,8 @@ async def evaluate_stage2_image1(
         existing = (await db.execute(stmt)).scalar_one_or_none()
 
         if not existing:
-            team.score += phase1_points
+            team.round2_score = (getattr(team, 'round2_score', 0) or 0) + phase1_points
+            team.score = (getattr(team, 'round1_score', 0) or 0) + (getattr(team, 'round2_score', 0) or 0) + (getattr(team, 'round3_score', 0) or 0)
             if team.current_stage < 2:
                 team.current_stage = 2
             team.status = "active"
@@ -281,6 +283,18 @@ async def evaluate_stage2_image1(
 
             # Real-time leaderboard broadcast to Admin Portal and all workstations
             await ws_manager.broadcast_leaderboard(db)
+        else:
+            # Re-sync if team.round2_score is out of sync with stored submission
+            stmt_sum = select(func.coalesce(func.sum(TaskSubmission.points_awarded), 0)).filter(
+                TaskSubmission.team_id == team.id,
+                TaskSubmission.stage == 2
+            )
+            r2_actual = (await db.execute(stmt_sum)).scalar() or 0
+            if (team.round2_score or 0) != r2_actual:
+                team.round2_score = r2_actual
+                team.score = (getattr(team, 'round1_score', 0) or 0) + (team.round2_score or 0) + (getattr(team, 'round3_score', 0) or 0)
+                await db.commit()
+                await ws_manager.broadcast_leaderboard(db)
 
         return {
             "success": True,
@@ -339,7 +353,8 @@ async def submit_stage2(
         existing = (await db.execute(stmt)).scalar_one_or_none()
 
         if not existing:
-            team.score += image2_points
+            team.round2_score = (getattr(team, 'round2_score', 0) or 0) + image2_points
+            team.score = (getattr(team, 'round1_score', 0) or 0) + (getattr(team, 'round2_score', 0) or 0) + (getattr(team, 'round3_score', 0) or 0)
             if team.current_stage < 2:
                 team.current_stage = 2
             team.status = "active"
@@ -368,6 +383,18 @@ async def submit_stage2(
 
             # Broadcast new standings across all 100 workstations
             await ws_manager.broadcast_leaderboard(db)
+        else:
+            # Re-sync if team.round2_score is out of sync with stored submission
+            stmt_sum = select(func.coalesce(func.sum(TaskSubmission.points_awarded), 0)).filter(
+                TaskSubmission.team_id == team.id,
+                TaskSubmission.stage == 2
+            )
+            r2_actual = (await db.execute(stmt_sum)).scalar() or 0
+            if (team.round2_score or 0) != r2_actual:
+                team.round2_score = r2_actual
+                team.score = (getattr(team, 'round1_score', 0) or 0) + (team.round2_score or 0) + (getattr(team, 'round3_score', 0) or 0)
+                await db.commit()
+                await ws_manager.broadcast_leaderboard(db)
 
         return {
             "success": True,

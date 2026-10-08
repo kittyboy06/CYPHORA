@@ -1,11 +1,11 @@
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Compass, Radio, Zap, Unlock, ArrowRight } from 'lucide-react';
+import { Shield, Compass, Radio, Zap, Unlock, ArrowRight, X } from 'lucide-react';
 import { useOS } from '../os/state/OSContext.jsx';
 import './CompletionCelebration.css';
 
-export function CompletionCelebration() {
-  const { onReturnToHub } = useOS();
+export function CompletionCelebration({ onDismiss }) {
+  const { onReturnToHub, openApp, setRound1State, eventBus } = useOS();
 
   useEffect(() => {
     try {
@@ -29,15 +29,66 @@ export function CompletionCelebration() {
     } catch (e) {}
   }, []);
 
+  const handleDismiss = () => {
+    try {
+      sessionStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
+      localStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
+    } catch (e) {}
+
+    if (typeof setRound1State === 'function') {
+      setRound1State(prev => ({
+        ...prev,
+        finalMemoryVisible: false,
+        celebrationDismissed: true
+      }));
+    }
+    if (eventBus && typeof eventBus.emit === 'function') {
+      eventBus.emit('DISMISS_ROUND1_CELEBRATION');
+    }
+    if (typeof onDismiss === 'function') {
+      onDismiss();
+    }
+  };
+
+  const handleProceedToRound2 = () => {
+    handleDismiss();
+    try {
+      localStorage.setItem('cyphora_round2_unlocked', 'true');
+      sessionStorage.setItem('cyphora_round2_unlocked', 'true');
+      sessionStorage.setItem('cyphora_active_round', '2');
+    } catch (e) {}
+    window.dispatchEvent(new CustomEvent('cyphora_round2_access_changed', { detail: { unlocked: true } }));
+    if (typeof openApp === 'function') {
+      openApp('round2');
+    }
+  };
+
+  const handleReturnToHub = () => {
+    handleDismiss();
+    if (typeof onReturnToHub === 'function') {
+      onReturnToHub();
+    }
+  };
+
   return (
     <div className="completion-celebration" role="status">
-      <div className="completion-backdrop" />
+      <div className="completion-backdrop" onClick={handleDismiss} />
       <motion.div
         className="completion-card"
         initial={{ opacity: 0, scale: 0.92, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
+        <button
+          type="button"
+          className="completion-close-btn"
+          onClick={handleDismiss}
+          title="Close notification and return to OS desktop"
+          aria-label="Close"
+        >
+          <X size={18} />
+        </button>
+
         <div className="completion-header">
           <Shield size={18} className="completion-shield-icon" />
           <span className="completion-kicker">EXPEDITION FIELD MODULE // STATUS RESTORED</span>
@@ -67,22 +118,26 @@ export function CompletionCelebration() {
         </div>
 
         <div className="completion-terminal-output">
-          <p className="terminal-line primary">&gt; SYSTEM RESTORATION COMPLETE</p>
+          <p className="terminal-line primary">&gt; SYSTEM RESTORATION COMPLETE (12/12 TASKS)</p>
           <p className="terminal-line">&gt; SIGNAL SOURCE LOCATED.</p>
           <p className="terminal-line">&gt; DISTANCE: UNKNOWN.</p>
-          <p className="terminal-line">&gt; ROUTE: AVAILABLE.</p>
+          <p className="terminal-line">&gt; ROUTE TO ROUND 2: UNLOCKED.</p>
         </div>
 
         <div className="completion-monolith-reveal">
           <div className="monolith-glow-ring" />
           <h2 className="monolith-proclamation">THE PATH TO THE LIGHT IS OPEN.</h2>
-          <p className="monolith-subtext">The signal coordinates are locked. Proceed into the unknown.</p>
+          <p className="monolith-subtext">The signal coordinates are locked. Proceed into Round 2: Image Navigation.</p>
         </div>
 
         <div className="completion-actions">
-          <button className="completion-proceed-btn" onClick={onReturnToHub}>
-            <span>PROCEED TOWARD THE LIGHT</span>
-            <ArrowRight size={16} />
+          <button className="completion-proceed-btn" onClick={handleProceedToRound2}>
+            <Compass size={17} />
+            <span>START ROUND 2: IMAGE NAVIGATION</span>
+            <ArrowRight size={17} />
+          </button>
+          <button className="completion-hub-btn" onClick={handleReturnToHub}>
+            <span>Return to Expedition Hub</span>
           </button>
         </div>
       </motion.div>

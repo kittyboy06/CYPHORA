@@ -45,6 +45,10 @@ function App({ initialStage = null, defaultAppId = null }) {
       const s = params.get('stage');
       if (s) return s;
       if (params.get('round') === '2') return 'os-desktop';
+      const storedStage = sessionStorage.getItem('cyphora_current_stage');
+      if (storedStage && ['main', 'initial', 'prologue', 'os-desktop'].includes(storedStage)) {
+        return storedStage;
+      }
       const savedName = sessionStorage.getItem('cyphora_team_name');
       if (savedName) {
         return 'os-desktop';
@@ -94,18 +98,8 @@ function App({ initialStage = null, defaultAppId = null }) {
           standing: '1st',
           score: 0,
           isSelected: true,
-          round2Unlocked: (
-            sessionStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-            localStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-            sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true' ||
-            localStorage.getItem('cyphora_round2_supervisor_override') === 'true'
-          ),
-          round3Unlocked: (
-            sessionStorage.getItem('cyphora_round3_unlocked') === 'true' ||
-            localStorage.getItem('cyphora_round3_unlocked') === 'true' ||
-            sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true' ||
-            localStorage.getItem('cyphora_round3_supervisor_override') === 'true'
-          ),
+          round2Unlocked: false,
+          round3Unlocked: false,
         };
       }
     }
@@ -237,12 +231,19 @@ function App({ initialStage = null, defaultAppId = null }) {
               return t;
             });
             const isDesktop = stageRef.current === 'os-desktop';
+            const isDismissed = Boolean(
+              prev.celebrationDismissed ||
+              sessionStorage.getItem('cyphora_round1_celebration_dismissed') === 'true' ||
+              localStorage.getItem('cyphora_round1_celebration_dismissed') === 'true'
+            );
             return recalculateRound1State({
               ...prev,
               round1StartedAt: prev.round1StartedAt || (isDesktop ? new Date().toISOString() : null),
               round1Status: completedKeys.size === 12 ? 'COMPLETED' : 'IN_PROGRESS',
               isExpired: false,
               isTimerRunning: isDesktop && completedKeys.size < 12,
+              finalMemoryVisible: completedKeys.size === 12 && !isDismissed,
+              celebrationDismissed: isDismissed,
               tasks: updatedTasks
             });
           });
@@ -1021,6 +1022,10 @@ function App({ initialStage = null, defaultAppId = null }) {
     try {
       sessionStorage.removeItem('cyphora_os_locked');
       sessionStorage.removeItem('cyphora_os_session');
+      sessionStorage.setItem('cyphora_current_stage', 'os-desktop');
+      if (isR2Auth || (syncResult && syncResult.completedCount >= 12)) {
+        sessionStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
+      }
     } catch (e) {}
 
     // Resuming returning players always directly enters the OS!
@@ -1250,6 +1255,7 @@ function App({ initialStage = null, defaultAppId = null }) {
     try {
       sessionStorage.removeItem('cyphora_os_locked');
       sessionStorage.setItem('cyphora_active_round', '1');
+      sessionStorage.setItem('cyphora_current_stage', 'os-desktop');
     } catch (e) { }
 
     // Transition to OS boot sequence - timer only starts when player lands on OS desktop
@@ -1264,13 +1270,47 @@ function App({ initialStage = null, defaultAppId = null }) {
     }
   };
 
+  const isRound1Completed = Boolean(
+    round1State?.round1Status === 'COMPLETED' ||
+    (Array.isArray(round1State?.tasks) && round1State.tasks.filter(t => t.status === 'COMPLETED').length >= 12) ||
+    (Array.isArray(round1State?.completedTaskIds) && round1State.completedTaskIds.length >= 12) ||
+    teamData?.round1Completed
+  );
+
+  const isStage2Unlocked = Boolean(
+    teamData?.round2Unlocked ||
+    teamData?.round2_unlocked ||
+    (typeof sessionStorage !== 'undefined' && teamData?.id && sessionStorage.getItem(`cyphora_round2_override_${teamData.id}`) === 'true') ||
+    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true') ||
+    (isRound1Completed && (
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round2_unlocked') === 'true') ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round2_unlocked') === 'true')
+    ))
+  );
+
+  const isStage3Unlocked = Boolean(
+    teamData?.round3Unlocked ||
+    teamData?.round3_unlocked ||
+    (typeof sessionStorage !== 'undefined' && teamData?.id && sessionStorage.getItem(`cyphora_round3_override_${teamData.id}`) === 'true') ||
+    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true') ||
+    (isRound1Completed && (
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round3_unlocked') === 'true') ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round3_unlocked') === 'true')
+    ))
+  );
+
   const handleLevelClick = (level, unlocked) => {
     if (!unlocked) return;
     if (level === 1) {
       try {
         sessionStorage.removeItem('cyphora_os_locked');
         sessionStorage.setItem('cyphora_active_round', '1');
+        sessionStorage.setItem('cyphora_current_stage', 'os-desktop');
+        sessionStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
       } catch (e) {}
+      if (setRound1State) {
+        setRound1State(prev => prev ? { ...prev, finalMemoryVisible: false, celebrationDismissed: true } : prev);
+      }
       if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
@@ -1280,6 +1320,7 @@ function App({ initialStage = null, defaultAppId = null }) {
     }
     if (level === 2) {
       const isR2Auth = Boolean(
+        isStage2Unlocked ||
         teamData?.round2Unlocked ||
         sessionStorage.getItem('cyphora_round2_unlocked') === 'true' ||
         localStorage.getItem('cyphora_round2_unlocked') === 'true' ||
@@ -1287,13 +1328,19 @@ function App({ initialStage = null, defaultAppId = null }) {
         localStorage.getItem('cyphora_round2_supervisor_override') === 'true'
       );
       if (!isR2Auth) {
-        alert('Round 2 is locked! Your team must receive administrator clearance to enter Round 2.');
+        alert('Round 2 is locked! Your team must complete Round 1 or receive administrator clearance to enter Round 2.');
         return;
       }
       try {
         sessionStorage.removeItem('cyphora_os_locked');
         sessionStorage.setItem('cyphora_active_round', '2');
+        sessionStorage.setItem('cyphora_current_stage', 'os-desktop');
+        sessionStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
+        sessionStorage.setItem('cyphora_round2_unlocked', 'true');
       } catch (e) {}
+      if (setRound1State) {
+        setRound1State(prev => prev ? { ...prev, finalMemoryVisible: false, celebrationDismissed: true } : prev);
+      }
       if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
@@ -1303,6 +1350,7 @@ function App({ initialStage = null, defaultAppId = null }) {
     }
     if (level === 3) {
       const isR3Auth = Boolean(
+        isStage3Unlocked ||
         teamData?.round3Unlocked ||
         sessionStorage.getItem('cyphora_round3_unlocked') === 'true' ||
         localStorage.getItem('cyphora_round3_unlocked') === 'true' ||
@@ -1316,7 +1364,12 @@ function App({ initialStage = null, defaultAppId = null }) {
       try {
         sessionStorage.removeItem('cyphora_os_locked');
         sessionStorage.setItem('cyphora_active_round', '3');
+        sessionStorage.setItem('cyphora_current_stage', 'os-desktop');
+        sessionStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
       } catch (e) {}
+      if (setRound1State) {
+        setRound1State(prev => prev ? { ...prev, finalMemoryVisible: false, celebrationDismissed: true } : prev);
+      }
       if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
@@ -1326,22 +1379,6 @@ function App({ initialStage = null, defaultAppId = null }) {
     }
     window.location.href = `/round${level}/index.html`;
   };
-
-  const isStage2Unlocked = Boolean(
-    teamData?.round2Unlocked ||
-    sessionStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-    localStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-    sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true' ||
-    localStorage.getItem('cyphora_round2_supervisor_override') === 'true'
-  );
-
-  const isStage3Unlocked = Boolean(
-    teamData?.round3Unlocked ||
-    sessionStorage.getItem('cyphora_round3_unlocked') === 'true' ||
-    localStorage.getItem('cyphora_round3_unlocked') === 'true' ||
-    sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true' ||
-    localStorage.getItem('cyphora_round3_supervisor_override') === 'true'
-  );
 
   const explorerList = Array.isArray(liveExplorers)
     ? liveExplorers.map(e => ({
@@ -1841,7 +1878,12 @@ function App({ initialStage = null, defaultAppId = null }) {
             try {
               sessionStorage.removeItem('cyphora_active_round');
               sessionStorage.removeItem('cyphora_os_locked');
+              sessionStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
+              sessionStorage.setItem('cyphora_current_stage', 'main');
             } catch (e) {}
+            if (setRound1State) {
+              setRound1State(prev => prev ? { ...prev, finalMemoryVisible: false, celebrationDismissed: true } : prev);
+            }
             setInitialAppId(null);
             setStage('main');
           }}

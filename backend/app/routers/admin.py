@@ -124,7 +124,8 @@ async def list_admin_teams(
             "round2_score": r2_s,
             "round3_score": r3_s,
             "final_score": r2_s + r3_s,
-            "status": t.status,
+            "status": "active" if ws_manager.is_team_connected(t.name) else t.status,
+            "is_connected": ws_manager.is_team_connected(t.name),
             "current_stage": t.current_stage,
             "round2_unlocked": bool(getattr(t, 'round2_unlocked', 0) or (t.current_stage and t.current_stage >= 2)),
             "round3_unlocked": bool(getattr(t, 'round3_unlocked', 0) or (t.current_stage and t.current_stage >= 3)),
@@ -132,6 +133,12 @@ async def list_admin_teams(
             "notes": t.notes,
             "last_ip": t.last_ip,
             "started_at": t.started_at.isoformat() if t.started_at else None,
+            "round1_started_at": t.round1_started_at.isoformat() if getattr(t, 'round1_started_at', None) else None,
+            "round2_started_at": t.round2_started_at.isoformat() if getattr(t, 'round2_started_at', None) else None,
+            "round3_started_at": t.round3_started_at.isoformat() if getattr(t, 'round3_started_at', None) else None,
+            "round1_completed_at": t.round1_completed_at.isoformat() if getattr(t, 'round1_completed_at', None) else None,
+            "round2_completed_at": t.round2_completed_at.isoformat() if getattr(t, 'round2_completed_at', None) else None,
+            "round3_completed_at": t.round3_completed_at.isoformat() if getattr(t, 'round3_completed_at', None) else None,
             "updated_at": t.updated_at.isoformat() if t.updated_at else None,
             "created_at": t.created_at.isoformat() if t.created_at else None,
         })
@@ -634,37 +641,56 @@ def _default_timer(round_num: int):
     mins = 60 if round_num == 1 else 30
     return {
         "round": round_num,
-        "action": "configured",
+        "action": "stopped",
         "duration_minutes": mins,
         "remaining_seconds": mins * 60,
+        "ends_at": None,
+        "started_at": None,
         "updated_at": datetime.utcnow().isoformat()
     }
 
 async def _fetch_timer(db: AsyncSession, round_num: int) -> dict:
     import json
+    from datetime import datetime
     key = f"event_timer_round_{round_num}"
     res = await db.execute(select(EventConfig).filter(EventConfig.key == key))
     cfg = res.scalar_one_or_none()
+    d = None
     if cfg and cfg.value:
         try:
             d = json.loads(cfg.value)
             d["round"] = round_num
-            return d
         except Exception:
             pass
 
-    if round_num == 1:
+    if not d and round_num == 1:
         res_leg = await db.execute(select(EventConfig).filter(EventConfig.key == "event_timer"))
         cfg_leg = res_leg.scalar_one_or_none()
         if cfg_leg and cfg_leg.value:
             try:
                 d = json.loads(cfg_leg.value)
                 d["round"] = 1
-                return d
             except Exception:
                 pass
 
-    return _default_timer(round_num)
+    if not d:
+        d = _default_timer(round_num)
+
+    # If running, calculate live remaining seconds
+    if d.get("action") == "start" and d.get("ends_at"):
+        try:
+            ends_at_dt = datetime.fromisoformat(d["ends_at"])
+            now = datetime.utcnow()
+            rem = int((ends_at_dt - now).total_seconds())
+            if rem <= 0:
+                d["action"] = "expired"
+                d["remaining_seconds"] = 0
+            else:
+                d["remaining_seconds"] = rem
+        except Exception:
+            pass
+
+    return d
 
 @router.get("/timer")
 async def get_admin_event_timer(
@@ -697,36 +723,91 @@ async def get_admin_event_timer(
 @router.post("/timer")
 async def configure_event_timer(
     round: int = 1,
-    duration_minutes: int = 60,
-    action: str = "set", # "set" | "reset" | "configured"
+    duration_minutes: Optional[int] = None,
+    action: str = "set", # "start" | "pause" | "resume" | "reset" | "set" | "configured"
     remaining_seconds: Optional[int] = None,
     authorized: bool = Depends(verify_admin),
     db: AsyncSession = Depends(get_db)
 ):
-    """Configures the duration limit for Round 1, Round 2, or Round 3 across all workstations.
-    Timers start dynamically per workstation when teams reach their respective milestone:
-    - Round 1: after team enters the OS desktop
-    - Round 2: after team enters the Round 2 app
-    - Round 3: after finishing the beginning story in Round 3
+    """Configures or controls the duration and countdown for Round 1, Round 2, or Round 3.
+    Supports start, pause, resume, reset, and set actions broadcasted in real time.
     """
     import json
-    from datetime import datetime
+    from datetime import datetime, timedelta
 
     round_num = int(round) if int(round) in (1, 2, 3) else 1
     now = datetime.utcnow()
 
+    existing_timer = await _fetch_timer(db, round_num)
+    cur_mins = duration_minutes if duration_minutes is not None else existing_timer.get("duration_minutes", 60 if round_num == 1 else 30)
+
     if action == "reset":
-        duration_minutes = 60 if round_num == 1 else 30
+        mins = cur_mins or (60 if round_num == 1 else 30)
+        timer_payload = {
+            "round": round_num,
+            "action": "stopped",
+            "duration_minutes": mins,
+            "remaining_seconds": mins * 60,
+            "ends_at": None,
+            "started_at": None,
+            "updated_at": now.isoformat()
+        }
+    elif action == "start":
+        rem = remaining_seconds if remaining_seconds is not None else (cur_mins * 60)
+        ends_at = (now + timedelta(seconds=rem)).isoformat()
+        timer_payload = {
+            "round": round_num,
+            "action": "start",
+            "duration_minutes": cur_mins,
+            "remaining_seconds": rem,
+            "ends_at": ends_at,
+            "started_at": now.isoformat(),
+            "updated_at": now.isoformat()
+        }
+    elif action == "pause":
+        rem = existing_timer.get("remaining_seconds", cur_mins * 60)
+        if existing_timer.get("ends_at"):
+            try:
+                ends_at_dt = datetime.fromisoformat(existing_timer["ends_at"])
+                rem = max(0, int((ends_at_dt - now).total_seconds()))
+            except Exception:
+                pass
+        timer_payload = {
+            "round": round_num,
+            "action": "pause",
+            "duration_minutes": cur_mins,
+            "remaining_seconds": rem,
+            "ends_at": None,
+            "started_at": existing_timer.get("started_at"),
+            "updated_at": now.isoformat()
+        }
+    elif action == "resume":
+        rem = remaining_seconds if remaining_seconds is not None else existing_timer.get("remaining_seconds", cur_mins * 60)
+        if rem <= 0:
+            rem = cur_mins * 60
+        ends_at = (now + timedelta(seconds=rem)).isoformat()
+        timer_payload = {
+            "round": round_num,
+            "action": "start",
+            "duration_minutes": cur_mins,
+            "remaining_seconds": rem,
+            "ends_at": ends_at,
+            "started_at": existing_timer.get("started_at") or now.isoformat(),
+            "updated_at": now.isoformat()
+        }
+    else:  # "set" | "configured"
+        mins = cur_mins or (60 if round_num == 1 else 30)
+        timer_payload = {
+            "round": round_num,
+            "action": "configured",
+            "duration_minutes": mins,
+            "remaining_seconds": mins * 60,
+            "ends_at": None,
+            "started_at": None,
+            "updated_at": now.isoformat()
+        }
 
-    timer_payload = {
-        "round": round_num,
-        "action": "configured",
-        "duration_minutes": duration_minutes,
-        "remaining_seconds": duration_minutes * 60,
-        "updated_at": now.isoformat()
-    }
     raw = json.dumps(timer_payload)
-
     key = f"event_timer_round_{round_num}"
     res = await db.execute(select(EventConfig).filter(EventConfig.key == key))
     cfg = res.scalar_one_or_none()
@@ -773,6 +854,36 @@ async def configure_event_timer(
             "round3": r3
         }
     }
+
+@router.post("/teams/{team_id}/timer-reset")
+async def reset_team_round_timer(
+    team_id: int,
+    round_num: Optional[int] = None,
+    authorized: bool = Depends(verify_admin),
+    db: AsyncSession = Depends(get_db)
+):
+    """Resets the timing stamps for a team so they can restart their round timer."""
+    res = await db.execute(select(Team).filter(Team.id == team_id))
+    team = res.scalar_one_or_none()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found.")
+
+    target = round_num or team.current_stage or 1
+    now = datetime.utcnow()
+    if target == 1:
+        team.round1_started_at = now
+        team.started_at = now
+        team.round1_completed_at = None
+    elif target == 2:
+        team.round2_started_at = now
+        team.round2_completed_at = None
+    elif target == 3:
+        team.round3_started_at = now
+        team.round3_completed_at = None
+
+    await db.commit()
+    await ws_manager.broadcast_leaderboard(db)
+    return {"status": "success", "message": f"Team {team.name} Round {target} timer reset to current time."}
 
 def execute_backup() -> dict:
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")

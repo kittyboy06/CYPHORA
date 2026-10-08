@@ -78,6 +78,18 @@ async def migrate_columns():
             await conn.execute(text("ALTER TABLE teams ADD COLUMN round2_score INTEGER DEFAULT 0;"))
         if "round3_score" not in existing_cols:
             await conn.execute(text("ALTER TABLE teams ADD COLUMN round3_score INTEGER DEFAULT 0;"))
+        if "round1_started_at" not in existing_cols:
+            await conn.execute(text("ALTER TABLE teams ADD COLUMN round1_started_at TIMESTAMP;"))
+        if "round2_started_at" not in existing_cols:
+            await conn.execute(text("ALTER TABLE teams ADD COLUMN round2_started_at TIMESTAMP;"))
+        if "round3_started_at" not in existing_cols:
+            await conn.execute(text("ALTER TABLE teams ADD COLUMN round3_started_at TIMESTAMP;"))
+        if "round1_completed_at" not in existing_cols:
+            await conn.execute(text("ALTER TABLE teams ADD COLUMN round1_completed_at TIMESTAMP;"))
+        if "round2_completed_at" not in existing_cols:
+            await conn.execute(text("ALTER TABLE teams ADD COLUMN round2_completed_at TIMESTAMP;"))
+        if "round3_completed_at" not in existing_cols:
+            await conn.execute(text("ALTER TABLE teams ADD COLUMN round3_completed_at TIMESTAMP;"))
 
         # Synchronize / backfill round scores from existing task_submissions
         await conn.execute(text("""
@@ -85,6 +97,47 @@ async def migrate_columns():
                 round1_score = COALESCE((SELECT SUM(points_awarded) FROM task_submissions WHERE task_submissions.team_id = teams.id AND task_submissions.stage = 1), 0),
                 round2_score = COALESCE((SELECT SUM(points_awarded) FROM task_submissions WHERE task_submissions.team_id = teams.id AND task_submissions.stage = 2), 0),
                 round3_score = COALESCE((SELECT SUM(points_awarded) FROM task_submissions WHERE task_submissions.team_id = teams.id AND task_submissions.stage = 3), 0);
+        """))
+
+        # Reset historical runaway started_at timestamps where started_at == created_at and team hasn't actually started
+        await conn.execute(text("""
+            UPDATE teams SET started_at = NULL, round1_started_at = NULL
+            WHERE current_stage = 1 AND round1_score = 0
+              AND started_at IS NOT NULL
+              AND (julianday('now') - julianday(COALESCE(started_at, created_at))) > 0.1;
+        """))
+
+        # Backfill round1_started_at from first task submission for teams with activity
+        await conn.execute(text("""
+            UPDATE teams SET
+                round1_started_at = (
+                    SELECT MIN(submitted_at) FROM task_submissions 
+                    WHERE task_submissions.team_id = teams.id AND task_submissions.stage = 1
+                )
+            WHERE round1_started_at IS NULL AND EXISTS (
+                SELECT 1 FROM task_submissions 
+                WHERE task_submissions.team_id = teams.id AND task_submissions.stage = 1
+            );
+        """))
+
+        # For teams at stage >= 2, mark round1_completed_at
+        await conn.execute(text("""
+            UPDATE teams SET
+                round1_completed_at = COALESCE(
+                    (SELECT MAX(submitted_at) FROM task_submissions WHERE task_submissions.team_id = teams.id AND task_submissions.stage = 1),
+                    updated_at
+                )
+            WHERE current_stage >= 2 AND round1_completed_at IS NULL;
+        """))
+
+        # For teams at stage >= 3, mark round2_completed_at
+        await conn.execute(text("""
+            UPDATE teams SET
+                round2_completed_at = COALESCE(
+                    (SELECT MAX(submitted_at) FROM task_submissions WHERE task_submissions.team_id = teams.id AND task_submissions.stage = 2),
+                    updated_at
+                )
+            WHERE current_stage >= 3 AND round2_completed_at IS NULL;
         """))
 
 async def init_db():

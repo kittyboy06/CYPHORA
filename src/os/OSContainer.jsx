@@ -95,7 +95,13 @@ function OSContent({ stage, setStage, teamData, round1State, initialAppId }) {
         /* Standard OS Workspace */
         <>
           <TaskBoard round1State={round1State} />
-          {round1State?.finalMemoryVisible && <CompletionCelebration />}
+          {round1State?.finalMemoryVisible && !round1State?.celebrationDismissed && (typeof sessionStorage === 'undefined' || !sessionStorage.getItem('cyphora_round1_celebration_dismissed')) && (
+            <CompletionCelebration onDismiss={() => {
+              if (typeof setRound1State === 'function') {
+                setRound1State(prev => prev ? { ...prev, finalMemoryVisible: false, celebrationDismissed: true } : prev);
+              }
+            }} />
+          )}
           <main className="os-workspace-area">
             <Desktop />
             <WindowManager />
@@ -107,6 +113,7 @@ function OSContent({ stage, setStage, teamData, round1State, initialAppId }) {
           {round3Window && !isR3Authorized && (
             <Round3PermissionModal
               teamData={teamData}
+              round1State={round1State}
               onAuthorized={() => setIsR3Authorized(true)}
               onCancel={() => closeWindow(round3Window.id)}
             />
@@ -158,4 +165,5 @@ export function OSContainer({
     </OSProvider>
   );
 }
+
 export default OSContainer;
