@@ -156,16 +156,23 @@ export function Round3PermissionModal({ teamData, onAuthorized, onCancel }) {
             <div className="round3-input-wrapper">
               <input
                 id="r3_admin_code"
-                type={showPassword ? 'text' : 'password'}
+                type="text"
                 value={adminCode}
                 onChange={(e) => {
                   setAdminCode(e.target.value);
                   setError('');
                 }}
-                placeholder="Enter Proctor Key (e.g. JCEAIML)..."
-                className={`round3-auth-input ${error ? 'has-error' : ''}`}
+                placeholder="Enter Proctor Key..."
+                className={`round3-auth-input ${showPassword ? '' : 'pin-mask-input'} ${error ? 'has-error' : ''}`}
                 autoFocus
                 disabled={isVerifying}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-form-type="other"
               />
               <button
                 type="button"
