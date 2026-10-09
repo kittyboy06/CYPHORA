@@ -6,13 +6,17 @@ from pydantic import BaseModel
 from fastapi import APIRouter, Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import func
 
+import os
+from pathlib import Path
+from PIL import Image
+
+from ..config import BASE_DIR
 from ..database import get_db
 from ..models import Team, TaskSubmission
 from ..websocket_manager import ws_manager
 from ..auth_utils import decode_access_token
-
-import os
 
 _clip_model = None
 _clip_processor = None
@@ -26,39 +30,113 @@ def get_clip_model():
         if _device is None:
             _device = "cuda" if torch.cuda.is_available() else "cpu"
         model_id = "openai/clip-vit-base-patch32"
+        # Load locally or from cache
         _clip_processor = CLIPProcessor.from_pretrained(model_id)
         _clip_model = CLIPModel.from_pretrained(model_id).to(_device)
     return _clip_model, _clip_processor
 
-def compute_cosine_similarity(image_base64: str, target_image_path: str) -> float:
-    if not image_base64:
-        import random
-        return round(random.uniform(82.0, 94.5), 1)
+def compute_fallback_visual_similarity(user_image: Image.Image, target_image: Image.Image) -> float:
+    """Reliable pixel and color histogram similarity when CLIP is unavailable."""
     try:
-        import torch
-        from PIL import Image
-        global _device
-        if _device is None:
-            _device = "cuda" if torch.cuda.is_available() else "cpu"
-        model, processor = get_clip_model()
+        import numpy as np
+        u_thumb = user_image.resize((128, 128)).convert("RGB")
+        t_thumb = target_image.resize((128, 128)).convert("RGB")
+        u_arr = np.array(u_thumb, dtype=np.float32) / 255.0
+        t_arr = np.array(t_thumb, dtype=np.float32) / 255.0
+        
+        # Color distribution similarity
+        u_mean, t_mean = u_arr.mean(axis=(0, 1)), t_arr.mean(axis=(0, 1))
+        u_std, t_std = u_arr.std(axis=(0, 1)), t_arr.std(axis=(0, 1))
+        color_diff = float(np.abs(u_mean - t_mean).mean() + np.abs(u_std - t_std).mean())
+        color_sim = max(0.0, min(1.0, 1.0 - 0.5 * color_diff))
+
+        # Pixel MSE similarity
+        mse = float(np.mean((u_arr - t_arr) ** 2))
+        pixel_sim = float(np.exp(-3.5 * mse))
+
+        if mse < 0.0001:
+            return 100.0
+
+        score = 0.55 * (color_sim * 100.0) + 0.45 * (pixel_sim * 100.0)
+        return round(min(100.0, max(5.0, score)), 1)
+    except Exception as e:
+        print(f"[Stage 2] Fallback similarity error: {e}")
+        return 75.0
+
+def compute_cosine_similarity(image_base64: Optional[str], target_image_path: str) -> float:
+    if not image_base64 or not image_base64.strip():
+        return 0.0
+    
+    target_path = Path(target_image_path)
+    if not target_path.is_absolute():
+        target_path = BASE_DIR / target_path
+
+    if not target_path.exists():
+        print(f"[Stage 2] Target image not found at {target_path}")
+        return 50.0
+
+    try:
         if "," in image_base64:
             image_base64 = image_base64.split(",")[1]
         user_img_data = base64.b64decode(image_base64)
         user_image = Image.open(BytesIO(user_img_data)).convert("RGB")
-        target_image = Image.open(target_image_path).convert("RGB")
-        
-        inputs = processor(images=[user_image, target_image], return_tensors="pt").to(_device)
-        with torch.no_grad():
-            image_features = model.get_image_features(**inputs)
-        image_features = image_features / image_features.norm(p=2, dim=-1, keepdim=True)
-        similarity = torch.nn.functional.cosine_similarity(image_features[0].unsqueeze(0), image_features[1].unsqueeze(0))
-        
-        sim_score = float(similarity.item()) * 100.0
-        return round(min(100.0, max(0.0, sim_score)), 1)
+        target_image = Image.open(target_path).convert("RGB")
     except Exception as e:
-        print(f"Error computing similarity: {e}")
-        import random
-        return round(random.uniform(82.0, 94.5), 1)
+        print(f"[Stage 2] Error decoding user image: {e}")
+        return 0.0
+
+    try:
+        import torch
+        import numpy as np
+        global _device
+        if _device is None:
+            _device = "cuda" if torch.cuda.is_available() else "cpu"
+        
+        model, processor = get_clip_model()
+        inputs = processor(images=[user_image, target_image], return_tensors="pt").to(_device)
+        
+        with torch.no_grad():
+            res = model.get_image_features(**inputs)
+            # Correctly extract 2D embedding tensor from transformers BaseModelOutputWithPooling
+            if hasattr(res, "pooler_output") and res.pooler_output is not None:
+                feats = res.pooler_output
+            elif hasattr(res, "image_embeds") and res.image_embeds is not None:
+                feats = res.image_embeds
+            elif isinstance(res, torch.Tensor):
+                feats = res
+            else:
+                feats = res[0]
+            
+            feats = feats / feats.norm(p=2, dim=-1, keepdim=True)
+            raw_cos = float(torch.nn.functional.cosine_similarity(feats[0:1], feats[1:2]).item())
+
+        # Check for identical image
+        u_thumb = user_image.resize((128, 128))
+        t_thumb = target_image.resize((128, 128))
+        u_arr = np.array(u_thumb, dtype=np.float32) / 255.0
+        t_arr = np.array(t_thumb, dtype=np.float32) / 255.0
+        mse = float(np.mean((u_arr - t_arr) ** 2))
+
+        if raw_cos >= 0.999 and mse < 0.001:
+            return 100.0
+
+        # Color distribution similarity
+        u_mean, t_mean = u_arr.mean(axis=(0, 1)), t_arr.mean(axis=(0, 1))
+        u_std, t_std = u_arr.std(axis=(0, 1)), t_arr.std(axis=(0, 1))
+        color_diff = float(np.abs(u_mean - t_mean).mean() + np.abs(u_std - t_std).mean())
+        color_sim = max(0.0, min(1.0, 1.0 - 0.5 * color_diff))
+        pixel_sim = float(np.exp(-3.0 * mse))
+
+        # Calibrate CLIP cosine (unrelated baseline ~0.50, high recreation ~0.88-0.98)
+        clip_scaled = max(0.0, (raw_cos - 0.50) / 0.50)
+        clip_score = (clip_scaled ** 1.35) * 100.0
+
+        # Blended score: 70% CLIP semantic, 20% color distribution, 10% pixel structural
+        final_score = 0.70 * clip_score + 0.20 * (color_sim * 100.0) + 0.10 * (pixel_sim * 100.0)
+        return round(min(100.0, max(5.0, final_score)), 1)
+    except Exception as e:
+        print(f"[Stage 2] CLIP evaluation exception, using visual pixel fallback: {e}")
+        return compute_fallback_visual_similarity(user_image, target_image)
 
 router = APIRouter(prefix="/api/stage2", tags=["Stage 2 - Image Navigation"])
 
@@ -138,7 +216,7 @@ async def get_stage2_access_status(
     if not team:
         return {"unlocked": False, "authenticated": False, "message": "No registered team session found."}
 
-    is_unlocked = bool(getattr(team, "round2_unlocked", 0) or (team.current_stage and team.current_stage >= 2))
+    is_unlocked = bool(getattr(team, "round2_unlocked", 0))
     return {
         "unlocked": is_unlocked,
         "authenticated": True,
@@ -162,10 +240,7 @@ async def evaluate_stage2_image1(
     x_team_name: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db)
 ):
-    if "target1" in req.image1_filename.lower():
-        similarity = 100.0
-    else:
-        similarity = compute_cosine_similarity(req.image1_base64, "public/assets/round2/targets/target1.jpg")
+    similarity = compute_cosine_similarity(req.image1_base64, "public/assets/round2/targets/target1.jpg")
     
     # 50 points for 100% Accuracy, reduced proportionally by accuracy percentage
     phase1_points = round(50 * (similarity / 100.0))
@@ -182,7 +257,8 @@ async def evaluate_stage2_image1(
         existing = (await db.execute(stmt)).scalar_one_or_none()
 
         if not existing:
-            team.score += phase1_points
+            team.round2_score = (getattr(team, 'round2_score', 0) or 0) + phase1_points
+            team.score = (getattr(team, 'round1_score', 0) or 0) + (getattr(team, 'round2_score', 0) or 0) + (getattr(team, 'round3_score', 0) or 0)
             if team.current_stage < 2:
                 team.current_stage = 2
             team.status = "active"
@@ -207,6 +283,18 @@ async def evaluate_stage2_image1(
 
             # Real-time leaderboard broadcast to Admin Portal and all workstations
             await ws_manager.broadcast_leaderboard(db)
+        else:
+            # Re-sync if team.round2_score is out of sync with stored submission
+            stmt_sum = select(func.coalesce(func.sum(TaskSubmission.points_awarded), 0)).filter(
+                TaskSubmission.team_id == team.id,
+                TaskSubmission.stage == 2
+            )
+            r2_actual = (await db.execute(stmt_sum)).scalar() or 0
+            if (team.round2_score or 0) != r2_actual:
+                team.round2_score = r2_actual
+                team.score = (getattr(team, 'round1_score', 0) or 0) + (team.round2_score or 0) + (getattr(team, 'round3_score', 0) or 0)
+                await db.commit()
+                await ws_manager.broadcast_leaderboard(db)
 
         return {
             "success": True,
@@ -246,10 +334,7 @@ async def submit_stage2(
     x_team_name: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db)
 ):
-    if "target2" in req.slot3_filename.lower():
-        image2_sim_value = 100.0
-    else:
-        image2_sim_value = compute_cosine_similarity(req.slot3_base64, "public/assets/round2/targets/target2.jpg")
+    image2_sim_value = compute_cosine_similarity(req.slot3_base64, "public/assets/round2/targets/target2.jpg")
     
     image2_similarity_str = f"{image2_sim_value}%"
     
@@ -268,7 +353,8 @@ async def submit_stage2(
         existing = (await db.execute(stmt)).scalar_one_or_none()
 
         if not existing:
-            team.score += image2_points
+            team.round2_score = (getattr(team, 'round2_score', 0) or 0) + image2_points
+            team.score = (getattr(team, 'round1_score', 0) or 0) + (getattr(team, 'round2_score', 0) or 0) + (getattr(team, 'round3_score', 0) or 0)
             if team.current_stage < 2:
                 team.current_stage = 2
             team.status = "active"
@@ -297,6 +383,18 @@ async def submit_stage2(
 
             # Broadcast new standings across all 100 workstations
             await ws_manager.broadcast_leaderboard(db)
+        else:
+            # Re-sync if team.round2_score is out of sync with stored submission
+            stmt_sum = select(func.coalesce(func.sum(TaskSubmission.points_awarded), 0)).filter(
+                TaskSubmission.team_id == team.id,
+                TaskSubmission.stage == 2
+            )
+            r2_actual = (await db.execute(stmt_sum)).scalar() or 0
+            if (team.round2_score or 0) != r2_actual:
+                team.round2_score = r2_actual
+                team.score = (getattr(team, 'round1_score', 0) or 0) + (team.round2_score or 0) + (getattr(team, 'round3_score', 0) or 0)
+                await db.commit()
+                await ws_manager.broadcast_leaderboard(db)
 
         return {
             "success": True,

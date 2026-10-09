@@ -8,10 +8,12 @@ import { BlueScreenGate } from './shell/BlueScreenGate.jsx';
 import { BootScreen } from './boot/BootScreen.jsx';
 import { CompletionCelebration } from '../components/CompletionCelebration.jsx';
 import { TaskBoard } from '../components/TaskBoard.jsx';
+import { Round2PermissionModal } from './apps/round2/Round2PermissionModal.jsx';
 import { Round3PermissionModal } from './apps/round3/Round3PermissionModal.jsx';
 import { Round3FullscreenView } from './apps/round3/Round3FullscreenView.jsx';
 import './OSContainer.css';
 
+const ROUND2_APP_IDS = ['round2', 'image-navigation'];
 const ROUND3_APP_IDS = ['round3', 'jungle-code', 'temple-trials'];
 
 function OSContent({ stage, setStage, teamData, round1State, initialAppId }) {
@@ -35,17 +37,48 @@ function OSContent({ stage, setStage, teamData, round1State, initialAppId }) {
     }
   }, [stage, initialAppId, openApp]);
 
+  const completedTasksCount = Array.isArray(round1State?.tasks)
+    ? round1State.tasks.filter(t => t.status === 'COMPLETED').length
+    : (Array.isArray(round1State?.completedTaskIds) ? round1State.completedTaskIds.length : 0);
+  const isRound1Completed = Boolean(
+    round1State?.round1Status === 'COMPLETED' ||
+    completedTasksCount >= 12
+  );
+  const teamId = teamData?.id || (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : null);
+
+  // Round 2 authorization state
+  const [isR2Authorized, setIsR2Authorized] = useState(() => {
+    if (teamData?.round2Unlocked || teamData?.round2_unlocked) return true;
+    if (typeof sessionStorage !== 'undefined') {
+      if (teamId && sessionStorage.getItem(`cyphora_round2_override_${teamId}`) === 'true') return true;
+      if (sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true') return true;
+    }
+    if (isRound1Completed) {
+      if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round2_unlocked') === 'true') return true;
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round2_unlocked') === 'true') return true;
+    }
+    return false;
+  });
+
   // Round 3 authorization state
   const [isR3Authorized, setIsR3Authorized] = useState(() => {
-    return Boolean(
-      teamData?.round3Unlocked ||
-      teamData?.round3_unlocked ||
-      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round3_unlocked') === 'true') ||
-      (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round3_unlocked') === 'true') ||
-      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true') ||
-      (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round3_supervisor_override') === 'true')
-    );
+    if (teamData?.round3Unlocked || teamData?.round3_unlocked) return true;
+    if (typeof sessionStorage !== 'undefined') {
+      if (teamId && sessionStorage.getItem(`cyphora_round3_override_${teamId}`) === 'true') return true;
+      if (sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true') return true;
+    }
+    if (isRound1Completed) {
+      if (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round3_unlocked') === 'true') return true;
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round3_unlocked') === 'true') return true;
+    }
+    return false;
   });
+
+  useEffect(() => {
+    if (teamData?.round2Unlocked || teamData?.round2_unlocked) {
+      setIsR2Authorized(true);
+    }
+  }, [teamData?.round2Unlocked, teamData?.round2_unlocked]);
 
   useEffect(() => {
     if (teamData?.round3Unlocked || teamData?.round3_unlocked) {
@@ -54,9 +87,28 @@ function OSContent({ stage, setStage, teamData, round1State, initialAppId }) {
   }, [teamData?.round3Unlocked, teamData?.round3_unlocked]);
 
   useEffect(() => {
-    const handleAccessChange = (e) => {
+    const handleR2AccessChange = (e) => {
       const detail = e.detail || {};
-      const myId = teamData?.id || (typeof localStorage !== 'undefined' ? parseInt(localStorage.getItem('cyphora_team_id'), 10) : null);
+      const myId = teamId ? parseInt(teamId, 10) : null;
+      const myName = (teamData?.name || (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_name') : '') || '').toLowerCase();
+
+      if (detail.unlocked !== undefined) {
+        if (!detail.team_id && !detail.team_name) {
+          setIsR2Authorized(Boolean(detail.unlocked));
+        } else if ((detail.team_id && detail.team_id === myId) || (detail.team_name && detail.team_name.toLowerCase() === myName)) {
+          setIsR2Authorized(Boolean(detail.unlocked));
+        }
+      }
+    };
+
+    window.addEventListener('cyphora_round2_access_changed', handleR2AccessChange);
+    return () => window.removeEventListener('cyphora_round2_access_changed', handleR2AccessChange);
+  }, [teamId, teamData?.name]);
+
+  useEffect(() => {
+    const handleR3AccessChange = (e) => {
+      const detail = e.detail || {};
+      const myId = teamId ? parseInt(teamId, 10) : null;
       const myName = (teamData?.name || (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_name') : '') || '').toLowerCase();
 
       if (detail.unlocked !== undefined) {
@@ -68,10 +120,11 @@ function OSContent({ stage, setStage, teamData, round1State, initialAppId }) {
       }
     };
 
-    window.addEventListener('cyphora_round3_access_changed', handleAccessChange);
-    return () => window.removeEventListener('cyphora_round3_access_changed', handleAccessChange);
-  }, [teamData?.id, teamData?.name]);
+    window.addEventListener('cyphora_round3_access_changed', handleR3AccessChange);
+    return () => window.removeEventListener('cyphora_round3_access_changed', handleR3AccessChange);
+  }, [teamId, teamData?.name]);
 
+  const round2Window = windows.find(w => ROUND2_APP_IDS.includes(w.appId));
   const round3Window = windows.find(w => ROUND3_APP_IDS.includes(w.appId));
   const isR2 = typeof isRound2Active === 'function' ? isRound2Active() : false;
   const isProtected = typeof isProtectedRoundActive === 'function'
@@ -95,18 +148,35 @@ function OSContent({ stage, setStage, teamData, round1State, initialAppId }) {
         /* Standard OS Workspace */
         <>
           <TaskBoard round1State={round1State} />
-          {round1State?.finalMemoryVisible && <CompletionCelebration />}
+          {round1State?.finalMemoryVisible && !round1State?.celebrationDismissed && (typeof sessionStorage === 'undefined' || !sessionStorage.getItem('cyphora_round1_celebration_dismissed')) && (
+            <CompletionCelebration onDismiss={() => {
+              if (typeof setRound1State === 'function') {
+                setRound1State(prev => prev ? { ...prev, finalMemoryVisible: false, celebrationDismissed: true } : prev);
+              }
+            }} />
+          )}
           <main className="os-workspace-area">
             <Desktop />
-            <WindowManager />
+            <WindowManager isR2Authorized={isR2Authorized} />
           </main>
           <StartMenu />
           <Taskbar />
+
+          {/* If Round 2 is requested but team does not yet have clearance, display permission modal */}
+          {round2Window && !isR2Authorized && (
+            <Round2PermissionModal
+              teamData={teamData}
+              round1State={round1State}
+              onAuthorized={() => setIsR2Authorized(true)}
+              onCancel={() => closeWindow(round2Window.id)}
+            />
+          )}
 
           {/* If Round 3 is requested but team does not yet have clearance, display permission modal */}
           {round3Window && !isR3Authorized && (
             <Round3PermissionModal
               teamData={teamData}
+              round1State={round1State}
               onAuthorized={() => setIsR3Authorized(true)}
               onCancel={() => closeWindow(round3Window.id)}
             />
@@ -158,4 +228,5 @@ export function OSContainer({
     </OSProvider>
   );
 }
+
 export default OSContainer;

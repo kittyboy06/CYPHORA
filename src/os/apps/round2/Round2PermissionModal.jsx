@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Lock, Key, X, Check, AlertTriangle, Eye, EyeOff } from 'lucide-react';
-import './Round3App.css';
+import { Compass, Shield, Lock, Key, X, Check, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import '../round3/Round3App.css';
+import './Round2PermissionModal.css';
 
 const hostname = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
 const isDevPort = typeof window !== 'undefined' && window.location.port && window.location.port !== '8000';
 const API_BASE = isDevPort ? `http://${hostname}:8000` : '';
 
-export function Round3PermissionModal({ teamData, round1State, onAuthorized, onCancel }) {
+export function Round2PermissionModal({ teamData, round1State, onAuthorized, onCancel }) {
   const [adminCode, setAdminCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
-  const teamName = teamData?.name || localStorage.getItem('cyphora_team_name') || 'Explorer';
-  const teamId = teamData?.id || localStorage.getItem('cyphora_team_id');
+  const teamName = teamData?.name || (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_name') : '') || 'Explorer';
+  const teamId = teamData?.id || (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : null);
 
   const completedTasksCount = Array.isArray(round1State?.tasks)
     ? round1State.tasks.filter(t => t.status === 'COMPLETED').length
@@ -38,8 +39,8 @@ export function Round3PermissionModal({ teamData, round1State, onAuthorized, onC
       }
     };
 
-    window.addEventListener('cyphora_round3_access_changed', handleAccessChange);
-    return () => window.removeEventListener('cyphora_round3_access_changed', handleAccessChange);
+    window.addEventListener('cyphora_round2_access_changed', handleAccessChange);
+    return () => window.removeEventListener('cyphora_round2_access_changed', handleAccessChange);
   }, [teamId, teamName, onAuthorized]);
 
   const handleAuthorize = async (e) => {
@@ -88,18 +89,18 @@ export function Round3PermissionModal({ teamData, round1State, onAuthorized, onC
     // Persist authorization in storage scoped to session
     try {
       if (teamId) {
-        sessionStorage.setItem(`cyphora_round3_override_${teamId}`, 'true');
+        sessionStorage.setItem(`cyphora_round2_override_${teamId}`, 'true');
       }
-      localStorage.setItem('cyphora_round3_unlocked', 'true');
-      sessionStorage.setItem('cyphora_round3_unlocked', 'true');
-      localStorage.setItem('cyphora_round3_supervisor_override', 'true');
-      sessionStorage.setItem('cyphora_round3_supervisor_override', 'true');
-    } catch (e) { }
+      localStorage.setItem('cyphora_round2_unlocked', 'true');
+      sessionStorage.setItem('cyphora_round2_unlocked', 'true');
+      localStorage.setItem('cyphora_round2_supervisor_override', 'true');
+      sessionStorage.setItem('cyphora_round2_supervisor_override', 'true');
+    } catch (e) {}
 
     // Notify backend if available
     try {
       if (teamId) {
-        await fetch(`${API_BASE}/api/admin/teams/${teamId}/round3-access`, {
+        await fetch(`${API_BASE}/api/admin/teams/${teamId}/round2-access`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -108,13 +109,13 @@ export function Round3PermissionModal({ teamData, round1State, onAuthorized, onC
           body: JSON.stringify({ unlocked: true })
         });
       }
-    } catch (err) { }
+    } catch (err) {}
 
     try {
-      window.dispatchEvent(new CustomEvent('cyphora_round3_access_changed', {
+      window.dispatchEvent(new CustomEvent('cyphora_round2_access_changed', {
         detail: { unlocked: true, team_id: teamId, team_name: teamName }
       }));
-    } catch (e) { }
+    } catch (e) {}
 
     setIsVerifying(false);
     if (typeof onAuthorized === 'function') {
@@ -123,37 +124,37 @@ export function Round3PermissionModal({ teamData, round1State, onAuthorized, onC
   };
 
   return (
-    <div className="round3-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
-      <div className="round3-modal-card" role="dialog" aria-modal="true" aria-labelledby="r3-modal-title">
+    <div className="round2-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
+      <div className="round2-modal-card" role="dialog" aria-modal="true" aria-labelledby="r2-modal-title">
         <button
           type="button"
-          className="round3-modal-close"
+          className="round2-modal-close"
           onClick={onCancel}
           title="Close dialog"
         >
           <X size={18} />
         </button>
 
-        <div className="round3-modal-badge">
+        <div className="round2-modal-badge">
           <Shield size={16} />
           <span>EXPEDITION CLEARANCE PROTOCOL</span>
         </div>
 
-        <h2 id="r3-modal-title" className="round3-modal-title">
-          ROUND 3 : THE TEMPLE TRIALS
+        <h2 id="r2-modal-title" className="round2-modal-title">
+          ROUND 2 : IMAGE NAVIGATION
         </h2>
 
-        <p className="round3-modal-subtitle">
+        <p className="round2-modal-subtitle">
           ACCESS RESTRICTED &bull; SQUAD VERIFICATION REQUIRED
         </p>
 
-        <div className="round3-modal-team-box">
+        <div className="round2-modal-team-box">
           <span className="team-box-label">REGISTERED SQUAD</span>
           <span className="team-box-name">{teamName}</span>
         </div>
 
         <div className="round3-modal-body">
-          <div className={`round3-warning-box ${isRound1Completed ? 'completed' : ''}`}>
+          <div className={`round2-warning-box ${isRound1Completed ? 'completed' : ''}`}>
             <Lock className="warning-box-icon" size={20} />
             <div className="warning-box-text">
               {!isRound1Completed ? (
@@ -162,16 +163,16 @@ export function Round3PermissionModal({ teamData, round1State, onAuthorized, onC
                     <strong>ROUND 1 IN PROGRESS ({completedTasksCount}/12 Subsystems Restored)</strong>
                   </p>
                   <p>
-                    This workstation is actively assigned to <strong>Round 1: OS Navigation</strong>. All 12 subsystem challenges must be solved before Round 3 (The Temple Trials / The Jungle Code) can be accessed.
+                    This workstation is actively assigned to <strong>Round 1: OS Navigation</strong>. All 12 subsystem challenges must be solved before Round 2 (Image Navigation) can be accessed.
                   </p>
-                  <div className="round3-progress-wrap">
-                    <div className="round3-progress-bar">
+                  <div className="round2-progress-wrap">
+                    <div className="round2-progress-bar">
                       <div
-                        className="round3-progress-fill"
+                        className="round2-progress-fill"
                         style={{ width: `${Math.round((completedTasksCount / 12) * 100)}%` }}
                       />
                     </div>
-                    <span className="round3-progress-text">
+                    <span className="round2-progress-text">
                       {completedTasksCount} of 12 Subsystems Restored ({Math.round((completedTasksCount / 12) * 100)}%)
                     </span>
                   </div>
@@ -185,7 +186,7 @@ export function Round3PermissionModal({ teamData, round1State, onAuthorized, onC
                     <strong>ROUND 1 COMPLETE (12/12) &bull; AWAITING ADMINISTRATOR CLEARANCE</strong>
                   </p>
                   <p>
-                    Station subsystems are restored! Access to <strong>Round 3 (The Temple Trials / The Jungle Code)</strong> requires clearance from the competition administrator or event proctor.
+                    Station subsystems are restored! Access to <strong>Round 2: Image Navigation</strong> requires clearance from the competition administrator or event proctor.
                   </p>
                   <p className="warning-note">
                     Please wait for the administrator to unlock your team remotely, or have an event proctor enter the station authorization master key below.
@@ -195,20 +196,20 @@ export function Round3PermissionModal({ teamData, round1State, onAuthorized, onC
             </div>
           </div>
 
-          <div className="round3-beacon-indicator">
-            <span className="round3-beacon-pulse" />
+          <div className="round2-beacon-indicator">
+            <span className="round2-beacon-pulse" />
             <span>Listening for real-time clearance signal from Admin Command...</span>
           </div>
 
           <form onSubmit={handleAuthorize} className="round3-auth-form" autoComplete="off">
-            <label htmlFor="r3_admin_code" className="round3-auth-label">
+            <label htmlFor="r2_admin_code" className="round3-auth-label">
               <Key size={14} />
               <span>Administrator / Proctor Authorization Key</span>
             </label>
 
             <div className="round3-input-wrapper">
               <input
-                id="r3_admin_code"
+                id="r2_admin_code"
                 type={showPassword ? 'text' : 'password'}
                 value={adminCode}
                 onChange={(e) => {
@@ -263,7 +264,7 @@ export function Round3PermissionModal({ teamData, round1State, onAuthorized, onC
                 ) : (
                   <>
                     <Check size={16} />
-                    <span>Authorize & Enter Round 3</span>
+                    <span>Authorize & Enter Round 2</span>
                   </>
                 )}
               </button>
@@ -275,4 +276,4 @@ export function Round3PermissionModal({ teamData, round1State, onAuthorized, onC
   );
 }
 
-export default Round3PermissionModal;
+export default Round2PermissionModal;

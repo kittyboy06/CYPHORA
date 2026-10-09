@@ -41,25 +41,36 @@ const MAX_IMAGE_POINTS = 50; // 50 points max per image for 100% accuracy
 export function Round2App({ windowId }) {
   const { openApp, closeWindow, vfs, eventBus, teamData, fetchLeaderboard, requestFullscreen, round1State } = useOS();
 
-  const isRound1Completed = round1State?.round1Status === 'COMPLETED' ||
-    (Array.isArray(round1State?.tasks) && round1State.tasks.filter(t => t.status === 'COMPLETED').length === 12);
   const completedTasksCount = Array.isArray(round1State?.tasks)
     ? round1State.tasks.filter(t => t.status === 'COMPLETED').length
-    : 0;
+    : (Array.isArray(round1State?.completedTaskIds) ? round1State.completedTaskIds.length : 0);
+  const isRound1Completed = Boolean(
+    round1State?.round1Status === 'COMPLETED' ||
+    completedTasksCount >= 12 ||
+    (Array.isArray(round1State?.completedTaskIds) && round1State.completedTaskIds.length >= 12)
+  );
+
+  const teamId = teamData?.id || (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : null);
 
   const [isSupervisorOverridden, setIsSupervisorOverridden] = useState(() => {
+    if (typeof sessionStorage === 'undefined') return false;
     return Boolean(
-      localStorage.getItem('cyphora_round2_supervisor_override') === 'true' ||
+      (teamId && sessionStorage.getItem(`cyphora_round2_override_${teamId}`) === 'true') ||
       sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true'
     );
   });
 
   const [isRound2Authorized, setIsRound2Authorized] = useState(() => {
-    return Boolean(
-      teamData?.round2Unlocked ||
-      localStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-      sessionStorage.getItem('cyphora_round2_unlocked') === 'true'
-    );
+    if (teamData?.round2Unlocked || teamData?.round2_unlocked) return true;
+    if (typeof sessionStorage !== 'undefined') {
+      if (teamId && sessionStorage.getItem(`cyphora_round2_override_${teamId}`) === 'true') return true;
+      if (sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true') return true;
+    }
+    // Only allow persistent storage if Round 1 is verified complete
+    if (isRound1Completed) {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round2_unlocked') === 'true') return true;
+    }
+    return false;
   });
 
   const [adminAuthCode, setAdminAuthCode] = useState('');
@@ -145,17 +156,24 @@ export function Round2App({ windowId }) {
       const myId = teamData?.id || parseInt(localStorage.getItem('cyphora_team_id'), 10);
       const myName = (teamData?.name || localStorage.getItem('cyphora_team_name') || '').toLowerCase();
       if (detail.unlocked !== undefined) {
-        if (!detail.team_id && !detail.team_name) {
+        const matches = (!detail.team_id && !detail.team_name) ||
+          ((detail.team_id && detail.team_id === myId) || (detail.team_name && detail.team_name.toLowerCase() === myName));
+        if (matches) {
           setIsRound2Authorized(Boolean(detail.unlocked));
           if (detail.unlocked) {
             localStorage.setItem('cyphora_round2_unlocked', 'true');
             sessionStorage.setItem('cyphora_round2_unlocked', 'true');
-          }
-        } else if ((detail.team_id && detail.team_id === myId) || (detail.team_name && detail.team_name.toLowerCase() === myName)) {
-          setIsRound2Authorized(Boolean(detail.unlocked));
-          if (detail.unlocked) {
-            localStorage.setItem('cyphora_round2_unlocked', 'true');
-            sessionStorage.setItem('cyphora_round2_unlocked', 'true');
+          } else {
+            setIsSupervisorOverridden(false);
+            if (teamId) {
+              try { sessionStorage.removeItem(`cyphora_round2_override_${teamId}`); } catch (_) {}
+            }
+            try {
+              localStorage.removeItem('cyphora_round2_unlocked');
+              sessionStorage.removeItem('cyphora_round2_unlocked');
+              localStorage.removeItem('cyphora_round2_supervisor_override');
+              sessionStorage.removeItem('cyphora_round2_supervisor_override');
+            } catch (_) {}
           }
         }
       }
@@ -316,36 +334,66 @@ export function Round2App({ windowId }) {
     };
   }, []);
 
-  // Synchronized Round 2 Countdown Tick Hook
+  // Individual Workstation Countdown for Round 2 - starts ONLY after entering Round 2 app
   useEffect(() => {
-    if (!backendRound2Timer) return;
+    if (!isRound2Authorized) return;
 
-    if (backendRound2Timer.action === 'start' && backendRound2Timer.ends_at) {
-      const tick = () => {
-        const rem = Math.max(0, Math.floor((new Date(backendRound2Timer.ends_at).getTime() - Date.now()) / 1000));
-        setSecondsRemaining(rem);
-        setIsTimerRunning(rem > 0);
-        if (rem <= 0 && !proctorUnlockedRound2) {
-          setIsRound2TimerExpired(true);
-        } else if (rem > 0) {
-          setIsRound2TimerExpired(false);
-        }
-      };
-      tick();
-      const interval = setInterval(tick, 1000);
-      return () => clearInterval(interval);
-    } else if (backendRound2Timer.action === 'pause') {
-      const rem = backendRound2Timer.remaining_seconds !== undefined ? backendRound2Timer.remaining_seconds : 1800;
-      setSecondsRemaining(rem);
-      setIsTimerRunning(false);
-    } else if (backendRound2Timer.action === 'reset') {
-      const dur = (backendRound2Timer.duration_minutes || 30) * 60;
-      setSecondsRemaining(dur);
-      setIsTimerRunning(false);
-      setIsRound2TimerExpired(false);
-      setProctorUnlockedRound2(false);
+    const currentTeamId = teamData?.id || (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : null) || 'team';
+    const teamSpecificKey = `cyphora_round2_started_at_${currentTeamId}`;
+
+    let storedStart = null;
+    if (teamData?.round2_started_at) {
+      storedStart = String(new Date(teamData.round2_started_at).getTime());
+      try { localStorage.setItem(teamSpecificKey, storedStart); } catch (_) {}
+    } else {
+      storedStart = localStorage.getItem(teamSpecificKey);
     }
-  }, [backendRound2Timer, proctorUnlockedRound2]);
+
+    const isNewStart = !storedStart;
+    if (!storedStart) {
+      storedStart = String(Date.now());
+      try {
+        localStorage.setItem(teamSpecificKey, storedStart);
+        localStorage.setItem('cyphora_round2_started_at', storedStart);
+      } catch (_) {}
+    }
+
+    if (isNewStart) {
+      const token = localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token');
+      fetch(`${API_BASE}/api/teams/timer/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ round: 2 })
+      }).catch(() => {});
+    }
+
+    const startedAtMs = parseInt(storedStart, 10);
+    const configuredMins = backendRound2Timer?.duration_minutes || 15;
+    const totalSec = configuredMins * 60;
+
+    const tick = () => {
+      if (backendRound2Timer?.action === 'pause') {
+        setIsTimerRunning(false);
+        return;
+      }
+      const elapsed = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
+      const rem = Math.max(0, totalSec - elapsed);
+      setSecondsRemaining(rem);
+      setIsTimerRunning(rem > 0);
+      if (rem <= 0 && !proctorUnlockedRound2) {
+        setIsRound2TimerExpired(true);
+      } else if (rem > 0) {
+        setIsRound2TimerExpired(false);
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [isRound2Authorized, backendRound2Timer?.duration_minutes, backendRound2Timer?.action, proctorUnlockedRound2, teamData?.id, teamData?.round2_started_at]);
 
   const formatTime = (totalSeconds) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -547,14 +595,8 @@ export function Round2App({ windowId }) {
       const isDev = window.location.port === '5173';
       const apiBase = isDev ? `http://${hostname}:8000` : '';
       const token = localStorage.getItem('cyphora_token') || '';
-
-      const filename = (image1File?.name || '').toLowerCase();
-      let simValue = 82 + Math.random() * 12;
-      if (filename.includes('target1')) {
-        simValue = 100.0;
-      }
-      let simMatch = simValue.toFixed(1) + '%';
-      let phase1Points = Math.round(MAX_IMAGE_POINTS * (simValue / 100));
+      const teamId = localStorage.getItem('cyphora_team_id') || '';
+      const storedTeamName = localStorage.getItem('cyphora_team_name') || teamName || '';
 
       const getBase64 = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -564,36 +606,44 @@ export function Round2App({ windowId }) {
       });
       const image1Base64 = image1File ? await getBase64(image1File) : null;
 
-      try {
-        const res = await fetch(`${apiBase}/api/stage2/evaluate-image1`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          },
-          body: JSON.stringify({
-            team_name: teamName,
-            prompt: prompt.trim(),
-            image1_filename: image1File?.name || 'image_1.png',
-            image1_base64: image1Base64,
-          })
-        });
-        if (res.ok) {
-          const resJson = await res.json();
-          if (resJson.points !== undefined) {
-            phase1Points = resJson.points;
-          } else if (resJson.similarity) {
-            const simParsed = parseFloat(resJson.similarity.replace('%', ''));
-            if (!isNaN(simParsed)) {
-              phase1Points = Math.round(MAX_IMAGE_POINTS * (simParsed / 100));
-            }
-          }
-          if (resJson.similarity) {
-            simMatch = resJson.similarity;
-          }
+      let simMatch = '0%';
+      let phase1Points = 0;
+
+      const res = await fetch(`${apiBase}/api/stage2/evaluate-image1`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(teamId ? { 'X-Team-Id': String(teamId) } : {}),
+          ...(storedTeamName ? { 'X-Team-Name': storedTeamName } : {})
+        },
+        body: JSON.stringify({
+          team_name: storedTeamName || teamName,
+          prompt: prompt.trim(),
+          image1_filename: image1File?.name || 'image_1.png',
+          image1_base64: image1Base64,
+        })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || `Evaluation server responded with error ${res.status}`);
+      }
+
+      const resJson = await res.json();
+      if (resJson.points !== undefined) {
+        phase1Points = resJson.points;
+      } else if (resJson.similarity) {
+        const simParsed = parseFloat(resJson.similarity.replace('%', ''));
+        if (!isNaN(simParsed)) {
+          phase1Points = Math.round(MAX_IMAGE_POINTS * (simParsed / 100));
         }
-      } catch {
-        // Fallback local evaluation
+      }
+      if (resJson.similarity) {
+        simMatch = resJson.similarity;
+      }
+      if (resJson.new_total_score !== undefined) {
+        localStorage.setItem('cyphora_team_score', resJson.new_total_score.toString());
       }
 
       const evalData = {
@@ -634,8 +684,8 @@ export function Round2App({ windowId }) {
       localStorage.removeItem('cyphora_round2_prompt');
 
       setPhaseSuccessNotice(`✓ Image 1 evaluated (+${phase1Points}/50 pts)! Slot for Image 2 is now unlocked.`);
-    } catch {
-      setFormGlobalError('Error communicating with evaluation server. Please retry.');
+    } catch (err) {
+      setFormGlobalError(err?.message || 'Error communicating with evaluation server. Please retry.');
     } finally {
       setIsSubmitting(false);
     }
@@ -655,24 +705,16 @@ export function Round2App({ windowId }) {
     setIsSubmitting(true);
 
     const finalElapsed = ROUND_2_DURATION_SECONDS - secondsRemaining;
-
-    const filename2 = (image2File?.name || '').toLowerCase();
-    let image2SimValue = 85 + Math.random() * 12;
-    if (filename2.includes('target2')) {
-      image2SimValue = 100.0;
-    }
-    let image2Similarity = image2SimValue.toFixed(1) + '%';
-    let image2Points = Math.round(MAX_IMAGE_POINTS * (image2SimValue / 100));
-
-    const image1Points = image1EvaluatedData?.score || 50;
-    let finalTotalPoints = image1Points + image2Points;
     const formattedSpeed = formatTime(finalElapsed);
+    const image1Points = image1EvaluatedData?.score || 0;
 
     try {
       const hostname = window.location.hostname || 'localhost';
       const isDev = window.location.port === '5173';
       const apiBase = isDev ? `http://${hostname}:8000` : '';
       const token = localStorage.getItem('cyphora_token') || '';
+      const teamId = localStorage.getItem('cyphora_team_id') || '';
+      const storedTeamName = localStorage.getItem('cyphora_team_name') || teamName || '';
 
       const getBase64 = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -682,45 +724,54 @@ export function Round2App({ windowId }) {
       });
       const slot3Base64 = image2File ? await getBase64(image2File) : null;
 
-      try {
-        const res = await fetch(`${apiBase}/api/stage2/submit`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          },
-          body: JSON.stringify({
-            team_name: teamName,
-            prompt: prompt.trim(),
-            slot2_filename: image1EvaluatedData?.fileName || 'image_1.png',
-            slot3_filename: image2File.name,
-            slot3_base64: slot3Base64,
-            elapsed_seconds: finalElapsed,
-            remaining_seconds: secondsRemaining,
-            calculated_points: finalTotalPoints,
-          })
-        });
+      let image2Points = 0;
+      let image2Similarity = '0%';
+      let finalTotalPoints = image1Points;
 
-        if (res.ok) {
-          const resData = await res.json();
-          if (resData.image2_points !== undefined) {
-            image2Points = resData.image2_points;
-            finalTotalPoints = image1Points + image2Points;
-          } else if (resData.points_awarded !== undefined) {
-            image2Points = resData.points_awarded;
-            finalTotalPoints = image1Points + image2Points;
-          } else if (resData.image2_similarity) {
-            const simParsed = parseFloat(resData.image2_similarity.replace('%', ''));
-            if (!isNaN(simParsed)) {
-              image2Points = Math.round(MAX_IMAGE_POINTS * (simParsed / 100));
-              finalTotalPoints = image1Points + image2Points;
-            }
-          }
-          if (resData.image2_similarity) {
-            image2Similarity = resData.image2_similarity;
-          }
+      const res = await fetch(`${apiBase}/api/stage2/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(teamId ? { 'X-Team-Id': String(teamId) } : {}),
+          ...(storedTeamName ? { 'X-Team-Name': storedTeamName } : {})
+        },
+        body: JSON.stringify({
+          team_name: storedTeamName || teamName,
+          prompt: prompt.trim(),
+          slot2_filename: image1EvaluatedData?.fileName || 'image_1.png',
+          slot3_filename: image2File.name,
+          slot3_base64: slot3Base64,
+          elapsed_seconds: finalElapsed,
+          remaining_seconds: secondsRemaining,
+          calculated_points: 0,
+        })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || `Evaluation server responded with error ${res.status}`);
+      }
+
+      const resData = await res.json();
+      if (resData.image2_points !== undefined) {
+        image2Points = resData.image2_points;
+      } else if (resData.points_awarded !== undefined) {
+        image2Points = resData.points_awarded;
+      } else if (resData.image2_similarity) {
+        const simParsed = parseFloat(resData.image2_similarity.replace('%', ''));
+        if (!isNaN(simParsed)) {
+          image2Points = Math.round(MAX_IMAGE_POINTS * (simParsed / 100));
         }
-      } catch {}
+      }
+      finalTotalPoints = image1Points + image2Points;
+
+      if (resData.image2_similarity) {
+        image2Similarity = resData.image2_similarity;
+      }
+      if (resData.new_total_score !== undefined) {
+        localStorage.setItem('cyphora_team_score', resData.new_total_score.toString());
+      }
 
       setEvaluatedScore(finalTotalPoints);
       setTeamPoints(finalTotalPoints);
@@ -874,14 +925,20 @@ export function Round2App({ windowId }) {
               <form onSubmit={handleAdminSupervisorLogin} className="supervisor-auth-form">
                 <div className="supervisor-input-group">
                   <input
-                    type="password"
+                    type="text"
+                    name="supervisor_override_code"
                     placeholder="Enter Admin Password..."
                     value={adminAuthCode}
                     onChange={(e) => setAdminAuthCode(e.target.value)}
-                    className="supervisor-input"
+                    className="supervisor-input pin-mask-input"
                     maxLength={32}
                     autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
                     spellCheck="false"
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-form-type="other"
                   />
                   <button
                     type="submit"

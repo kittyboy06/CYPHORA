@@ -30,6 +30,12 @@ class TeamOut(BaseModel):
     notes: Optional[str] = None
     last_ip: Optional[str] = None
     started_at: Optional[datetime] = None
+    round1_started_at: Optional[datetime] = None
+    round2_started_at: Optional[datetime] = None
+    round3_started_at: Optional[datetime] = None
+    round1_completed_at: Optional[datetime] = None
+    round2_completed_at: Optional[datetime] = None
+    round3_completed_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -45,6 +51,10 @@ class AuthResponse(BaseModel):
     token: str
     team: TeamOut
 
+class RoundStartRequest(BaseModel):
+    round: int = Field(1, ge=1, le=3, description="Round number (1, 2, or 3)")
+    started_at: Optional[str] = None
+
 # Leaderboard / Explorers Telemetry
 class LeaderboardItem(BaseModel):
     rank: int
@@ -58,12 +68,19 @@ class LeaderboardItem(BaseModel):
     round3_score: Optional[int] = 0
     final_score: Optional[int] = 0
     status: str
+    is_connected: Optional[bool] = False
     current_stage: int
     round2_unlocked: Optional[bool] = False
     round3_unlocked: Optional[bool] = False
     last_ip: Optional[str] = None
     notes: Optional[str] = None
     started_at: Optional[str] = None
+    round1_started_at: Optional[str] = None
+    round2_started_at: Optional[str] = None
+    round3_started_at: Optional[str] = None
+    round1_completed_at: Optional[str] = None
+    round2_completed_at: Optional[str] = None
+    round3_completed_at: Optional[str] = None
     updated_at: Optional[str] = None
     submission_count: Optional[int] = 0
 
@@ -88,6 +105,7 @@ class TaskSubmitRequest(BaseModel):
     task_key: str = Field(..., description="Unique task identifier in Stage 1")
     proof: Optional[str] = Field(None, description="Optional proof/flag string")
     hints_used: Optional[int] = Field(0, description="Hints revealed for this task (0, 1, or 2)")
+    team_name: Optional[str] = Field(None, description="Optional fallback team name")
 
 class TaskSubmitResponse(BaseModel):
     success: bool
@@ -103,6 +121,7 @@ class AdminLoginRequest(BaseModel):
 class AdminScoreUpdateRequest(BaseModel):
     points_delta: Optional[int] = None
     new_score: Optional[int] = None
+    round: Optional[int] = None
     reason: Optional[str] = None
 
 class AdminTeamUpdateRequest(BaseModel):

@@ -624,15 +624,33 @@ export function Round2Page({ onReturnToHub }) {
   // Synchronized Round 2 Countdown Tick Hook — starts ONLY after enters Round 2 app
   useEffect(() => {
     let storedStart = localStorage.getItem('cyphora_round2_started_at');
+    const isNewStart = !storedStart;
     if (!storedStart) {
       storedStart = String(Date.now());
       localStorage.setItem('cyphora_round2_started_at', storedStart);
     }
+
+    if (isNewStart) {
+      const token = localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token');
+      fetch(`${API_BASE}/api/teams/timer/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ round: 2 })
+      }).catch(() => {});
+    }
+
     const startedAtMs = parseInt(storedStart, 10);
     const durMinutes = backendRound2Timer?.duration_minutes || 30;
     const totalSec = durMinutes * 60;
 
     const tick = () => {
+      if (backendRound2Timer?.action === 'pause') {
+        setIsTimerRunning(false);
+        return;
+      }
       const elapsed = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
       const rem = Math.max(0, totalSec - elapsed);
       setSecondsRemaining(rem);
@@ -647,7 +665,7 @@ export function Round2Page({ onReturnToHub }) {
     tick();
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [backendRound2Timer?.duration_minutes, proctorUnlockedRound2]);
+  }, [backendRound2Timer?.duration_minutes, backendRound2Timer?.action, proctorUnlockedRound2]);
 
   // Object URL cleanup
   useEffect(() => {
@@ -844,19 +862,11 @@ export function Round2Page({ onReturnToHub }) {
 
     try {
       const hostname = window.location.hostname || 'localhost';
-      const isDev = window.location.port === '5173';
-      const apiBase = isDev ? `http://${hostname}:8000` : '';
-      const token = localStorage.getItem('cyphora_token') || '';
-      const teamId = localStorage.getItem('cyphora_team_id') || '';
-      const storedTeamName = localStorage.getItem('cyphora_team_name') || teamName || '';
-
-      const filename = (image1File?.name || '').toLowerCase();
-      let simValue = 82 + Math.random() * 12;
-      if (filename.includes('target1')) {
-        simValue = 100.0;
-      }
-      let simMatch = simValue.toFixed(1) + '%';
-      let phase1Points = Math.round(50 * (simValue / 100));
+      const isDevPort = window.location.port && window.location.port !== '8000';
+      const apiBase = isDevPort ? `http://${hostname}:8000` : '';
+      const token = localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token') || '';
+      const teamId = localStorage.getItem('cyphora_team_id') || sessionStorage.getItem('cyphora_team_id') || '';
+      const storedTeamName = localStorage.getItem('cyphora_team_name') || sessionStorage.getItem('cyphora_team_name') || teamName || '';
 
       const getBase64 = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -866,40 +876,43 @@ export function Round2Page({ onReturnToHub }) {
       });
       const image1Base64 = image1File ? await getBase64(image1File) : null;
 
-      try {
-        const res = await fetch(`${apiBase}/api/stage2/evaluate-image1`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-            ...(teamId ? { 'X-Team-Id': String(teamId) } : {}),
-            ...(storedTeamName ? { 'X-Team-Name': storedTeamName } : {})
-          },
-          body: JSON.stringify({
-            team_name: storedTeamName || teamName,
-            prompt: prompt.trim(),
-            image1_filename: image1File?.name || 'image_1.png',
-            image1_base64: image1Base64,
-          })
-        });
-        if (res.ok) {
-          const resJson = await res.json();
-          if (resJson.similarity) {
-            simMatch = resJson.similarity;
-            const simParsed = parseFloat(resJson.similarity.replace('%', ''));
-            if (!isNaN(simParsed)) {
-              phase1Points = Math.round(50 * (simParsed / 100));
-            }
-          }
-          if (resJson.points !== undefined) {
-            phase1Points = resJson.points;
-          }
-          if (resJson.new_total_score !== undefined) {
-            localStorage.setItem('cyphora_team_score', resJson.new_total_score.toString());
-          }
+      let simMatch = '0%';
+      let phase1Points = 0;
+
+      const res = await fetch(`${apiBase}/api/stage2/evaluate-image1`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(teamId ? { 'X-Team-Id': String(teamId) } : {}),
+          ...(storedTeamName ? { 'X-Team-Name': storedTeamName } : {})
+        },
+        body: JSON.stringify({
+          team_name: storedTeamName || teamName,
+          prompt: prompt.trim(),
+          image1_filename: image1File?.name || 'image_1.png',
+          image1_base64: image1Base64,
+        })
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || `Evaluation server responded with error ${res.status}`);
+      }
+
+      const resJson = await res.json();
+      if (resJson.similarity) {
+        simMatch = resJson.similarity;
+        const simParsed = parseFloat(resJson.similarity.replace('%', ''));
+        if (!isNaN(simParsed)) {
+          phase1Points = Math.round(50 * (simParsed / 100));
         }
-      } catch {
-        // Fallback local evaluation
+      }
+      if (resJson.points !== undefined) {
+        phase1Points = resJson.points;
+      }
+      if (resJson.new_total_score !== undefined) {
+        localStorage.setItem('cyphora_team_score', resJson.new_total_score.toString());
       }
 
       const evalData = {
@@ -956,28 +969,16 @@ export function Round2Page({ onReturnToHub }) {
     setIsSubmitting(true);
 
     const finalElapsed = ROUND_2_DURATION_SECONDS - secondsRemaining;
-    
-    // Evaluate Image 2 (50 points max for 100% accuracy, reduced proportionally)
-    const filename2 = (image2File?.name || '').toLowerCase();
-    let image2SimValue = 85 + Math.random() * 12;
-    if (filename2.includes('target2')) {
-      image2SimValue = 100.0;
-    }
-    let image2Similarity = image2SimValue.toFixed(1) + '%';
-    let image2Points = Math.round(50 * (image2SimValue / 100));
-
-    // Total points = points earned from Image 1 accuracy + points from Image 2 accuracy (max 100)
-    const image1Points = image1EvaluatedData?.score || 50;
-    let finalTotalPoints = image1Points + image2Points;
     const formattedSpeed = formatTime(finalElapsed);
+    const image1Points = image1EvaluatedData?.score || 0;
 
     try {
       const hostname = window.location.hostname || 'localhost';
-      const isDev = window.location.port === '5173';
-      const apiBase = isDev ? `http://${hostname}:8000` : '';
-      const token = localStorage.getItem('cyphora_token') || '';
-      const teamId = localStorage.getItem('cyphora_team_id') || '';
-      const storedTeamName = localStorage.getItem('cyphora_team_name') || teamName || '';
+      const isDevPort = window.location.port && window.location.port !== '8000';
+      const apiBase = isDevPort ? `http://${hostname}:8000` : '';
+      const token = localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token') || '';
+      const teamId = localStorage.getItem('cyphora_team_id') || sessionStorage.getItem('cyphora_team_id') || '';
+      const storedTeamName = localStorage.getItem('cyphora_team_name') || sessionStorage.getItem('cyphora_team_name') || teamName || '';
 
       const getBase64 = (file) => new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -986,6 +987,10 @@ export function Round2Page({ onReturnToHub }) {
         reader.onerror = error => reject(error);
       });
       const slot3Base64 = image2File ? await getBase64(image2File) : null;
+
+      let image2Points = 0;
+      let image2Similarity = '0%';
+      let finalTotalPoints = image1Points;
 
       const res = await fetch(`${apiBase}/api/stage2/submit`, {
         method: 'POST',
@@ -1003,43 +1008,43 @@ export function Round2Page({ onReturnToHub }) {
           slot3_base64: slot3Base64,
           elapsed_seconds: finalElapsed,
           remaining_seconds: secondsRemaining,
-          calculated_points: image2Points,
+          calculated_points: 0,
         })
       });
 
-      if (res.ok) {
-        const resData = await res.json();
-        if (resData.image2_similarity) {
-          image2Similarity = resData.image2_similarity;
-          const simParsed = parseFloat(resData.image2_similarity.replace('%', ''));
-          if (!isNaN(simParsed)) {
-            image2Points = Math.round(50 * (simParsed / 100));
-            finalTotalPoints = image1Points + image2Points;
-          }
-        }
-        if (resData.image2_points !== undefined) {
-          image2Points = resData.image2_points;
-          finalTotalPoints = image1Points + image2Points;
-        }
-        if (resData.new_total_score !== undefined) {
-          localStorage.setItem('cyphora_team_score', resData.new_total_score.toString());
-        }
-        setEvaluatedScore(finalTotalPoints);
-      } else {
-        setEvaluatedScore(finalTotalPoints);
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.detail || `Evaluation server responded with error ${res.status}`);
       }
-    } catch {
-        setEvaluatedScore(finalTotalPoints);
-    } finally {
-      setIsSubmitting(false);
+
+      const resData = await res.json();
+      if (resData.image2_points !== undefined) {
+        image2Points = resData.image2_points;
+      } else if (resData.points_awarded !== undefined) {
+        image2Points = resData.points_awarded;
+      } else if (resData.image2_similarity) {
+        const simParsed = parseFloat(resData.image2_similarity.replace('%', ''));
+        if (!isNaN(simParsed)) {
+          image2Points = Math.round(50 * (simParsed / 100));
+        }
+      }
+      finalTotalPoints = image1Points + image2Points;
+
+      if (resData.image2_similarity) {
+        image2Similarity = resData.image2_similarity;
+      }
+      if (resData.new_total_score !== undefined) {
+        localStorage.setItem('cyphora_team_score', resData.new_total_score.toString());
+      }
+      setEvaluatedScore(finalTotalPoints);
 
       const payload = {
         team: teamName,
         prompt: prompt.trim(),
         image1Name: image1EvaluatedData?.fileName || 'image_1.png',
         image2Name: image2File.name,
-        image1Similarity: image1EvaluatedData?.similarity || '85.0%',
-        image1Points: image1EvaluatedData?.score || 50,
+        image1Similarity: image1EvaluatedData?.similarity || '0.0%',
+        image1Points: image1Points,
         image2Similarity: image2Similarity,
         image2Points: image2Points,
         timeCompleted: formattedSpeed,
@@ -1068,6 +1073,10 @@ export function Round2Page({ onReturnToHub }) {
       setPrompt('');
       setPromptTouched(false);
       localStorage.removeItem('cyphora_round2_prompt');
+    } catch (err) {
+      setFormGlobalError(err?.message || 'Error communicating with evaluation server. Please retry.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

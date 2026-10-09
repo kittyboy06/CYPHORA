@@ -1115,8 +1115,8 @@
 .hub-signout-btn {
   position: fixed;
   top: 1.2rem;
-  right: 1.5rem;
-  z-index: 150;
+  right: 10.5rem;
+  z-index: 250;
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;

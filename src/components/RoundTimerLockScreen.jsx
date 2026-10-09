@@ -121,8 +121,8 @@ export function RoundTimerLockScreen({
               <input
                 type="text"
                 name="admin_override_key"
-                className="override-key-input"
-                placeholder="Enter Proctor Key (e.g. JCEAIML / 8080)..."
+                className="override-key-input pin-mask-input"
+                placeholder="Enter Proctor Key..."
                 value={overrideKey}
                 onChange={(e) => {
                   setOverrideKey(e.target.value.toUpperCase());

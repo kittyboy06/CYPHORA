@@ -61,14 +61,35 @@ function App() {
 
   // Round 3 countdown timer — starts ONLY after finishing the beginning story
   useEffect(() => {
-    const isStoryFinished = typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round3_story_finished') === 'true';
+    const teamId = (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : '') || 'default';
+    const storyFinishedKey = `cyphora_round3_story_finished_${teamId}`;
+    const isStoryFinished = typeof localStorage !== 'undefined' &&
+      (localStorage.getItem(storyFinishedKey) === 'true' || localStorage.getItem('cyphora_round3_story_finished') === 'true');
     if (!isStoryFinished || showStory) return;
 
-    let storedStart = localStorage.getItem('cyphora_round3_started_at');
+    const teamKey = `cyphora_round3_started_at_${teamId}`;
+    let storedStart = localStorage.getItem(teamKey) || localStorage.getItem('cyphora_round3_started_at');
+    const isNewStart = !storedStart;
     if (!storedStart) {
       storedStart = String(Date.now());
-      localStorage.setItem('cyphora_round3_started_at', storedStart);
+      try {
+        localStorage.setItem(teamKey, storedStart);
+        localStorage.setItem('cyphora_round3_started_at', storedStart);
+      } catch (_) {}
     }
+
+    if (isNewStart) {
+      const token = typeof localStorage !== 'undefined' ? (localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token')) : null;
+      fetch('/api/teams/timer/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ round: 3 })
+      }).catch(() => {});
+    }
+
     const startedAtMs = parseInt(storedStart, 10);
     const totalSec = round3DurationMinutes * 60;
 
@@ -83,7 +104,9 @@ function App() {
     return () => clearInterval(timer);
   }, [showStory, round3DurationMinutes]);
 
-  const [lockReason, setLockReason] = useState('FULLSCREEN_EXIT');
+  const [isTabSwitched, setIsTabSwitched] = useState(false);
+  const [lockReason, setLockReason] = useState('');
+  const hadFullscreenRef = useRef(false);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -94,8 +117,11 @@ function App() {
         }
       } catch (e) { }
       setIsFullscreen(isFull);
-      if (!isFull && hasEntered) {
+      if (isFull) {
+        hadFullscreenRef.current = true;
+      } else if (hasEntered && hadFullscreenRef.current) {
         setLockReason('FULLSCREEN_EXIT');
+        setIsTabSwitched(true);
         try {
           if (window.parent && window.parent !== window) {
             window.parent.postMessage({ type: 'CYPHORA_TRIGGER_LOCK', reason: 'FULLSCREEN_EXIT' }, '*');
@@ -108,6 +134,7 @@ function App() {
       if (!hasEntered) return;
       if (document.hidden || document.visibilityState === 'hidden') {
         setLockReason('TAB_SWITCH');
+        setIsTabSwitched(true);
         setIsFullscreen(false);
         try {
           if (window.parent && window.parent !== window) {
@@ -126,6 +153,7 @@ function App() {
         e.preventDefault();
         e.stopPropagation();
         setLockReason('PAGE_RELOAD_ATTEMPT');
+        setIsTabSwitched(true);
         setIsFullscreen(false);
         try {
           if (window.parent && window.parent !== window) {
@@ -140,6 +168,7 @@ function App() {
         e.preventDefault();
         e.stopPropagation();
         setLockReason('SCREENSHOT_ATTEMPT');
+        setIsTabSwitched(true);
         setIsFullscreen(false);
         try {
           if (window.parent && window.parent !== window) {
@@ -154,6 +183,7 @@ function App() {
         e.preventDefault();
         e.stopPropagation();
         setLockReason('INSPECTOR_DEVTOOLS');
+        setIsTabSwitched(true);
         setIsFullscreen(false);
         try {
           if (window.parent && window.parent !== window) {
@@ -291,9 +321,9 @@ function App() {
     return <LandingScreen onEnter={enterFullscreen} />;
   }
 
-  // Anti-Cheat is disabled:
-  if (!isFullscreen) {
-    return <AntiCheatScreen reason={lockReason} onAdminUnlock={enterFullscreen} />;
+  // Fullscreen is recommended but not blocking; AntiCheatScreen only for explicit security locks
+  if (isTabSwitched && lockReason) {
+    return <AntiCheatScreen reason={lockReason} onAdminUnlock={() => { setIsTabSwitched(false); setLockReason(''); }} />;
   }
 
   if (showStory) {
@@ -302,10 +332,16 @@ function App() {
         onComplete={() => {
           setShowStory(false);
           setShowTutorial(true);
-          localStorage.setItem('cyphora_round3_story_finished', 'true');
-          if (!localStorage.getItem('cyphora_round3_started_at')) {
-            localStorage.setItem('cyphora_round3_started_at', String(Date.now()));
-          }
+          const teamId = (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : '') || 'default';
+          try {
+            localStorage.setItem('cyphora_round3_story_finished', 'true');
+            localStorage.setItem(`cyphora_round3_story_finished_${teamId}`, 'true');
+            if (!localStorage.getItem(`cyphora_round3_started_at_${teamId}`)) {
+              const nowMs = String(Date.now());
+              localStorage.setItem(`cyphora_round3_started_at_${teamId}`, nowMs);
+              localStorage.setItem('cyphora_round3_started_at', nowMs);
+            }
+          } catch (_) {}
         }}
       />
     );

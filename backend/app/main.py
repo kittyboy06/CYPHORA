@@ -3,12 +3,13 @@ import json
 import logging
 from typing import Optional
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from .config import STATIC_DIST_DIR, BASE_DIR
-from .database import init_db, AsyncSessionLocal
+from .database import init_db, AsyncSessionLocal, get_db
 from .websocket_manager import ws_manager
 from .routers import auth, teams, stage1, admin, stage2
 
@@ -68,6 +69,28 @@ app.include_router(stage1.router)
 app.include_router(stage2.router)
 app.include_router(admin.router)
 
+@app.get("/api/stage3/access-status")
+async def get_stage3_access_status(
+    authorization: Optional[str] = Header(None),
+    x_team_id: Optional[str] = Header(None),
+    x_team_name: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_db)
+):
+    from .routers.stage2 import resolve_team
+    team = await resolve_team(db, authorization, x_team_id, x_team_name)
+    if not team:
+        return {"unlocked": False, "authenticated": False, "message": "No registered team session found."}
+
+    is_unlocked = bool(getattr(team, "round3_unlocked", 0))
+    return {
+        "unlocked": is_unlocked,
+        "authenticated": True,
+        "team_id": team.id,
+        "team_name": team.name,
+        "current_stage": team.current_stage,
+        "message": "Round 3 access authorized by administrator." if is_unlocked else "Awaiting administrator clearance for Round 3."
+    }
+
 # Real-time WebSocket Gateway for 100 Workstations
 @app.websocket("/ws/live")
 async def websocket_endpoint(websocket: WebSocket, team: Optional[str] = None):
@@ -110,11 +133,20 @@ async def websocket_endpoint(websocket: WebSocket, team: Optional[str] = None):
                         "member1": t.member1,
                         "member2": t.member2,
                         "score": t.score,
-                        "status": t.status,
+                        "status": "active" if ws_manager.is_team_connected(t.name) else t.status,
+                        "is_connected": ws_manager.is_team_connected(t.name),
                         "current_stage": t.current_stage,
+                        "round2_unlocked": bool(getattr(t, 'round2_unlocked', 0)),
+                        "round3_unlocked": bool(getattr(t, 'round3_unlocked', 0)),
                         "notes": t.notes,
                         "last_ip": t.last_ip,
                         "started_at": t.started_at.isoformat() if t.started_at else None,
+                        "round1_started_at": t.round1_started_at.isoformat() if getattr(t, 'round1_started_at', None) else None,
+                        "round2_started_at": t.round2_started_at.isoformat() if getattr(t, 'round2_started_at', None) else None,
+                        "round3_started_at": t.round3_started_at.isoformat() if getattr(t, 'round3_started_at', None) else None,
+                        "round1_completed_at": t.round1_completed_at.isoformat() if getattr(t, 'round1_completed_at', None) else None,
+                        "round2_completed_at": t.round2_completed_at.isoformat() if getattr(t, 'round2_completed_at', None) else None,
+                        "round3_completed_at": t.round3_completed_at.isoformat() if getattr(t, 'round3_completed_at', None) else None,
                         "updated_at": t.updated_at.isoformat() if t.updated_at else None,
                     }
                     for i, t in enumerate(teams_list, start=1)

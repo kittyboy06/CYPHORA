@@ -43,7 +43,9 @@ def main():
         host="0.0.0.0",
         port=port,
         log_level="info",
-        access_log=True
+        access_log=True,
+        reload=True,
+        reload_dirs=[str(CURRENT_DIR / "app")]
     )
 
 if __name__ == "__main__":

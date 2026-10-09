@@ -45,6 +45,10 @@ function App({ initialStage = null, defaultAppId = null }) {
       const s = params.get('stage');
       if (s) return s;
       if (params.get('round') === '2') return 'os-desktop';
+      const storedStage = sessionStorage.getItem('cyphora_current_stage');
+      if (storedStage && ['main', 'initial', 'prologue', 'os-desktop'].includes(storedStage)) {
+        return storedStage;
+      }
       const savedName = sessionStorage.getItem('cyphora_team_name');
       if (savedName) {
         return 'os-desktop';
@@ -94,18 +98,8 @@ function App({ initialStage = null, defaultAppId = null }) {
           standing: '1st',
           score: 0,
           isSelected: true,
-          round2Unlocked: (
-            sessionStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-            localStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-            sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true' ||
-            localStorage.getItem('cyphora_round2_supervisor_override') === 'true'
-          ),
-          round3Unlocked: (
-            sessionStorage.getItem('cyphora_round3_unlocked') === 'true' ||
-            localStorage.getItem('cyphora_round3_unlocked') === 'true' ||
-            sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true' ||
-            localStorage.getItem('cyphora_round3_supervisor_override') === 'true'
-          ),
+          round2Unlocked: false,
+          round3Unlocked: false,
         };
       }
     }
@@ -160,9 +154,9 @@ function App({ initialStage = null, defaultAppId = null }) {
   const syncTaskSubmission = async (taskId, answer, hintsUsed = 0) => {
     if (!taskId) return;
     try {
-      const token = localStorage.getItem('cyphora_token');
-      const teamId = teamDataRef.current.id || localStorage.getItem('cyphora_team_id');
-      const teamName = teamDataRef.current.name || localStorage.getItem('cyphora_team_name');
+      const token = localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token');
+      const teamId = teamDataRef.current?.id || localStorage.getItem('cyphora_team_id') || sessionStorage.getItem('cyphora_team_id');
+      const teamName = teamDataRef.current?.name || localStorage.getItem('cyphora_team_name') || sessionStorage.getItem('cyphora_team_name');
 
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -175,7 +169,8 @@ function App({ initialStage = null, defaultAppId = null }) {
         body: JSON.stringify({
           task_key: taskId,
           proof: answer || null,
-          hints_used: hintsUsed
+          hints_used: hintsUsed,
+          team_name: teamName || undefined
         })
       });
 
@@ -237,12 +232,19 @@ function App({ initialStage = null, defaultAppId = null }) {
               return t;
             });
             const isDesktop = stageRef.current === 'os-desktop';
+            const isDismissed = Boolean(
+              prev.celebrationDismissed ||
+              sessionStorage.getItem('cyphora_round1_celebration_dismissed') === 'true' ||
+              localStorage.getItem('cyphora_round1_celebration_dismissed') === 'true'
+            );
             return recalculateRound1State({
               ...prev,
               round1StartedAt: prev.round1StartedAt || (isDesktop ? new Date().toISOString() : null),
               round1Status: completedKeys.size === 12 ? 'COMPLETED' : 'IN_PROGRESS',
               isExpired: false,
               isTimerRunning: isDesktop && completedKeys.size < 12,
+              finalMemoryVisible: completedKeys.size === 12 && !isDismissed,
+              celebrationDismissed: isDismissed,
               tasks: updatedTasks
             });
           });
@@ -268,7 +270,9 @@ function App({ initialStage = null, defaultAppId = null }) {
       const durationMs = configuredMinutes * 60 * 1000;
 
       setRound1State(prev => {
-        const storedStart = localStorage.getItem('cyphora_round1_started_at');
+        const currentTeamId = teamDataRef.current?.id || localStorage.getItem('cyphora_team_id') || 'team';
+        const teamSpecificKey = `cyphora_round1_started_at_${currentTeamId}`;
+        const storedStart = localStorage.getItem(teamSpecificKey) || localStorage.getItem('cyphora_round1_started_at');
         if (storedStart && isDesktop) {
           const startedAtMs = parseInt(storedStart, 10);
           const elapsed = Math.max(0, Date.now() - startedAtMs);
@@ -279,7 +283,7 @@ function App({ initialStage = null, defaultAppId = null }) {
             round1DurationMs: durationMs,
             remainingTimeMs: remainingMs,
             isExpired: isExp,
-            isTimerRunning: isDesktop && !isExp && prev.round1Status !== 'COMPLETED'
+            isTimerRunning: isDesktop && !isExp && prev.round1Status !== 'COMPLETED' && timer.action !== 'pause'
           };
         }
         return {
@@ -302,10 +306,10 @@ function App({ initialStage = null, defaultAppId = null }) {
 
       if (event.event === 'TASK_ANSWER_SUBMITTED') {
         const currentState = round1StateRef.current;
-        const activeTask = currentState.tasks.find(t => t.status === 'ACTIVE');
-        if (activeTask && activeTask.validator && activeTask.validator(event.payload)) {
-          const hintsUsed = event.payload.hintsUsed !== undefined ? event.payload.hintsUsed : (activeTask.hintsUsed || 0);
-          syncTaskSubmission(activeTask.id, event.payload.answer, hintsUsed);
+        const targetTask = (currentState?.tasks || []).find(t => t.id === event.payload?.taskId) || (currentState?.tasks || []).find(t => t.status === 'ACTIVE');
+        if (targetTask && targetTask.validator && targetTask.validator(event.payload)) {
+          const hintsUsed = event.payload.hintsUsed !== undefined ? event.payload.hintsUsed : (targetTask.hintsUsed || 0);
+          syncTaskSubmission(targetTask.id, event.payload.answer, hintsUsed);
         }
       }
     });
@@ -315,11 +319,39 @@ function App({ initialStage = null, defaultAppId = null }) {
   // Automatically start Round 1 countdown timer ONLY after entering the OS desktop
   useEffect(() => {
     if (stage === 'os-desktop') {
-      let storedStart = localStorage.getItem('cyphora_round1_started_at');
+      const currentTeamId = teamData?.id || (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : null) || 'team';
+      const teamSpecificKey = `cyphora_round1_started_at_${currentTeamId}`;
+
+      let storedStart = null;
+      if (teamData?.round1_started_at) {
+        storedStart = String(new Date(teamData.round1_started_at).getTime());
+        try { localStorage.setItem(teamSpecificKey, storedStart); } catch (_) {}
+      } else {
+        storedStart = localStorage.getItem(teamSpecificKey);
+      }
+
+      const isNewStart = !storedStart;
       if (!storedStart) {
         storedStart = String(Date.now());
-        localStorage.setItem('cyphora_round1_started_at', storedStart);
+        try {
+          localStorage.setItem(teamSpecificKey, storedStart);
+          localStorage.setItem('cyphora_round1_started_at', storedStart);
+        } catch (_) {}
       }
+
+      // Notify backend of Round 1 initiation
+      if (isNewStart) {
+        const token = localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token');
+        fetch(`${API_BASE}/api/teams/timer/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ round: 1 })
+        }).catch(() => {});
+      }
+
       const startedAtMs = parseInt(storedStart, 10);
       const configuredMinutes = round1Timer?.duration_minutes || 60;
       const durationMs = configuredMinutes * 60 * 1000;
@@ -342,7 +374,7 @@ function App({ initialStage = null, defaultAppId = null }) {
           round1DurationMs: durationMs,
           remainingTimeMs: remainingMs,
           isExpired: isExp,
-          isTimerRunning: remainingMs > 0 && base.round1Status !== 'COMPLETED'
+          isTimerRunning: remainingMs > 0 && base.round1Status !== 'COMPLETED' && round1Timer?.action !== 'pause'
         };
       });
 
@@ -358,15 +390,18 @@ function App({ initialStage = null, defaultAppId = null }) {
         return prev;
       });
     }
-  }, [stage, teamData.name, round1Timer?.duration_minutes, proctorOverrideRound1]);
+  }, [stage, teamData?.id, teamData?.name, teamData?.round1_started_at, round1Timer?.duration_minutes, round1Timer?.action, proctorOverrideRound1]);
 
   // Tick interval for Round 1 timer ONLY while on os-desktop
   useEffect(() => {
     if (stage !== 'os-desktop') return;
     if (round1State.round1Status === 'COMPLETED') return;
+    if (round1Timer?.action === 'pause') return;
 
     const tick = () => {
-      const storedStart = localStorage.getItem('cyphora_round1_started_at');
+      const currentTeamId = teamData?.id || (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : null) || 'team';
+      const teamSpecificKey = `cyphora_round1_started_at_${currentTeamId}`;
+      const storedStart = localStorage.getItem(teamSpecificKey) || localStorage.getItem('cyphora_round1_started_at');
       if (!storedStart) return;
       const startedAtMs = parseInt(storedStart, 10);
       const configuredMinutes = round1Timer?.duration_minutes || 60;
@@ -391,7 +426,7 @@ function App({ initialStage = null, defaultAppId = null }) {
     tick();
     const intervalId = setInterval(tick, 1000);
     return () => clearInterval(intervalId);
-  }, [stage, round1Timer?.duration_minutes, round1State.round1Status, proctorOverrideRound1]);
+  }, [stage, teamData?.id, round1Timer?.duration_minutes, round1State.round1Status, proctorOverrideRound1]);
 
   useEffect(() => {
     return () => { if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current); };
@@ -678,6 +713,14 @@ function App({ initialStage = null, defaultAppId = null }) {
 
           const self = data.teams.find(e => (savedId && e.id === savedId) || (searchName && e.name.toLowerCase() === searchName));
           if (self) {
+            const completedTasks = Array.isArray(round1StateRef.current?.tasks)
+              ? round1StateRef.current.tasks.filter(t => t.status === 'COMPLETED').length
+              : 0;
+            const r1Done = round1StateRef.current?.round1Status === 'COMPLETED' || completedTasks >= 12;
+
+            const isR2Auth = Boolean(self.round2_unlocked || (r1Done && self.current_stage && self.current_stage >= 2));
+            const isR3Auth = Boolean(self.round3_unlocked || (r1Done && self.current_stage && self.current_stage >= 3));
+
             setTeamData(prev => {
               if (self.name && self.name !== prev.name) {
                 localStorage.setItem('cyphora_team_name', self.name);
@@ -689,7 +732,9 @@ function App({ initialStage = null, defaultAppId = null }) {
                 member1: self.member1 || prev.member1,
                 member2: self.member2 || prev.member2,
                 standing: formatOrdinal(self.rank),
-                score: self.score
+                score: self.score,
+                round2Unlocked: isR2Auth,
+                round3Unlocked: isR3Auth
               };
             });
           }
@@ -800,12 +845,30 @@ function App({ initialStage = null, defaultAppId = null }) {
 
                 const self = payload.data.find(e => (savedId && e.id === savedId) || (searchName && e.name.toLowerCase() === searchName));
                 if (self) {
-                  const isR2Auth = Boolean(self.round2_unlocked || (self.current_stage && self.current_stage >= 2));
-                  const isR3Auth = Boolean(self.round3_unlocked || (self.current_stage && self.current_stage >= 3));
-                  localStorage.setItem('cyphora_round2_unlocked', String(isR2Auth));
+                  const completedTasks = Array.isArray(round1StateRef.current?.tasks)
+                    ? round1StateRef.current.tasks.filter(t => t.status === 'COMPLETED').length
+                    : 0;
+                  const r1Done = round1StateRef.current?.round1Status === 'COMPLETED' || completedTasks >= 12;
+
+                  const isR2Auth = Boolean(self.round2_unlocked || (r1Done && self.current_stage && self.current_stage >= 2));
+                  const isR3Auth = Boolean(self.round3_unlocked || (r1Done && self.current_stage && self.current_stage >= 3));
+
+                  if (isR2Auth) {
+                    localStorage.setItem('cyphora_round2_unlocked', 'true');
+                    sessionStorage.setItem('cyphora_round2_unlocked', 'true');
+                  } else {
+                    localStorage.removeItem('cyphora_round2_unlocked');
+                    sessionStorage.removeItem('cyphora_round2_unlocked');
+                  }
+
                   if (self.round3_unlocked !== undefined) {
-                    localStorage.setItem('cyphora_round3_unlocked', String(isR3Auth));
-                    sessionStorage.setItem('cyphora_round3_unlocked', String(isR3Auth));
+                    if (isR3Auth) {
+                      localStorage.setItem('cyphora_round3_unlocked', 'true');
+                      sessionStorage.setItem('cyphora_round3_unlocked', 'true');
+                    } else {
+                      localStorage.removeItem('cyphora_round3_unlocked');
+                      sessionStorage.removeItem('cyphora_round3_unlocked');
+                    }
                   }
                   setTeamData(prev => {
                     if (self.name && self.name !== prev.name) {
@@ -847,14 +910,33 @@ function App({ initialStage = null, defaultAppId = null }) {
               if ((updateData.team_id && updateData.team_id === savedId) ||
                   (updateData.team_name && updateData.team_name.toLowerCase() === searchName)) {
                 const isR2Auth = Boolean(updateData.unlocked);
-                localStorage.setItem('cyphora_round2_unlocked', String(isR2Auth));
+                if (isR2Auth) {
+                  localStorage.setItem('cyphora_round2_unlocked', 'true');
+                  sessionStorage.setItem('cyphora_round2_unlocked', 'true');
+                } else {
+                  localStorage.removeItem('cyphora_round2_unlocked');
+                  sessionStorage.removeItem('cyphora_round2_unlocked');
+                  localStorage.removeItem('cyphora_round2_supervisor_override');
+                  sessionStorage.removeItem('cyphora_round2_supervisor_override');
+                  if (savedId) {
+                    try { sessionStorage.removeItem(`cyphora_round2_override_${savedId}`); } catch (_) {}
+                  }
+                }
                 setTeamData(prev => ({ ...prev, round2Unlocked: isR2Auth }));
                 window.dispatchEvent(new CustomEvent('cyphora_round2_access_changed', { detail: updateData }));
               }
             } else if (payload.event === 'ROUND2_ACCESS_UPDATE_ALL') {
               const updateData = payload.data || {};
               const isR2Auth = Boolean(updateData.unlocked);
-              localStorage.setItem('cyphora_round2_unlocked', String(isR2Auth));
+              if (isR2Auth) {
+                localStorage.setItem('cyphora_round2_unlocked', 'true');
+                sessionStorage.setItem('cyphora_round2_unlocked', 'true');
+              } else {
+                localStorage.removeItem('cyphora_round2_unlocked');
+                sessionStorage.removeItem('cyphora_round2_unlocked');
+                localStorage.removeItem('cyphora_round2_supervisor_override');
+                sessionStorage.removeItem('cyphora_round2_supervisor_override');
+              }
               setTeamData(prev => ({ ...prev, round2Unlocked: isR2Auth }));
               window.dispatchEvent(new CustomEvent('cyphora_round2_access_changed', { detail: updateData }));
             } else if (payload.event === 'ROUND3_ACCESS_UPDATE') {
@@ -865,16 +947,33 @@ function App({ initialStage = null, defaultAppId = null }) {
               if ((updateData.team_id && updateData.team_id === savedId) ||
                   (updateData.team_name && updateData.team_name.toLowerCase() === searchName)) {
                 const isR3Auth = Boolean(updateData.unlocked);
-                localStorage.setItem('cyphora_round3_unlocked', String(isR3Auth));
-                sessionStorage.setItem('cyphora_round3_unlocked', String(isR3Auth));
+                if (isR3Auth) {
+                  localStorage.setItem('cyphora_round3_unlocked', 'true');
+                  sessionStorage.setItem('cyphora_round3_unlocked', 'true');
+                } else {
+                  localStorage.removeItem('cyphora_round3_unlocked');
+                  sessionStorage.removeItem('cyphora_round3_unlocked');
+                  localStorage.removeItem('cyphora_round3_supervisor_override');
+                  sessionStorage.removeItem('cyphora_round3_supervisor_override');
+                  if (savedId) {
+                    try { sessionStorage.removeItem(`cyphora_round3_override_${savedId}`); } catch (_) {}
+                  }
+                }
                 setTeamData(prev => ({ ...prev, round3Unlocked: isR3Auth }));
                 window.dispatchEvent(new CustomEvent('cyphora_round3_access_changed', { detail: updateData }));
               }
             } else if (payload.event === 'ROUND3_ACCESS_UPDATE_ALL') {
               const updateData = payload.data || {};
               const isR3Auth = Boolean(updateData.unlocked);
-              localStorage.setItem('cyphora_round3_unlocked', String(isR3Auth));
-              sessionStorage.setItem('cyphora_round3_unlocked', String(isR3Auth));
+              if (isR3Auth) {
+                localStorage.setItem('cyphora_round3_unlocked', 'true');
+                sessionStorage.setItem('cyphora_round3_unlocked', 'true');
+              } else {
+                localStorage.removeItem('cyphora_round3_unlocked');
+                sessionStorage.removeItem('cyphora_round3_unlocked');
+                localStorage.removeItem('cyphora_round3_supervisor_override');
+                sessionStorage.removeItem('cyphora_round3_supervisor_override');
+              }
               setTeamData(prev => ({ ...prev, round3Unlocked: isR3Auth }));
               window.dispatchEvent(new CustomEvent('cyphora_round3_access_changed', { detail: updateData }));
             }
@@ -993,9 +1092,28 @@ function App({ initialStage = null, defaultAppId = null }) {
       localStorage.setItem('cyphora_member2', team.member2);
     }
 
-    const isR2Auth = Boolean(team.round2_unlocked || (team.current_stage && team.current_stage >= 2));
-    sessionStorage.setItem('cyphora_round2_unlocked', String(isR2Auth));
-    localStorage.setItem('cyphora_round2_unlocked', String(isR2Auth));
+    // Rehydrate complete task completion record directly from central database
+    const syncResult = await syncCompletedTasksFromBackend(team.id, team.name, token);
+    const isR1Done = Boolean(syncResult && syncResult.completedCount >= 12);
+
+    const isR2Auth = Boolean(team.round2_unlocked || (isR1Done && team.current_stage && team.current_stage >= 2));
+    const isR3Auth = Boolean(team.round3_unlocked || (isR1Done && team.current_stage && team.current_stage >= 3));
+
+    if (isR2Auth) {
+      sessionStorage.setItem('cyphora_round2_unlocked', 'true');
+      localStorage.setItem('cyphora_round2_unlocked', 'true');
+    } else {
+      sessionStorage.removeItem('cyphora_round2_unlocked');
+      localStorage.removeItem('cyphora_round2_unlocked');
+    }
+
+    if (isR3Auth) {
+      sessionStorage.setItem('cyphora_round3_unlocked', 'true');
+      localStorage.setItem('cyphora_round3_unlocked', 'true');
+    } else {
+      sessionStorage.removeItem('cyphora_round3_unlocked');
+      localStorage.removeItem('cyphora_round3_unlocked');
+    }
 
     setTeamData({
       id: team.id,
@@ -1005,7 +1123,8 @@ function App({ initialStage = null, defaultAppId = null }) {
       standing: team.standing ? formatOrdinal(team.standing) : 'Unranked',
       score: team.score || 0,
       isSelected: true,
-      round2Unlocked: isR2Auth
+      round2Unlocked: isR2Auth,
+      round3Unlocked: isR3Auth
     });
 
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -1014,17 +1133,18 @@ function App({ initialStage = null, defaultAppId = null }) {
 
     setShowTeamModal(false);
 
-    // Rehydrate complete task completion record directly from central database
-    const syncResult = await syncCompletedTasksFromBackend(team.id, team.name, token);
-
     // Clear any previous OS locks and stale session windows so resuming player starts fresh inside the OS
     try {
       sessionStorage.removeItem('cyphora_os_locked');
       sessionStorage.removeItem('cyphora_os_session');
+      sessionStorage.setItem('cyphora_current_stage', 'os-desktop');
+      if (isR1Done) {
+        sessionStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
+      }
     } catch (e) {}
 
     // Resuming returning players always directly enters the OS!
-    if (isR2Auth || (syncResult && syncResult.completedCount >= 12)) {
+    if (isR2Auth || isR1Done) {
       setInitialAppId('round2');
     } else {
       setInitialAppId('tasks');
@@ -1047,6 +1167,9 @@ function App({ initialStage = null, defaultAppId = null }) {
       localStorage.removeItem('cyphora_member1');
       localStorage.removeItem('cyphora_member2');
       localStorage.removeItem('cyphora_round2_unlocked');
+      localStorage.removeItem('cyphora_round3_unlocked');
+      localStorage.removeItem('cyphora_round2_supervisor_override');
+      localStorage.removeItem('cyphora_round3_supervisor_override');
       localStorage.removeItem('cyphora_vfs_data');
       localStorage.removeItem('cyphora_os_session');
       localStorage.removeItem('cyphora_os_locked');
@@ -1250,6 +1373,7 @@ function App({ initialStage = null, defaultAppId = null }) {
     try {
       sessionStorage.removeItem('cyphora_os_locked');
       sessionStorage.setItem('cyphora_active_round', '1');
+      sessionStorage.setItem('cyphora_current_stage', 'os-desktop');
     } catch (e) { }
 
     // Transition to OS boot sequence - timer only starts when player lands on OS desktop
@@ -1264,13 +1388,47 @@ function App({ initialStage = null, defaultAppId = null }) {
     }
   };
 
+  const isRound1Completed = Boolean(
+    round1State?.round1Status === 'COMPLETED' ||
+    (Array.isArray(round1State?.tasks) && round1State.tasks.filter(t => t.status === 'COMPLETED').length >= 12) ||
+    (Array.isArray(round1State?.completedTaskIds) && round1State.completedTaskIds.length >= 12) ||
+    teamData?.round1Completed
+  );
+
+  const isStage2Unlocked = Boolean(
+    teamData?.round2Unlocked ||
+    teamData?.round2_unlocked ||
+    (typeof sessionStorage !== 'undefined' && teamData?.id && sessionStorage.getItem(`cyphora_round2_override_${teamData.id}`) === 'true') ||
+    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true') ||
+    (isRound1Completed && (
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round2_unlocked') === 'true') ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round2_unlocked') === 'true')
+    ))
+  );
+
+  const isStage3Unlocked = Boolean(
+    teamData?.round3Unlocked ||
+    teamData?.round3_unlocked ||
+    (typeof sessionStorage !== 'undefined' && teamData?.id && sessionStorage.getItem(`cyphora_round3_override_${teamData.id}`) === 'true') ||
+    (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true') ||
+    (isRound1Completed && (
+      (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round3_unlocked') === 'true') ||
+      (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round3_unlocked') === 'true')
+    ))
+  );
+
   const handleLevelClick = (level, unlocked) => {
     if (!unlocked) return;
     if (level === 1) {
       try {
         sessionStorage.removeItem('cyphora_os_locked');
         sessionStorage.setItem('cyphora_active_round', '1');
+        sessionStorage.setItem('cyphora_current_stage', 'os-desktop');
+        sessionStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
       } catch (e) {}
+      if (setRound1State) {
+        setRound1State(prev => prev ? { ...prev, finalMemoryVisible: false, celebrationDismissed: true } : prev);
+      }
       if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
@@ -1280,20 +1438,29 @@ function App({ initialStage = null, defaultAppId = null }) {
     }
     if (level === 2) {
       const isR2Auth = Boolean(
+        isStage2Unlocked ||
         teamData?.round2Unlocked ||
-        sessionStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-        localStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-        sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true' ||
-        localStorage.getItem('cyphora_round2_supervisor_override') === 'true'
+        teamData?.round2_unlocked ||
+        (typeof sessionStorage !== 'undefined' && teamData?.id && sessionStorage.getItem(`cyphora_round2_override_${teamData.id}`) === 'true') ||
+        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true') ||
+        (isRound1Completed && (
+          (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round2_unlocked') === 'true') ||
+          (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round2_unlocked') === 'true')
+        ))
       );
       if (!isR2Auth) {
-        alert('Round 2 is locked! Your team must receive administrator clearance to enter Round 2.');
+        alert('Round 2 is locked! Your team must complete Round 1 or receive administrator clearance to enter Round 2.');
         return;
       }
       try {
         sessionStorage.removeItem('cyphora_os_locked');
         sessionStorage.setItem('cyphora_active_round', '2');
+        sessionStorage.setItem('cyphora_current_stage', 'os-desktop');
+        sessionStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
       } catch (e) {}
+      if (setRound1State) {
+        setRound1State(prev => prev ? { ...prev, finalMemoryVisible: false, celebrationDismissed: true } : prev);
+      }
       if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
@@ -1303,11 +1470,15 @@ function App({ initialStage = null, defaultAppId = null }) {
     }
     if (level === 3) {
       const isR3Auth = Boolean(
+        isStage3Unlocked ||
         teamData?.round3Unlocked ||
-        sessionStorage.getItem('cyphora_round3_unlocked') === 'true' ||
-        localStorage.getItem('cyphora_round3_unlocked') === 'true' ||
-        sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true' ||
-        localStorage.getItem('cyphora_round3_supervisor_override') === 'true'
+        teamData?.round3_unlocked ||
+        (typeof sessionStorage !== 'undefined' && teamData?.id && sessionStorage.getItem(`cyphora_round3_override_${teamData.id}`) === 'true') ||
+        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true') ||
+        (isRound1Completed && (
+          (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round3_unlocked') === 'true') ||
+          (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round3_unlocked') === 'true')
+        ))
       );
       if (!isR3Auth) {
         alert('Round 3 is locked! Your team must receive administrator clearance to enter Round 3.');
@@ -1316,7 +1487,12 @@ function App({ initialStage = null, defaultAppId = null }) {
       try {
         sessionStorage.removeItem('cyphora_os_locked');
         sessionStorage.setItem('cyphora_active_round', '3');
+        sessionStorage.setItem('cyphora_current_stage', 'os-desktop');
+        sessionStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
       } catch (e) {}
+      if (setRound1State) {
+        setRound1State(prev => prev ? { ...prev, finalMemoryVisible: false, celebrationDismissed: true } : prev);
+      }
       if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
@@ -1326,22 +1502,6 @@ function App({ initialStage = null, defaultAppId = null }) {
     }
     window.location.href = `/round${level}/index.html`;
   };
-
-  const isStage2Unlocked = Boolean(
-    teamData?.round2Unlocked ||
-    sessionStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-    localStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-    sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true' ||
-    localStorage.getItem('cyphora_round2_supervisor_override') === 'true'
-  );
-
-  const isStage3Unlocked = Boolean(
-    teamData?.round3Unlocked ||
-    sessionStorage.getItem('cyphora_round3_unlocked') === 'true' ||
-    localStorage.getItem('cyphora_round3_unlocked') === 'true' ||
-    sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true' ||
-    localStorage.getItem('cyphora_round3_supervisor_override') === 'true'
-  );
 
   const explorerList = Array.isArray(liveExplorers)
     ? liveExplorers.map(e => ({
@@ -1437,10 +1597,11 @@ function App({ initialStage = null, defaultAppId = null }) {
                     </label>
                     <div className="pin-input-container">
                       <input
-                        type={showRegisterPin ? 'text' : 'password'}
-                        name="reg_team_pin"
+                        type="text"
+                        name="reg_team_pin_code"
                         id="reg_team_pin"
-                        className="team-input"
+                        className={`team-input ${showRegisterPin ? '' : 'pin-mask-input'}`}
+                        inputMode="numeric"
                         value={registerPinInput}
                         onChange={(e) => setRegisterPinInput(e.target.value)}
                         placeholder="Create 4-digit PIN"
@@ -1450,6 +1611,8 @@ function App({ initialStage = null, defaultAppId = null }) {
                         autoCapitalize="off"
                         spellCheck="false"
                         data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-form-type="other"
                         required
                       />
                       <button
@@ -1597,17 +1760,22 @@ function App({ initialStage = null, defaultAppId = null }) {
                     </label>
                     <div className="pin-input-container">
                       <input
-                        type={showResumePin ? 'text' : 'password'}
-                        name="resume_team_pin"
+                        type="text"
+                        name="resume_team_pin_code"
                         id="resume_team_pin"
-                        className="team-input"
+                        className={`team-input ${showResumePin ? '' : 'pin-mask-input'}`}
+                        inputMode="numeric"
                         value={resumePinInput}
                         onChange={(e) => setResumePinInput(e.target.value)}
                         placeholder="Enter 4-digit PIN"
                         maxLength={16}
                         autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
                         spellCheck="false"
                         data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-form-type="other"
                         required
                       />
                       <button
@@ -1833,7 +2001,12 @@ function App({ initialStage = null, defaultAppId = null }) {
             try {
               sessionStorage.removeItem('cyphora_active_round');
               sessionStorage.removeItem('cyphora_os_locked');
+              sessionStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
+              sessionStorage.setItem('cyphora_current_stage', 'main');
             } catch (e) {}
+            if (setRound1State) {
+              setRound1State(prev => prev ? { ...prev, finalMemoryVisible: false, celebrationDismissed: true } : prev);
+            }
             setInitialAppId(null);
             setStage('main');
           }}
