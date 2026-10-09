@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 
 interface Props {
   onComplete: () => void;
+  isLocked?: boolean;
 }
 
-export const StoryIntro: React.FC<Props> = ({ onComplete }) => {
+export const StoryIntro: React.FC<Props> = ({ onComplete, isLocked = false }) => {
   const [step, setStep] = useState(0);
   const [canAdvance, setCanAdvance] = useState(false);
   const [countdown, setCountdown] = useState(3);
@@ -50,20 +51,28 @@ export const StoryIntro: React.FC<Props> = ({ onComplete }) => {
     return () => clearInterval(interval);
   }, [step]);
 
+  const advanceStory = () => {
+    if (isLocked) return;
+    if (step < storyScenes.length - 1) {
+      setStep(s => s + 1);
+    } else {
+      onComplete();
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isLocked) return;
       if (e.key === 'Enter' && canAdvance) {
-        if (step < storyScenes.length - 1) {
-          setStep(s => s + 1);
-        } else {
-          onComplete();
-        }
+        e.preventDefault();
+        e.stopPropagation();
+        advanceStory();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [step, canAdvance, onComplete, storyScenes.length]);
+  }, [step, canAdvance, onComplete, storyScenes.length, isLocked]);
 
   return (
     <div className="absolute inset-0 bg-[var(--bg-dark)] flex flex-col items-center justify-center p-4 md:p-8 z-50">
@@ -104,9 +113,14 @@ export const StoryIntro: React.FC<Props> = ({ onComplete }) => {
               <span className="absolute text-[var(--accent-gold)] font-mono text-sm font-bold">{countdown}</span>
             </div>
           ) : (
-            <p className="text-[var(--accent-gold)] font-mono text-xs md:text-sm uppercase tracking-widest animate-pulse opacity-100 transition-opacity duration-500">
-              [ Press Enter to {step < storyScenes.length - 1 ? 'continue' : 'begin trial'} ]
-            </p>
+            <button
+              type="button"
+              onClick={advanceStory}
+              disabled={isLocked}
+              className="px-6 py-2 bg-[var(--bg-panel)] border border-[var(--border-gold)] text-[var(--accent-gold)] hover:bg-[var(--accent-gold)] hover:text-black font-mono text-xs md:text-sm uppercase tracking-widest rounded-sm transition-all cursor-pointer shadow-[0_0_15px_rgba(223,177,37,0.2)] hover:shadow-[0_0_25px_rgba(223,177,37,0.5)] active:scale-95"
+            >
+              [ Press Enter or Click to {step < storyScenes.length - 1 ? 'continue' : 'begin trial'} → ]
+            </button>
           )}
         </div>
       </div>

@@ -1366,3 +1366,386 @@
   color: #f85149;
   margin-top: 0.2rem;
 }
+
+/* ==========================================================================
+   TEMPLE EFFECTS — Progressive Background, Screen Rumble, Temple Modals
+   ========================================================================== */
+
+#bg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: opacity 1.2s ease-in-out;
+}
+
+#bg-layer.bg-layer-active {
+  opacity: 0.32;
+  background-color: rgba(4, 8, 3, 0.75);
+  background-blend-mode: multiply;
+}
+
+.screen-rumble {
+  animation: screenRumble 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes screenRumble {
+  0%   { transform: translate(0, 0); }
+  10%  { transform: translate(-4px, -3px); }
+  20%  { transform: translate(4px, 2px); }
+  30%  { transform: translate(-3px, 4px); }
+  40%  { transform: translate(5px, -2px); }
+  50%  { transform: translate(-5px, 3px); }
+  60%  { transform: translate(3px, -4px); }
+  70%  { transform: translate(-2px, 5px); }
+  80%  { transform: translate(4px, -3px); }
+  90%  { transform: translate(-3px, 2px); }
+  100% { transform: translate(0, 0); }
+}
+
+.temple-cutscene-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50000;
+  pointer-events: none;
+  background-size: cover;
+  background-position: center;
+  animation: templeCutsceneFade 1s ease-out forwards;
+}
+
+@keyframes templeCutsceneFade {
+  0% { opacity: 0; transform: scale(1.05); }
+  30% { opacity: 0.85; transform: scale(1.02); }
+  70% { opacity: 0.85; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.98); }
+}
+
+/* Temple Modal Backdrop & Card */
+.temple-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(3, 6, 2, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: templeBackdropIn 0.35s ease-out both;
+}
+
+@keyframes templeBackdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.temple-modal-slab {
+  position: relative;
+  max-width: 540px;
+  width: 100%;
+  background: linear-gradient(160deg, #18140c 0%, #0d0f09 60%, #080c05 100%);
+  border: 2px solid #5a4820;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 1px rgba(201, 166, 83, 0.25),
+    0 0 0 4px rgba(40, 30, 10, 0.9),
+    0 0 0 5px rgba(100, 80, 30, 0.35),
+    inset 0 0 30px rgba(0, 0, 0, 0.75),
+    0 24px 60px rgba(0, 0, 0, 0.95),
+    0 0 40px rgba(160, 110, 20, 0.3);
+  overflow: hidden;
+  animation: templeSlabIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.temple-modal-slab--final {
+  border-color: #8c6d26;
+  box-shadow:
+    0 0 0 1px rgba(255, 200, 80, 0.35),
+    0 0 0 4px rgba(50, 35, 5, 0.95),
+    0 0 0 5px rgba(150, 110, 30, 0.45),
+    inset 0 0 40px rgba(0, 0, 0, 0.65),
+    0 24px 60px rgba(0, 0, 0, 0.98),
+    0 0 60px rgba(223, 177, 37, 0.35);
+}
+
+@keyframes templeSlabIn {
+  from { opacity: 0; transform: scale(0.9) translateY(20px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.temple-modal-rune-border {
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(180, 130, 30, 0.4) 20%,
+    rgba(223, 177, 37, 0.9) 50%,
+    rgba(180, 130, 30, 0.4) 80%,
+    transparent 100%
+  );
+  animation: runeGlow 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes runeGlow {
+  from { opacity: 0.5; }
+  to   { opacity: 1; }
+}
+
+.temple-modal-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2.2rem 2.2rem 2.4rem;
+  text-align: center;
+}
+
+.temple-modal-glyph {
+  font-size: 2.8rem;
+  filter: drop-shadow(0 0 12px rgba(223, 177, 37, 0.8));
+  animation: glyphFloat 3s ease-in-out infinite;
+  line-height: 1;
+}
+
+.temple-modal-glyph--final {
+  font-size: 3.4rem;
+  filter: drop-shadow(0 0 20px rgba(255, 200, 60, 0.95));
+}
+
+@keyframes glyphFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-5px); }
+}
+
+.temple-modal-tag {
+  font-family: 'Cinzel', serif;
+  font-size: 0.72rem;
+  letter-spacing: 3px;
+  color: #c9a653;
+  text-transform: uppercase;
+}
+
+.temple-modal-tag--final {
+  color: #dfb125;
+  letter-spacing: 4px;
+}
+
+.temple-modal-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.2rem, 3vw, 1.6rem);
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #d6b265;
+  line-height: 1.35;
+  margin: 0;
+  text-shadow: 0 0 20px rgba(223, 177, 37, 0.4);
+}
+
+.temple-modal-title--final {
+  color: #f0c94a;
+  text-shadow: 0 0 30px rgba(255, 200, 50, 0.6);
+}
+
+.temple-modal-score-stone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.9rem 1.6rem;
+  background: rgba(8, 6, 2, 0.78);
+  border: 1px solid rgba(180, 130, 30, 0.45);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 12px rgba(0, 0, 0, 0.6),
+    0 0 14px rgba(180, 130, 30, 0.15);
+}
+
+.temple-modal-score-stone--total {
+  border-color: rgba(255, 200, 60, 0.65);
+  box-shadow:
+    inset 0 0 16px rgba(0, 0, 0, 0.6),
+    0 0 24px rgba(255, 200, 60, 0.28);
+}
+
+.temple-modal-score-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.temple-score-divider {
+  font-family: 'Cinzel', serif;
+  font-size: 1.4rem;
+  color: rgba(201, 166, 83, 0.7);
+  flex-shrink: 0;
+}
+
+.temple-score-label {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #a68436;
+}
+
+.temple-score-value {
+  font-family: 'Cinzel', serif;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #dfb125;
+  text-shadow: 0 0 14px rgba(223, 177, 37, 0.55);
+}
+
+.temple-score-unit {
+  font-size: 0.85rem;
+  color: #b08d40;
+  font-weight: 400;
+}
+
+.temple-modal-desc {
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: #b8a890;
+  max-width: 440px;
+  margin: 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.temple-modal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 2.2rem;
+  margin-top: 0.4rem;
+  font-family: 'Cinzel', serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #1a1208;
+  background: linear-gradient(135deg, #c9a653 0%, #dfb125 50%, #b8883a 100%);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(255, 200, 60, 0.35),
+    0 4px 16px rgba(180, 130, 30, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.temple-modal-btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(255, 210, 80, 0.55),
+    0 8px 24px rgba(180, 130, 30, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  filter: brightness(1.1);
+}
+
+.temple-modal-btn:active {
+  transform: translateY(0);
+}
+
+.temple-modal-btn--final {
+  background: linear-gradient(135deg, #e8b830 0%, #ffcc40 45%, #c88c20 100%);
+  color: #0e0900;
+  font-size: 0.95rem;
+  padding: 1rem 2.4rem;
+  box-shadow:
+    0 0 0 1px rgba(255, 220, 60, 0.45),
+    0 0 25px rgba(255, 200, 40, 0.35),
+    0 6px 20px rgba(180, 130, 20, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  animation: amberPulse 2.2s ease-in-out infinite;
+}
+
+.temple-modal-btn--final:hover {
+  filter: brightness(1.15) saturate(1.1);
+  box-shadow:
+    0 0 0 2px rgba(255, 220, 60, 0.75),
+    0 0 40px rgba(255, 200, 40, 0.6),
+    0 10px 30px rgba(180, 130, 20, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+@keyframes amberPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(255, 220, 60, 0.45),
+      0 0 25px rgba(255, 200, 40, 0.35),
+      0 6px 20px rgba(180, 130, 20, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px rgba(255, 220, 60, 0.7),
+      0 0 35px rgba(255, 200, 40, 0.6),
+      0 8px 24px rgba(180, 130, 20, 0.65),
+      inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+}
+
+.temple-modal-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.temple-modal-dismiss-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(223, 177, 37, 0.3);
+  color: #c9a653;
+  padding: 0.75rem 1.4rem;
+  border-radius: 4px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.temple-modal-dismiss-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #dfb125;
+  border-color: rgba(223, 177, 37, 0.6);
+}
+
+.os-proceed-round3-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: linear-gradient(135deg, #c9a653 0%, #dfb125 50%, #b8883a 100%);
+  color: #120e06;
+  font-family: 'Cinzel', serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 0.45rem 1.1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(223, 177, 37, 0.35);
+  animation: amberPulse 2.5s infinite ease-in-out;
+  transition: all 0.2s ease;
+}
+
+.os-proceed-round3-btn:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}

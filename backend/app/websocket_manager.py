@@ -60,6 +60,10 @@ class WebSocketManager:
         for dead in dead_connections:
             self.disconnect(dead)
 
+    async def broadcast_json(self, message: dict):
+        """Alias for broadcast"""
+        await self.broadcast(message)
+
     async def broadcast_leaderboard(self, session):
         """Calculates current ranks and broadcasts to all clients."""
         stmt = select(Team).order_by(desc(Team.score), Team.updated_at)

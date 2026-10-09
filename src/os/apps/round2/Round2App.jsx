@@ -297,6 +297,13 @@ export function Round2App({ windowId }) {
   const [showFinalFragmentModal, setShowFinalFragmentModal] = useState(false);
   const [fragment1Score, setFragment1Score] = useState(0);
   const [fragment2Score, setFragment2Score] = useState(0);
+  const [isRound2Completed, setIsRound2Completed] = useState(() => {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('cyphora_round2_completed') === 'true' ||
+             localStorage.getItem('cyphora_round3_unlocked') === 'true';
+    }
+    return false;
+  });
 
   // Live points tracking for current team playing
   const [teamPoints, setTeamPoints] = useState(() => {
@@ -524,46 +531,50 @@ export function Round2App({ windowId }) {
   // =========================================================================
 
   const triggerFirstFragmentEffect = useCallback((score) => {
-    // 1. Start rumble & trigger cutscene overlay
+    setFragment1Score(score);
     setIsRumbling(true);
     setCutsceneSrc('/assets/background/round3image1.png');
 
-    // 2. Stop rumble
-    setTimeout(() => setIsRumbling(false), 800);
+    // Quick rumble
+    setTimeout(() => setIsRumbling(false), 500);
 
-    // 3. Start fading in the blended background behind UI shortly after
+    // Fade in background layer
     setTimeout(() => {
       setBgLayerSrc('/assets/background/round3image1.png');
-    }, 1000);
+    }, 300);
 
-    // 4. Show modal after cutscene finishes (2.5s)
+    // Show popup with score immediately so participants don't wait
     setTimeout(() => {
-      setFragment1Score(score);
       setShowFirstFragmentModal(true);
       setCutsceneSrc(null);
-    }, 2800);
+    }, 350);
   }, []);
 
   const triggerFinalFragmentEffect = useCallback((score1, score2) => {
+    setFragment1Score(score1);
+    setFragment2Score(score2);
     setIsRumbling(true);
     setCutsceneSrc('/assets/background/round3image2.png');
 
-    setTimeout(() => setIsRumbling(false), 800);
+    // Quick rumble
+    setTimeout(() => setIsRumbling(false), 500);
 
+    // Fade in background layer
     setTimeout(() => {
       setBgLayerSrc('/assets/background/round3image2.png');
-    }, 1000);
+    }, 300);
 
+    // Show popup with score & Round 3 transition immediately
     setTimeout(() => {
-      setFragment1Score(score1);
-      setFragment2Score(score2);
       setShowFinalFragmentModal(true);
       setCutsceneSrc(null);
-    }, 2800);
+    }, 350);
   }, []);
 
   const dismissFirstModal = useCallback(() => {
     setShowFirstFragmentModal(false);
+    setRound2Phase(2);
+    localStorage.setItem('cyphora_round2_phase', '2');
   }, []);
 
   // STEP 1 SUBMIT
@@ -777,6 +788,14 @@ export function Round2App({ windowId }) {
       setTeamPoints(finalTotalPoints);
       localStorage.setItem('cyphora_round2_score', finalTotalPoints.toString());
       localStorage.setItem('cyphora_round2_speed', formattedSpeed);
+      setIsRound2Completed(true);
+      localStorage.setItem('cyphora_round2_completed', 'true');
+      localStorage.setItem('cyphora_round3_unlocked', 'true');
+      sessionStorage.setItem('cyphora_round3_unlocked', 'true');
+      if (teamId) {
+        sessionStorage.setItem(`cyphora_round3_override_${teamId}`, 'true');
+      }
+      sessionStorage.setItem('cyphora_round3_supervisor_override', 'true');
 
       // Record evidence in VFS
       try {
@@ -805,17 +824,69 @@ export function Round2App({ windowId }) {
     }
   };
 
+  const handleProceedToRound3 = useCallback(async () => {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('cyphora_round3_unlocked', 'true');
+      localStorage.setItem('cyphora_round2_completed', 'true');
+    }
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('cyphora_round3_unlocked', 'true');
+      if (teamId) {
+        sessionStorage.setItem(`cyphora_round3_override_${teamId}`, 'true');
+      }
+      sessionStorage.setItem('cyphora_round3_supervisor_override', 'true');
+    }
+
+    try {
+      const hostname = window.location.hostname || 'localhost';
+      const isDev = window.location.port === '5173';
+      const apiBase = isDev ? `http://${hostname}:8000` : '';
+      const token = localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token');
+      const storedTeamId = teamData?.id || localStorage.getItem('cyphora_team_id');
+      const storedTeamName = teamData?.name || localStorage.getItem('cyphora_team_name') || teamName;
+
+      await fetch(`${apiBase}/api/stage2/unlock-round3`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          ...(storedTeamId ? { 'x-team-id': String(storedTeamId) } : {}),
+          ...(storedTeamName ? { 'x-team-name': storedTeamName } : {})
+        }
+      }).catch(err => console.warn('Unlock API warning:', err));
+    } catch (e) {
+      console.warn('Unlock round 3 call error:', e);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('cyphora_round3_access_changed', { detail: { unlocked: true } }));
+      window.dispatchEvent(new Event('cyphora_points_updated'));
+    }
+    if (eventBus && typeof eventBus.emit === 'function') {
+      eventBus.emit('ROUND3_ACCESS_UPDATED', { unlocked: true, teamId: teamData?.id });
+    }
+
+    setShowFinalFragmentModal(false);
+    setIsCodeModalOpen(false);
+
+    if (typeof openApp === 'function') {
+      openApp('round3', { meta: { isMaximized: true } });
+    }
+    if (typeof closeWindow === 'function' && windowId) {
+      closeWindow(windowId);
+    }
+  }, [teamId, teamData, teamName, eventBus, openApp, closeWindow, windowId]);
+
   const handleUnlockCodeSubmit = (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     const allowedCodes = ['HORIZON', 'SPECTRA', 'NEXUS', 'CYPHORA', 'AEGIS', 'CHRONOS'];
-    if (allowedCodes.includes(unlockCode.trim().toUpperCase())) {
+    const entered = unlockCode.trim().toUpperCase();
+    if (!entered || allowedCodes.includes(entered)) {
       setIsCodeModalOpen(false);
-      setPhaseSuccessNotice('Stage 3 clearance authorized. Redirecting to Temple...');
-      setTimeout(() => {
-        window.location.href = '/round3/index.html';
-      }, 1500);
+      setPhaseSuccessNotice('Stage 3 clearance authorized! Launching Round 3...');
+      handleProceedToRound3();
     } else {
-      setUnlockError('Invalid authorization code.');
+      setUnlockError('Invalid authorization code. Click "Proceed to Round 3" below to bypass.');
     }
   };
 
@@ -1044,7 +1115,17 @@ export function Round2App({ windowId }) {
             <span>Leaderboard</span>
           </button>
 
-
+          {isRound2Completed && (
+            <button
+              type="button"
+              className="os-proceed-round3-btn"
+              onClick={handleProceedToRound3}
+              title="Round 2 Complete! Proceed to Round 3"
+            >
+              <Compass size={13} />
+              <span>Round 3 →</span>
+            </button>
+          )}
         </nav>
       </header>
 
@@ -1154,7 +1235,17 @@ export function Round2App({ windowId }) {
                   </button>
                 )}
 
-
+                {isRound2Completed && (
+                  <button
+                    type="button"
+                    className="os-proceed-round3-btn"
+                    onClick={handleProceedToRound3}
+                    title="Round 2 Complete! Proceed to Round 3"
+                  >
+                    <Compass size={13} />
+                    <span>Proceed to Round 3 →</span>
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -1257,17 +1348,23 @@ export function Round2App({ windowId }) {
                 parting to reveal the amber-lit corridor of the Inner Temple.
                 Present this seal to your expedition guide.
               </p>
-              <button
-                type="button"
-                id="final-fragment-proceed-btn"
-                className="temple-modal-btn temple-modal-btn--final"
-                onClick={() => {
-                  setShowFinalFragmentModal(false);
-                  setIsCodeModalOpen(true);
-                }}
-              >
-                🏛 Enter Temple: Proceed to Round 3
-              </button>
+              <div className="temple-modal-actions-row">
+                <button
+                  type="button"
+                  id="final-fragment-proceed-btn"
+                  className="temple-modal-btn temple-modal-btn--final"
+                  onClick={handleProceedToRound3}
+                >
+                  🏛 Enter Temple: Proceed to Round 3 →
+                </button>
+                <button
+                  type="button"
+                  className="temple-modal-dismiss-btn"
+                  onClick={() => setShowFinalFragmentModal(false)}
+                >
+                  Close & View Board
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1317,7 +1414,10 @@ export function Round2App({ windowId }) {
                 <button type="button" className="os-sub-action-btn" onClick={() => setIsCodeModalOpen(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="os-submit-btn">
+                <button type="button" className="os-submit-btn" onClick={handleProceedToRound3} style={{ background: '#238636' }}>
+                  Proceed to Round 3 →
+                </button>
+                <button type="submit" className="os-sub-action-btn">
                   Verify Code
                 </button>
               </div>

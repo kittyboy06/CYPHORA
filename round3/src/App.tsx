@@ -17,7 +17,9 @@ function App() {
   const [hasEntered, setHasEntered] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showStory, setShowStory] = useState(() => {
-    return typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round3_story_finished') !== 'true';
+    if (typeof localStorage === 'undefined') return true;
+    const teamId = localStorage.getItem('cyphora_team_id') || 'default';
+    return localStorage.getItem(`cyphora_round3_story_finished_${teamId}`) !== 'true';
   });
   const [showTutorial, setShowTutorial] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -27,6 +29,7 @@ function App() {
   const blocklyRef = useRef<any>(null);
   const gameRef = useRef<any>(null);
   const level = useGameStore((state) => state.level);
+  const score = useGameStore((state) => state.score);
   const setStatus = useGameStore((state) => state.setStatus);
   const timeRemaining = useGameStore((state) => state.timeRemaining);
 
@@ -201,6 +204,8 @@ function App() {
     const handleParentMessage = (e: MessageEvent) => {
       if (e.data?.type === 'CYPHORA_GATE_UNLOCKED') {
         setIsFullscreen(true);
+        setIsTabSwitched(false);
+        setLockReason('');
       }
     };
 

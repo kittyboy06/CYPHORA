@@ -22,6 +22,7 @@ export function Round3App({ windowId }) {
       if (teamId && sessionStorage.getItem(`cyphora_round3_override_${teamId}`) === 'true') return true;
       if (sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true') return true;
     }
+    if (typeof localStorage !== 'undefined' && (localStorage.getItem('cyphora_round3_unlocked') === 'true' || localStorage.getItem('cyphora_round2_completed') === 'true')) return true;
     if (isRound1Completed) {
       if (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round3_unlocked') === 'true') return true;
     }

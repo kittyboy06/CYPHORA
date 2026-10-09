@@ -70,6 +70,7 @@ export const AntiCheatScreen: React.FC<Props> = ({ reason = 'FULLSCREEN_EXIT', o
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    event.stopPropagation();
     const cleanPass = password.trim().toUpperCase();
 
     if (RECOVERY_PASSWORDS.includes(cleanPass)) {

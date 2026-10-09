@@ -173,8 +173,8 @@ export function OSProvider({
   };
 
   const isProtectedRoundActive = () => {
-    // Only Round 2 is exempt from blue screen (user needs to upload device image from local machine)
-    return isRound2Active();
+    // Round 2 and Round 3 manage their own full-screen views and security policies
+    return isRound2Active() || isRound3Active();
   };
 
   const triggerLock = (reason = 'FULLSCREEN_EXIT') => {

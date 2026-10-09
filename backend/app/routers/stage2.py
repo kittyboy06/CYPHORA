@@ -385,8 +385,8 @@ async def submit_stage2(
         if not existing:
             team.round2_score = (getattr(team, 'round2_score', 0) or 0) + image2_points
             team.score = (getattr(team, 'round1_score', 0) or 0) + (getattr(team, 'round2_score', 0) or 0) + (getattr(team, 'round3_score', 0) or 0)
-            if team.current_stage < 2:
-                team.current_stage = 2
+            team.current_stage = 3
+            team.round3_unlocked = 1
             team.status = "active"
 
             # Create TaskSubmission entry for Image 2
@@ -414,6 +414,9 @@ async def submit_stage2(
             # Broadcast new standings across all 100 workstations
             await ws_manager.broadcast_leaderboard(db)
         else:
+            team.round3_unlocked = 1
+            if team.current_stage < 3:
+                team.current_stage = 3
             # Re-sync if team.round2_score is out of sync with stored submission
             stmt_sum = select(func.coalesce(func.sum(TaskSubmission.points_awarded), 0)).filter(
                 TaskSubmission.team_id == team.id,
@@ -423,25 +426,48 @@ async def submit_stage2(
             if (team.round2_score or 0) != r2_actual:
                 team.round2_score = r2_actual
                 team.score = (getattr(team, 'round1_score', 0) or 0) + (team.round2_score or 0) + (getattr(team, 'round3_score', 0) or 0)
-                await db.commit()
-                await ws_manager.broadcast_leaderboard(db)
+            await db.commit()
+            await ws_manager.broadcast_leaderboard(db)
 
         return {
             "success": True,
-            "points_awarded": image2_points,
             "image2_points": image2_points,
+            "points_awarded": image2_points,
             "image2_similarity": image2_similarity_str,
-            "accuracy": image2_sim_value,
             "new_total_score": team.score,
-            "message": f"Image 2 evaluated! {image2_similarity_str} accuracy ({image2_points}/50 PTS). Synced to database & admin."
+            "round3_unlocked": True,
+            "message": f"Round 2 completed! Image 2 accuracy: {image2_similarity_str} (+{image2_points}/50 PTS). Round 3 is now unlocked."
         }
 
     return {
         "success": True,
-        "points_awarded": image2_points,
         "image2_points": image2_points,
+        "points_awarded": image2_points,
         "image2_similarity": image2_similarity_str,
-        "accuracy": image2_sim_value,
         "new_total_score": image2_points,
-        "message": f"Image 2 evaluated in standalone mode! Accuracy: {image2_similarity_str} ({image2_points}/50 PTS)."
+        "round3_unlocked": True,
+        "message": f"Round 2 completed! Image 2 accuracy: {image2_similarity_str} (+{image2_points}/50 PTS). Round 3 is now unlocked."
     }
+
+@router.post("/unlock-round3")
+async def unlock_stage3(
+    authorization: Optional[str] = Header(None),
+    x_team_id: Optional[str] = Header(None),
+    x_team_name: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_db)
+):
+    team = await resolve_team(db, authorization, x_team_id, x_team_name)
+    if team:
+        team.round3_unlocked = 1
+        if team.current_stage < 3:
+            team.current_stage = 3
+        await db.commit()
+        await ws_manager.broadcast_leaderboard(db)
+        await ws_manager.broadcast({
+            "type": "ROUND3_ACCESS_UPDATED",
+            "team_id": team.id,
+            "team_name": team.name,
+            "unlocked": True
+        })
+        return {"success": True, "unlocked": True, "team_id": team.id}
+    return {"success": False, "message": "Team not resolved"}
