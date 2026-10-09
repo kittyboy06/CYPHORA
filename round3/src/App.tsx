@@ -15,6 +15,7 @@ import * as Blockly from 'blockly';
 import { PromptDialog, AlertDialog } from './components/PromptDialog';
 import { BlockGuideModal } from './components/BlockGuideModal';
 import { FinaleLeaderboard } from './components/FinaleLeaderboard';
+import { Round3TimeExpiredLeaderboard } from './components/Round3TimeExpiredLeaderboard';
 
 function App() {
   const [hasEntered, setHasEntered] = useState(false);
@@ -454,43 +455,14 @@ function App() {
     );
   }
 
-  if (timeRemaining <= 0 && localStorage.getItem('cyphora_round3_story_finished') === 'true' && !isAdminUnlocked) {
+  const teamId = (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : '') || 'default';
+  const isStoryFinished = typeof localStorage !== 'undefined' &&
+    (localStorage.getItem(`cyphora_round3_story_finished_${teamId}`) === 'true' || localStorage.getItem('cyphora_round3_story_finished') === 'true');
+
+  if (timeRemaining <= 0 && isStoryFinished && !isAdminUnlocked) {
     return (
       <>
-        <div className="absolute inset-0 bg-red-950/95 flex flex-col items-center justify-center p-4 md:p-8 z-[200] backdrop-blur-md">
-          <div className="max-w-3xl w-full text-center space-y-6 md:space-y-8 bg-black/80 p-8 md:p-12 border border-red-500/50 rounded-sm shadow-2xl">
-            <Clock size={64} className="text-red-500 mx-auto animate-pulse" />
-            <h1 className="text-2xl md:text-4xl font-cinzel text-red-500 tracking-widest">
-              ROUND 3 TIME EXPIRED
-            </h1>
-            <p className="text-base md:text-xl font-cinzel text-[var(--text-primary)] leading-relaxed italic">
-              "The temple gates have closed. Your trial in the Blockly Forest has concluded."
-            </p>
-            <p className="text-xs md:text-sm font-mono text-red-400/80 uppercase tracking-widest mt-2">
-              Round 3 time limit reached. Please await jury evaluation and final championship tally.
-            </p>
-            <div className="pt-6 mt-6 border-t border-red-900/30">
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                const code = adminCode.trim().toUpperCase();
-                if (['JCEAIML', 'CYPHORA-ADMIN', '8080', 'ADMIN', '1234'].includes(code)) {
-                  setIsAdminUnlocked(true);
-                } else {
-                  alert('Invalid admin override code.');
-                }
-              }} className="flex flex-col items-center gap-2">
-                <label className="text-[10px] text-red-500/50 uppercase tracking-widest font-mono">Supervisor Proctor Unlock</label>
-                <input
-                  type="password"
-                  value={adminCode}
-                  onChange={(e) => setAdminCode(e.target.value)}
-                  placeholder="Access Code"
-                  className="bg-black/50 border border-red-900/50 text-red-500 text-center text-xs font-mono px-3 py-2 outline-none focus:border-red-500 w-48 transition-colors"
-                />
-              </form>
-            </div>
-          </div>
-        </div>
+        <Round3TimeExpiredLeaderboard onAdminUnlock={() => setIsAdminUnlocked(true)} />
         {securityOverlay}
       </>
     );

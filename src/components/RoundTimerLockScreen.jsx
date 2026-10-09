@@ -40,7 +40,7 @@ export function RoundTimerLockScreen({
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isConnected, setIsConnected] = useState(false);
-  const [showOverrideInput, setShowOverrideInput] = useState(false);
+  const [showOverrideInput, setShowOverrideInput] = useState(true);
 
   const activeTeamName = (
     teamName ||
@@ -303,10 +303,12 @@ export function RoundTimerLockScreen({
         <div className="lockscreen-bottom-bar">
           <div className="lockscreen-team-summary">
             <span className="summary-label">YOUR TEAM:</span>
-            <span className="summary-val">{activeTeamName}</span>
+            <span className="summary-val diag-val highlight">{activeTeamName}</span>
             <span className="summary-divider">•</span>
             <span className="summary-label">CODE:</span>
-            <span className="summary-val code">CYPHORA_ROUND_{round}_TIME_EXPIRED</span>
+            <span className="summary-val code diag-val code-text">CYPHORA_ROUND_{round}_TIME_EXPIRED</span>
+            <span className="summary-divider">•</span>
+            <span className="summary-label">PLEASE CONTACT THE ADMINISTRATOR</span>
           </div>
 
           <button
