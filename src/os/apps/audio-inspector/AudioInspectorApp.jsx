@@ -48,8 +48,8 @@ export function AudioInspectorApp() {
       </div>
 
       {/* Visualizer Simulation */}
-      <div className="waveform-box">
-        <div className="waveform-bars">
+      <div className="waveform-container">
+        <div className={`bars-wrapper ${isPlaying ? 'playing' : ''}`}>
           {[40, 65, 20, 85, 95, 30, 70, 50, 90, 45, 60, 80, 25, 75, 55, 35, 90, 65, 40].map((h, idx) => (
             <div
               key={idx}

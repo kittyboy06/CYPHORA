@@ -20,19 +20,46 @@ from ..auth_utils import decode_access_token
 
 _clip_model = None
 _clip_processor = None
+_clip_attempted = False
 _device = None
 
 def get_clip_model():
-    global _clip_model, _clip_processor, _device
-    if _clip_model is None:
+    global _clip_model, _clip_processor, _clip_attempted, _device
+    if _clip_attempted:
+        return _clip_model, _clip_processor
+
+    _clip_attempted = True
+    try:
         import torch
         from transformers import CLIPProcessor, CLIPModel
         if _device is None:
             _device = "cuda" if torch.cuda.is_available() else "cpu"
         model_id = "openai/clip-vit-base-patch32"
-        # Load locally or from cache
-        _clip_processor = CLIPProcessor.from_pretrained(model_id)
-        _clip_model = CLIPModel.from_pretrained(model_id).to(_device)
+        
+        # 1. Try local cache first (instant, 100% offline, zero network requests or DNS lookups)
+        try:
+            _clip_processor = CLIPProcessor.from_pretrained(model_id, local_files_only=True)
+            _clip_model = CLIPModel.from_pretrained(model_id, local_files_only=True).to(_device)
+            print("[Stage 2] Successfully loaded CLIP model from local cache.")
+            return _clip_model, _clip_processor
+        except Exception:
+            pass
+
+        # 2. Try online download if local cache was missing
+        try:
+            _clip_processor = CLIPProcessor.from_pretrained(model_id)
+            _clip_model = CLIPModel.from_pretrained(model_id).to(_device)
+            print("[Stage 2] Successfully downloaded and loaded CLIP model.")
+            return _clip_model, _clip_processor
+        except Exception as net_err:
+            print(f"[Stage 2] Note: CLIP model not found locally and network unavailable ({net_err}). Using visual pixel fallback.")
+            _clip_model = None
+            _clip_processor = None
+    except Exception as e:
+        print(f"[Stage 2] Torch/Transformers initialization error ({e}). Using visual pixel fallback.")
+        _clip_model = None
+        _clip_processor = None
+
     return _clip_model, _clip_processor
 
 def compute_fallback_visual_similarity(user_image: Image.Image, target_image: Image.Image) -> float:
@@ -93,6 +120,9 @@ def compute_cosine_similarity(image_base64: Optional[str], target_image_path: st
             _device = "cuda" if torch.cuda.is_available() else "cpu"
         
         model, processor = get_clip_model()
+        if model is None or processor is None:
+            return compute_fallback_visual_similarity(user_image, target_image)
+
         inputs = processor(images=[user_image, target_image], return_tensors="pt").to(_device)
         
         with torch.no_grad():

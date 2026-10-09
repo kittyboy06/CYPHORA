@@ -24,6 +24,13 @@ export function TaskBoard({ round1State }) {
   const previousActiveTask = useRef(null);
   const seenCompletedTasks = useRef(new Set(tasks.filter(task => task.status === 'COMPLETED').map(task => task.id)));
   const celebrationTimeout = useRef(null);
+  const submitTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (submitTimeoutRef.current) clearTimeout(submitTimeoutRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!activeTaskId) {
@@ -142,23 +149,47 @@ export function TaskBoard({ round1State }) {
     const val = submittedAnswer.trim();
     if (!val) return;
 
-    eventBus.emit('TASK_ANSWER_SUBMITTED', {
-      answer: val,
-      hintsUsed: hintLevel,
-      taskId: activeTask.id
-    });
-
-    const isAnswerCorrect = activeTask.validator({ answer: val });
+    const isAnswerCorrect = activeTask?.validator ? activeTask.validator({ answer: val }) : false;
 
     if (isAnswerCorrect) {
       setIsCorrect(true);
       const points = Math.max(0, 20 - (hintLevel * 5));
       const penaltyNote = hintLevel > 0 ? ` (${hintLevel} hint${hintLevel > 1 ? 's' : ''} used: -${hintLevel * 5} pts)` : '';
       setFeedbackMsg(`✓ CORRECT (+${points} PTS EARNED${penaltyNote})\n\nTask complete.`);
+
+      if (submitTimeoutRef.current) clearTimeout(submitTimeoutRef.current);
+      submitTimeoutRef.current = setTimeout(() => {
+        eventBus.emit('TASK_ANSWER_SUBMITTED', {
+          answer: val,
+          hintsUsed: hintLevel,
+          taskId: activeTask.id
+        });
+        submitTimeoutRef.current = null;
+      }, 750);
     } else {
       setIsCorrect(false);
       setFeedbackMsg('Not quite.\n\nReview the information you recovered and try again.');
+      eventBus.emit('TASK_ANSWER_SUBMITTED', {
+        answer: val,
+        hintsUsed: hintLevel,
+        taskId: activeTask.id
+      });
     }
+  };
+
+  const handleProceedImmediate = () => {
+    if (submitTimeoutRef.current) {
+      clearTimeout(submitTimeoutRef.current);
+      submitTimeoutRef.current = null;
+    }
+    eventBus.emit('TASK_ANSWER_SUBMITTED', {
+      answer: submittedAnswer.trim(),
+      hintsUsed: hintLevel,
+      taskId: activeTask.id
+    });
+    setIsCorrect(false);
+    setFeedbackMsg('');
+    setSubmittedAnswer('');
   };
 
   const getPlaceholder = () => {
@@ -252,6 +283,7 @@ export function TaskBoard({ round1State }) {
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <input
                     type="text"
+                    className="objective-answer-field"
                     placeholder={getPlaceholder()}
                     value={submittedAnswer}
                     onChange={(e) => setSubmittedAnswer(e.target.value)}
@@ -259,6 +291,7 @@ export function TaskBoard({ round1State }) {
                   />
                   <button
                     type="submit"
+                    className="objective-submit-button"
                     style={{ background: '#238636', color: '#fff', border: 'none', padding: '0.65rem 1.25rem', borderRadius: '4px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.9rem' }}
                   >
                     <CheckCircle size={16} />
@@ -267,7 +300,10 @@ export function TaskBoard({ round1State }) {
                 </div>
 
                 {feedbackMsg && (
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'pre-line', color: isCorrect ? '#7ee787' : '#f85149', background: isCorrect ? 'rgba(46, 160, 67, 0.15)' : 'rgba(248, 81, 73, 0.15)', padding: '0.5rem 0.75rem', borderRadius: '4px', border: `1px solid ${isCorrect ? '#2ea043' : '#f85149'}` }}>
+                  <div
+                    className={isCorrect ? "objective-feedback-positive" : "objective-feedback-negative"}
+                    style={{ fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'pre-line', color: isCorrect ? '#7ee787' : '#f85149', background: isCorrect ? 'rgba(46, 160, 67, 0.15)' : 'rgba(248, 81, 73, 0.15)', padding: '0.5rem 0.75rem', borderRadius: '4px', border: `1px solid ${isCorrect ? '#2ea043' : '#f85149'}` }}
+                  >
                     {feedbackMsg}
                   </div>
                 )}
@@ -278,7 +314,7 @@ export function TaskBoard({ round1State }) {
                 {presentation.hints && presentation.hints.length > 0 && !isCorrect ? (
                   <button
                     type="button"
-                    className="objective-secondary-button"
+                    className="objective-secondary-button objective-hint-button"
                     onClick={revealHint}
                     title="Getting a hint reduces 5 points (2 hints reduce 10 points)"
                     style={{ background: '#21262d', color: '#e3b341', border: '1px solid #d29922', padding: '0.45rem 0.85rem', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
@@ -293,11 +329,7 @@ export function TaskBoard({ round1State }) {
                     <button
                       type="button"
                       className="objective-primary-button"
-                      onClick={() => {
-                        setIsCorrect(false);
-                        setFeedbackMsg('');
-                        setSubmittedAnswer('');
-                      }}
+                      onClick={handleProceedImmediate}
                       style={{
                         background: '#238636',
                         color: '#ffffff',
@@ -317,7 +349,7 @@ export function TaskBoard({ round1State }) {
 
               {/* Hint Modal Display */}
               {hintLevel > 0 && presentation.hints && presentation.hints.length > 0 && (
-                <div className="objective-hint" style={{ marginTop: '1rem', background: '#1c2128', border: '1px solid #d29922', borderRadius: '6px', padding: '0.8rem 1rem' }}>
+                <div className="objective-hint objective-hint-card" style={{ marginTop: '1rem', background: '#1c2128', border: '1px solid #d29922', borderRadius: '6px', padding: '0.8rem 1rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#e3b341', letterSpacing: '0.05rem' }}>
                       REVEALED HINTS ({hintLevel} OF {presentation.hints.length}) &bull; -{hintLevel * 5} PTS PENALTY

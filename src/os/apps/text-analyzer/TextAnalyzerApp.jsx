@@ -4,12 +4,13 @@ import { useOS } from '../../state/OSContext.jsx';
 import './TextAnalyzerApp.css';
 
 const SAMPLE_TEXT_FILES = [
-  { label: 'pattern_log.txt (Task 04 Text Pattern)', path: '/Documents/pattern_log.txt' },
-  { label: 'numbers.txt (Task 09 Frequency List)', path: '/Documents/numbers.txt' },
-  { label: 'sensor_stream.txt (Documents)', path: '/Documents/sensor_stream.txt' },
-  { label: 'REPORT_17.txt (Documents)', path: '/Documents/REPORT_17.txt' },
-  { label: 'Archive_04.txt (Documents)', path: '/Documents/Archive_04.txt' },
-  { label: 'final_cipher.txt (Documents)', path: '/Documents/final_cipher.txt' }
+  { label: 'access.log (Documents)', path: '/Documents/access.log' },
+  { label: 'message_old.txt (Documents)', path: '/Documents/message_old.txt' },
+  { label: 'message_new.txt (Documents)', path: '/Documents/message_new.txt' },
+  { label: 'alpha.txt (Documents)', path: '/Documents/alpha.txt' },
+  { label: 'beta.txt (Documents)', path: '/Documents/beta.txt' },
+  { label: 'Getting Started.txt (Desktop)', path: '/Desktop/Getting Started.txt' },
+  { label: 'App Usage.txt (Desktop)', path: '/Desktop/App Usage.txt' }
 ];
 
 export function TextAnalyzerApp() {

@@ -160,7 +160,7 @@ export function FileComparatorApp() {
 
           <div className="diff-lines-container">
             {diffResult.diffLines.map((line, idx) => (
-              <div key={idx} className="diff-line-row">
+              <div key={idx} className={`diff-line-row ${line.isDiff ? 'diff-row-highlight' : ''}`}>
                 <div className="col-num">{line.lineNum}</div>
                 <div className="col-content col-a">{line.lineA}</div>
                 <div className="col-content col-b">{line.lineB}</div>
@@ -175,8 +175,20 @@ export function FileComparatorApp() {
         <div className="comparator-footer">
           <div className="diff-summary">
             <span>COMPARISON COMPLETE:</span>
-            <span>{diffResult.diffLines.length} lines compared side-by-side. Inspect the entries to identify differences.</span>
+            <span>{diffResult.diffLines.length} lines compared side-by-side.</span>
+            {diffResult.diffValue && (
+              <div style={{ marginTop: '0.25rem' }}>
+                <span style={{ color: '#8b949e', fontSize: '0.78rem' }}>DIFFERENCE ISOLATED: </span>
+                <strong className="diff-tag" style={{ color: '#7ee787', fontFamily: 'monospace', fontSize: '0.95rem' }}>{diffResult.diffValue}</strong>
+              </div>
+            )}
           </div>
+          {diffResult.diffValue && (
+            <button className="copy-btn copy-diff-btn" onClick={handleCopy}>
+              {copied ? <Check size={14} color="#7ee787" /> : <Copy size={14} />}
+              <span>{copied ? 'Copied' : 'Copy Diff'}</span>
+            </button>
+          )}
         </div>
       )}
 
