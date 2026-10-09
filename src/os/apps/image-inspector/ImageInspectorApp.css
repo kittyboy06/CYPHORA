@@ -31,6 +31,27 @@
   opacity: 0.7;
 }
 
+.header-meta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(88, 166, 255, 0.12);
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  color: #58a6ff;
+  padding: 0.35rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.header-meta-btn:hover {
+  background: rgba(88, 166, 255, 0.25);
+  color: #ffffff;
+  border-color: #58a6ff;
+}
+
 /* ========================================================
    FILE SELECTION & TOOLBAR
    ======================================================== */
@@ -162,7 +183,7 @@
   min-height: 200px;
   display: flex;
   position: relative;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .canvas-container {
@@ -171,7 +192,32 @@
   align-items: center;
   justify-content: center;
   padding: 1.2rem;
+  min-width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
   transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.inspector-image-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 100%;
+  background: #080c12;
+  border: 1px solid rgba(88, 166, 255, 0.25);
+  border-radius: 6px;
+  padding: 0.4rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+
+.inspector-image-render {
+  max-width: 100%;
+  max-height: calc(100vh - 350px);
+  object-fit: contain;
+  border-radius: 4px;
+  display: block;
+  user-select: none;
 }
 
 .simulated-image-frame {
@@ -341,6 +387,85 @@
 
 .adj-group input[type="range"] {
   width: 100%;
+}
+
+/* ========================================================
+   TELEMETRY & FILE ATTRIBUTES BAR
+   ======================================================== */
+.inspector-telemetry-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 0.45rem 0.75rem;
+}
+
+.telemetry-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.telemetry-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  color: #8b949e;
+  font-size: 0.72rem;
+}
+
+.telemetry-badge strong {
+  color: #c9d1d9;
+  font-family: 'Fira Code', monospace;
+}
+
+.telemetry-badge.highlight-id {
+  background: rgba(88, 166, 255, 0.15);
+  border-color: #58a6ff;
+  color: #58a6ff;
+}
+
+.telemetry-badge.highlight-id strong {
+  color: #58a6ff;
+}
+
+.telemetry-badge.highlight-qr {
+  background: rgba(126, 231, 135, 0.15);
+  border-color: #7ee787;
+  color: #7ee787;
+}
+
+.telemetry-badge.highlight-qr strong {
+  color: #7ee787;
+}
+
+.telemetry-meta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #21262d;
+  border: 1px solid #388bfd;
+  color: #58a6ff;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.telemetry-meta-btn:hover {
+  background: rgba(56, 139, 253, 0.2);
+  color: #ffffff;
 }
 
 /* ========================================================

@@ -44,22 +44,26 @@ export function osReducer(state, action) {
         }
       }
 
-      // If single-instance app already exists (and no specific file meta), just focus it
-      if (!meta.filePath) {
-        const existing = state.windows.find(w => w.appId === appId);
-        if (existing) {
-          return {
-            ...state,
-            windows: state.windows.map(w =>
-              w.id === existing.id
-                ? { ...w, isMinimized: false, zIndex: state.nextZIndex + 1 }
-                : w
-            ),
-            activeWindowId: existing.id,
-            nextZIndex: state.nextZIndex + 1,
-            isStartMenuOpen: false
-          };
-        }
+      // If single-instance app already exists (or image/metadata inspector with new file), focus and update it
+      const existing = state.windows.find(w => w.appId === appId && (!meta.filePath || w.appId === 'image-inspector' || w.appId === 'metadata-inspector' || w.meta?.filePath === meta.filePath));
+      if (existing) {
+        return {
+          ...state,
+          windows: state.windows.map(w =>
+            w.id === existing.id
+              ? {
+                  ...w,
+                  isMinimized: false,
+                  zIndex: state.nextZIndex + 1,
+                  title: title || w.title,
+                  meta: { ...w.meta, ...meta }
+                }
+              : w
+          ),
+          activeWindowId: existing.id,
+          nextZIndex: state.nextZIndex + 1,
+          isStartMenuOpen: false
+        };
       }
 
       // Cascade windows through the safe workspace below the HUD and above the taskbar.

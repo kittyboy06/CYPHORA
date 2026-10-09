@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
-import { Info, FileSearch, Copy, Check, Folder } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Info, FileSearch, Copy, Check, Folder, Image as ImageIcon } from 'lucide-react';
 import { useOS } from '../../state/OSContext.jsx';
 import { VirtualFilePicker } from '../../components/VirtualFilePicker.jsx';
 import './MetadataInspectorApp.css';
 
-export function MetadataInspectorApp() {
-  const { vfs, eventBus } = useOS();
-  const [selectedPath, setSelectedPath] = useState('');
+export function MetadataInspectorApp({ meta = {} }) {
+  const { vfs, eventBus, openApp } = useOS();
+  const [selectedPath, setSelectedPath] = useState(meta?.filePath || '');
   const [metadata, setMetadata] = useState(null);
   const [copiedKey, setCopiedKey] = useState('');
   const [showPicker, setShowPicker] = useState(false);
+
+  useEffect(() => {
+    if (meta?.filePath) {
+      setSelectedPath(meta.filePath);
+      handleInspectVFS(meta.filePath);
+    }
+  }, [meta?.filePath]);
 
   const handleInspectVFS = (pathToInspect = selectedPath) => {
     if (!pathToInspect) return;
@@ -114,7 +121,22 @@ export function MetadataInspectorApp() {
       {/* Metadata Table Display */}
       {metadata && !metadata.error && (
         <div className="metadata-results">
-          <h3>FILE METADATA RECORD</h3>
+          <div className="meta-results-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
+            <h3 style={{ margin: 0 }}>FILE METADATA RECORD</h3>
+            {(metadata.mimeType?.startsWith('image/') || metadata.name?.endsWith('.png') || metadata.name?.endsWith('.jpg') || metadata.name?.endsWith('.jpeg') || metadata.name?.endsWith('.webp')) && (
+              <button
+                className="inspect-btn"
+                onClick={() => openApp('image-inspector', {
+                  title: `Image Inspector - ${metadata.name}`,
+                  meta: { filePath: metadata.path }
+                })}
+                style={{ background: 'rgba(88, 166, 255, 0.15)', borderColor: '#58a6ff', color: '#58a6ff', fontSize: '0.78rem', padding: '0.35rem 0.65rem' }}
+              >
+                <ImageIcon size={14} />
+                <span>Open in Image Inspector</span>
+              </button>
+            )}
+          </div>
           <div className="meta-grid">
             <div className="meta-row"><span className="key">File Name</span><span className="val">{metadata.name}</span></div>
             <div className="meta-row"><span className="key">File Path</span><span className="val">{metadata.path}</span></div>

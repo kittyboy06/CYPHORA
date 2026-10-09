@@ -230,30 +230,49 @@ export function Desktop() {
         ))}
 
         {/* Dynamic VFS /Desktop file icons */}
-        {desktopFiles.map(file => (
-          <div
-            key={file.path}
-            className={`desktop-icon-cell ${selectedId === file.path ? 'selected' : ''}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedId(file.path);
-            }}
-            onDoubleClick={(e) => {
-              e.stopPropagation();
-              openApp('text-editor', {
-                title: `Text Editor - ${file.name}`,
-                meta: { filePath: file.path }
-              });
-            }}
-          >
-            <div className="desktop-icon-glyph">
-              <FileText size={32} className={`desktop-icon-svg ${(file.name.includes('Getting Started') || file.name.includes('App Usage')) ? 'settings-color' : 'file-color'}`} />
+        {desktopFiles.map(file => {
+          const isImage = file.mimeType?.startsWith('image/') ||
+            file.name.endsWith('.png') ||
+            file.name.endsWith('.jpg') ||
+            file.name.endsWith('.jpeg') ||
+            file.name.endsWith('.webp');
+
+          return (
+            <div
+              key={file.path}
+              className={`desktop-icon-cell ${selectedId === file.path ? 'selected' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedId(file.path);
+              }}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                if (isImage) {
+                  openApp('image-inspector', {
+                    title: `Image Inspector - ${file.name}`,
+                    meta: { filePath: file.path }
+                  });
+                } else {
+                  openApp('text-editor', {
+                    title: `Text Editor - ${file.name}`,
+                    meta: { filePath: file.path }
+                  });
+                }
+              }}
+            >
+              <div className="desktop-icon-glyph">
+                {isImage ? (
+                  <ImageIcon size={32} className="desktop-icon-svg file-color" />
+                ) : (
+                  <FileText size={32} className={`desktop-icon-svg ${(file.name.includes('Getting Started') || file.name.includes('App Usage')) ? 'settings-color' : 'file-color'}`} />
+                )}
+              </div>
+              <span className="desktop-icon-label" title={file.name}>
+                {file.name}
+              </span>
             </div>
-            <span className="desktop-icon-label" title={file.name}>
-              {file.name}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Top-Right Desktop HUD Stack: Monolith Telemetry HUD + Synced Database Leaderboard */}

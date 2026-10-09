@@ -381,6 +381,7 @@ const EVENT_TYPE_MAP = {
   'FILE_UPLOADED': 'file_uploaded',
   'CONVERSION_PERFORMED': 'conversion_performed',
   'METADATA_INSPECTED': 'metadata_inspected',
+  'IMAGE_INSPECTED': 'image_inspected',
   'QR_SCANNED': 'qr_scanned',
   'FILES_COMPARED': 'comparison_performed',
   'TASK_ANSWER_SUBMITTED': 'answer_submitted',

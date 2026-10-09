@@ -166,13 +166,24 @@ export function FileManagerApp() {
         item.name.endsWith('.dat') ||
         item.name.endsWith('.cfg');
 
+      const isImage = item.mimeType?.startsWith('image/') ||
+        item.name.endsWith('.png') ||
+        item.name.endsWith('.jpg') ||
+        item.name.endsWith('.jpeg') ||
+        item.name.endsWith('.webp') ||
+        item.name.endsWith('.gif') ||
+        item.name.endsWith('.svg');
+
       if (isText) {
         openApp('text-editor', {
           title: `Text Editor - ${item.name}`,
           meta: { filePath: item.path }
         });
-      } else if (item.name.endsWith('.png') || item.name.endsWith('.jpg')) {
-        openApp('metadata-inspector');
+      } else if (isImage) {
+        openApp('image-inspector', {
+          title: `Image Inspector - ${item.name}`,
+          meta: { filePath: item.path }
+        });
       } else {
         handleInspectProperties(item);
       }
@@ -337,7 +348,13 @@ export function FileManagerApp() {
                     onContextMenu={(e) => handleContextMenu(e, item)}
                   >
                     <span className="col-name">
-                      {item.type === 'dir' ? <Folder size={16} /> : <FileText size={16} />}
+                      {item.type === 'dir' ? (
+                        <Folder size={16} />
+                      ) : (item.mimeType?.startsWith('image/') || item.name.endsWith('.png') || item.name.endsWith('.jpg') || item.name.endsWith('.jpeg')) ? (
+                        <ImageIcon size={16} style={{ color: '#58a6ff' }} />
+                      ) : (
+                        <FileText size={16} />
+                      )}
                       <span className="name-text">{item.name}</span>
                     </span>
                     <span className="col-type">{item.type === 'dir' ? 'Folder' : (item.mimeType || 'File')}</span>
@@ -384,6 +401,39 @@ export function FileManagerApp() {
               <Folder size={14} color="#79c0ff" />
               <span>Open Directory</span>
             </button>
+          ) : (contextMenu.target?.mimeType?.startsWith('image/') ||
+               contextMenu.target?.name?.endsWith('.png') ||
+               contextMenu.target?.name?.endsWith('.jpg') ||
+               contextMenu.target?.name?.endsWith('.jpeg') ||
+               contextMenu.target?.name?.endsWith('.webp')) ? (
+            <>
+              <button
+                className="context-menu-item"
+                onClick={() => {
+                  openApp('image-inspector', {
+                    title: `Image Inspector - ${contextMenu.target.name}`,
+                    meta: { filePath: contextMenu.target.path }
+                  });
+                  setContextMenu(null);
+                }}
+              >
+                <ImageIcon size={14} color="#58a6ff" />
+                <span>Open Image</span>
+              </button>
+              <button
+                className="context-menu-item"
+                onClick={() => {
+                  openApp('metadata-inspector', {
+                    title: `Metadata Inspector - ${contextMenu.target.name}`,
+                    meta: { filePath: contextMenu.target.path }
+                  });
+                  setContextMenu(null);
+                }}
+              >
+                <Info size={14} color="#e5c07b" />
+                <span>Inspect Metadata</span>
+              </button>
+            </>
           ) : (
             <button
               className="context-menu-item"
@@ -447,9 +497,46 @@ export function FileManagerApp() {
         <span>{items.length} item{items.length === 1 ? '' : 's'}</span>
         {selectedItem && (
           <div className="fm-footer-right">
+            {(selectedItem.mimeType?.startsWith('image/') ||
+              selectedItem.name?.endsWith('.png') ||
+              selectedItem.name?.endsWith('.jpg') ||
+              selectedItem.name?.endsWith('.jpeg') ||
+              selectedItem.name?.endsWith('.webp')) ? (
+              <>
+                <button
+                  className="inspect-prop-btn"
+                  onClick={() => openApp('image-inspector', {
+                    title: `Image Inspector - ${selectedItem.name}`,
+                    meta: { filePath: selectedItem.path }
+                  })}
+                  style={{ background: 'rgba(88, 166, 255, 0.15)', borderColor: '#58a6ff', color: '#58a6ff' }}
+                >
+                  <ImageIcon size={13} />
+                  <span>Open Image</span>
+                </button>
+                <button
+                  className="inspect-prop-btn"
+                  onClick={() => openApp('metadata-inspector', {
+                    title: `Metadata - ${selectedItem.name}`,
+                    meta: { filePath: selectedItem.path }
+                  })}
+                >
+                  <Info size={13} />
+                  <span>Inspect Metadata</span>
+                </button>
+              </>
+            ) : selectedItem.type !== 'dir' ? (
+              <button
+                className="inspect-prop-btn"
+                onClick={() => handleItemDoubleClick(selectedItem)}
+              >
+                <FileText size={13} />
+                <span>Open File</span>
+              </button>
+            ) : null}
             <button className="inspect-prop-btn" onClick={() => handleInspectProperties(selectedItem)}>
               <Info size={13} />
-              <span>Inspect Properties</span>
+              <span>Properties</span>
             </button>
             <span className="fm-selected-desc">
               Selected: {selectedItem.name} ({selectedItem.type === 'dir' ? 'Folder' : `${selectedItem.size || 0} B`})
