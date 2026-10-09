@@ -216,7 +216,7 @@ async def get_stage2_access_status(
     if not team:
         return {"unlocked": False, "authenticated": False, "message": "No registered team session found."}
 
-    is_unlocked = bool(getattr(team, "round2_unlocked", 0) or (team.current_stage and team.current_stage >= 2))
+    is_unlocked = bool(getattr(team, "round2_unlocked", 0))
     return {
         "unlocked": is_unlocked,
         "authenticated": True,

@@ -127,8 +127,8 @@ async def list_admin_teams(
             "status": "active" if ws_manager.is_team_connected(t.name) else t.status,
             "is_connected": ws_manager.is_team_connected(t.name),
             "current_stage": t.current_stage,
-            "round2_unlocked": bool(getattr(t, 'round2_unlocked', 0) or (t.current_stage and t.current_stage >= 2)),
-            "round3_unlocked": bool(getattr(t, 'round3_unlocked', 0) or (t.current_stage and t.current_stage >= 3)),
+            "round2_unlocked": bool(getattr(t, 'round2_unlocked', 0)),
+            "round3_unlocked": bool(getattr(t, 'round3_unlocked', 0)),
             "pin": getattr(t, 'raw_pin', None) or "—",
             "notes": t.notes,
             "last_ip": t.last_ip,
@@ -760,62 +760,39 @@ async def configure_event_timer(
     existing_timer = await _fetch_timer(db, round_num)
     cur_mins = duration_minutes if duration_minutes is not None else existing_timer.get("duration_minutes", 60 if round_num == 1 else 30)
 
+    mins = cur_mins or (60 if round_num == 1 else (15 if round_num == 2 else 30))
     if action == "reset":
-        mins = cur_mins or (60 if round_num == 1 else 30)
+        mins = 60 if round_num == 1 else (15 if round_num == 2 else 30)
         timer_payload = {
             "round": round_num,
-            "action": "stopped",
+            "action": "configured",
             "duration_minutes": mins,
             "remaining_seconds": mins * 60,
             "ends_at": None,
             "started_at": None,
             "updated_at": now.isoformat()
         }
-    elif action == "start":
-        rem = remaining_seconds if remaining_seconds is not None else (cur_mins * 60)
-        ends_at = (now + timedelta(seconds=rem)).isoformat()
-        timer_payload = {
-            "round": round_num,
-            "action": "start",
-            "duration_minutes": cur_mins,
-            "remaining_seconds": rem,
-            "ends_at": ends_at,
-            "started_at": now.isoformat(),
-            "updated_at": now.isoformat()
-        }
     elif action == "pause":
-        rem = existing_timer.get("remaining_seconds", cur_mins * 60)
-        if existing_timer.get("ends_at"):
-            try:
-                ends_at_dt = datetime.fromisoformat(existing_timer["ends_at"])
-                rem = max(0, int((ends_at_dt - now).total_seconds()))
-            except Exception:
-                pass
         timer_payload = {
             "round": round_num,
             "action": "pause",
-            "duration_minutes": cur_mins,
-            "remaining_seconds": rem,
+            "duration_minutes": mins,
+            "remaining_seconds": mins * 60,
             "ends_at": None,
-            "started_at": existing_timer.get("started_at"),
+            "started_at": None,
             "updated_at": now.isoformat()
         }
     elif action == "resume":
-        rem = remaining_seconds if remaining_seconds is not None else existing_timer.get("remaining_seconds", cur_mins * 60)
-        if rem <= 0:
-            rem = cur_mins * 60
-        ends_at = (now + timedelta(seconds=rem)).isoformat()
         timer_payload = {
             "round": round_num,
-            "action": "start",
-            "duration_minutes": cur_mins,
-            "remaining_seconds": rem,
-            "ends_at": ends_at,
-            "started_at": existing_timer.get("started_at") or now.isoformat(),
+            "action": "configured",
+            "duration_minutes": mins,
+            "remaining_seconds": mins * 60,
+            "ends_at": None,
+            "started_at": None,
             "updated_at": now.isoformat()
         }
-    else:  # "set" | "configured"
-        mins = cur_mins or (60 if round_num == 1 else 30)
+    else:  # "set" | "configured" | "start"
         timer_payload = {
             "round": round_num,
             "action": "configured",

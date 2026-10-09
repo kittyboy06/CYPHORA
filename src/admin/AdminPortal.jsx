@@ -66,7 +66,7 @@ export function AdminPortal() {
   // Search & Filter & Sort
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'idle' | 'noted'
-  const [sortField, setSortField] = useState('final_score'); // default sort by Final Winner Score (R2 + R3)
+  const [sortField, setSortField] = useState('score'); // default sort by Total Score
   const [sortAsc, setSortAsc] = useState(false);
 
   // Score Audit Modal & Live Feed
@@ -240,36 +240,14 @@ export function AdminPortal() {
 
   const getRemainingTimeString = (t) => {
     if (!t) return '60:00';
-    const durMins = t.duration_minutes || (t.round === 1 ? 60 : 30);
-    if (t.action === 'start' && t.ends_at) {
-      const diffMs = Math.max(0, new Date(t.ends_at).getTime() - currentTime.getTime());
-      const totalSec = Math.floor(diffMs / 1000);
-      const m = Math.floor(totalSec / 60);
-      const s = totalSec % 60;
-      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
-    if (t.action === 'pause') {
-      const sec = t.remaining_seconds != null ? t.remaining_seconds : durMins * 60;
-      const m = Math.floor(sec / 60);
-      const s = sec % 60;
-      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
-    if (t.action === 'expired') {
-      return '00:00';
-    }
+    const durMins = t.duration_minutes || (t.round === 1 ? 60 : (t.round === 2 ? 15 : 30));
     return `${durMins.toString().padStart(2, '0')}:00`;
   };
 
   const getTimerStatus = (t) => {
-    if (!t) return { label: 'STOPPED', cls: 'stopped', color: '#8c8268' };
-    if (t.action === 'start') {
-      const diffMs = t.ends_at ? new Date(t.ends_at).getTime() - currentTime.getTime() : 1;
-      if (diffMs <= 0) return { label: 'EXPIRED', cls: 'expired', color: '#ff4757' };
-      return { label: 'RUNNING', cls: 'running', color: '#2ed573' };
-    }
+    if (!t) return { label: 'CONFIGURED', cls: 'running', color: '#dfb125' };
     if (t.action === 'pause') return { label: 'PAUSED', cls: 'paused', color: '#ffa502' };
-    if (t.action === 'expired') return { label: 'EXPIRED', cls: 'expired', color: '#ff4757' };
-    return { label: 'STANDBY', cls: 'stopped', color: '#dfb125' };
+    return { label: 'CONFIGURED', cls: 'running', color: '#dfb125' };
   };
 
   // Reset / Restart round timer for a team
@@ -821,21 +799,9 @@ export function AdminPortal() {
     return true;
   });
 
-  // Calculate Championship Winner Ranking based on Round 2 + Round 3 score
-  const championshipRankedTeams = [...teams].sort((a, b) => {
-    const fA = (a.round2_score || 0) + (a.round3_score || 0);
-    const fB = (b.round2_score || 0) + (b.round3_score || 0);
-    if (fB !== fA) return fB - fA;
-    return (b.score || 0) - (a.score || 0);
-  });
-
   const sortedTeams = [...filteredTeams].sort((a, b) => {
     let cmp = 0;
-    const finalA = (a.round2_score || 0) + (a.round3_score || 0);
-    const finalB = (b.round2_score || 0) + (b.round3_score || 0);
-
-    if (sortField === 'final_score') cmp = finalB - finalA;
-    else if (sortField === 'score') cmp = (b.score || 0) - (a.score || 0);
+    if (sortField === 'score') cmp = (b.score || 0) - (a.score || 0);
     else if (sortField === 'round1_score') cmp = (b.round1_score || 0) - (a.round1_score || 0);
     else if (sortField === 'round2_score') cmp = (b.round2_score || 0) - (a.round2_score || 0);
     else if (sortField === 'round3_score') cmp = (b.round3_score || 0) - (a.round3_score || 0);
@@ -986,21 +952,6 @@ export function AdminPortal() {
             </div>
           </div>
 
-          <div className="admin-metric-card" style={{ borderColor: 'rgba(223, 177, 37, 0.45)' }}>
-            <div className="metric-icon-wrap" style={{ color: '#dfb125', background: 'rgba(223,177,37,0.12)' }}>
-              <Trophy size={22} />
-            </div>
-            <div className="metric-data">
-              <span className="metric-label">Top Final (R2+R3)</span>
-              <span className="metric-val">
-                {championshipRankedTeams.length > 0 ? ((championshipRankedTeams[0]?.round2_score || 0) + (championshipRankedTeams[0]?.round3_score || 0)) : 0} pts
-              </span>
-              <span className="metric-sub">
-                Champion: {championshipRankedTeams[0]?.name || 'None'}
-              </span>
-            </div>
-          </div>
-
           <div className="admin-metric-card">
             <div className="metric-icon-wrap"><Database size={22} /></div>
             <div className="metric-data">
@@ -1093,35 +1044,27 @@ export function AdminPortal() {
 
                 {/* Actions */}
                 <div className="timer-hub-controls">
-                  {currentTimerObj.action === 'start' ? (
-                    <button
-                      className="timer-ctrl-btn pause"
-                      onClick={() => handleControlTimer(activeTimerTab, 'pause')}
-                      title={`Pause Round ${activeTimerTab} timer for all workstations`}
-                    >
-                      <Pause size={14} /> Pause Round {activeTimerTab}
-                    </button>
-                  ) : currentTimerObj.action === 'pause' ? (
+                  {currentTimerObj.action === 'pause' ? (
                     <button
                       className="timer-ctrl-btn primary"
                       onClick={() => handleControlTimer(activeTimerTab, 'resume')}
-                      title={`Resume Round ${activeTimerTab} countdown`}
+                      title={`Resume Round ${activeTimerTab} workstation timers`}
                     >
-                      <Play size={14} /> Resume Round {activeTimerTab}
+                      <Play size={14} /> Resume Workstations
                     </button>
                   ) : (
                     <button
-                      className="timer-ctrl-btn primary"
-                      onClick={() => handleControlTimer(activeTimerTab, 'start')}
-                      title={`Start Round ${activeTimerTab} countdown for all workstations`}
+                      className="timer-ctrl-btn pause"
+                      onClick={() => handleControlTimer(activeTimerTab, 'pause')}
+                      title={`Emergency pause Round ${activeTimerTab} workstation timers`}
                     >
-                      <Play size={14} /> Start Round {activeTimerTab}
+                      <Pause size={14} /> Emergency Pause
                     </button>
                   )}
 
                   <button
                     className="timer-ctrl-btn config"
-                    onClick={() => setTimerModal({ open: true, round: activeTimerTab, durationMinutes: currentTimerObj.duration_minutes || (activeTimerTab === 1 ? 60 : 30) })}
+                    onClick={() => setTimerModal({ open: true, round: activeTimerTab, durationMinutes: currentTimerObj.duration_minutes || (activeTimerTab === 1 ? 60 : (activeTimerTab === 2 ? 15 : 30)) })}
                     title="Configure Custom Duration"
                   >
                     <Clock size={14} /> Custom Duration
@@ -1391,9 +1334,6 @@ export function AdminPortal() {
                   <th className="sortable" onClick={() => handleSortClick('round3_score')} style={{ textAlign: 'right', width: '65px' }}>
                     R3 {sortField === 'round3_score' ? (sortAsc ? '▲' : '▼') : ''}
                   </th>
-                  <th className="sortable" onClick={() => handleSortClick('final_score')} style={{ textAlign: 'center', width: '130px', color: '#eed56a' }}>
-                    Final (R2+R3) 🏆 {sortField === 'final_score' ? (sortAsc ? '▲' : '▼') : ''}
-                  </th>
                   <th className="sortable" onClick={() => handleSortClick('score')}>
                     Total Score & Controls {sortField === 'score' ? (sortAsc ? '▲' : '▼') : ''}
                   </th>
@@ -1409,7 +1349,6 @@ export function AdminPortal() {
               <tbody>
                 {sortedTeams.map((t) => {
                   const rankClass = t.rank === 1 ? 'gold' : t.rank === 2 ? 'silver' : t.rank === 3 ? 'bronze' : '';
-                  const finalScore = (t.round2_score || 0) + (t.round3_score || 0);
 
                   return (
                     <tr key={t.id || t.name}>
@@ -1535,26 +1474,6 @@ export function AdminPortal() {
                       {/* R3 Score */}
                       <td style={{ textAlign: 'right', fontFamily: 'monospace', color: '#dfb125', fontWeight: 600 }}>
                         {t.round3_score || 0}
-                      </td>
-
-                      {/* Final Championship Score (R2 + R3) */}
-                      <td style={{ textAlign: 'center' }}>
-                        <span style={{
-                          fontFamily: 'monospace',
-                          fontWeight: 'bold',
-                          fontSize: '0.98rem',
-                          color: '#dfb125',
-                          background: 'rgba(223, 177, 37, 0.12)',
-                          border: '1px solid rgba(223, 177, 37, 0.35)',
-                          padding: '0.2rem 0.55rem',
-                          borderRadius: '4px',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.3rem'
-                        }}>
-                          <Trophy size={11} color="#dfb125" />
-                          {finalScore} pts
-                        </span>
                       </td>
 
                       {/* Total Score with Quick Point Adjustment Controls */}

@@ -334,36 +334,66 @@ export function Round2App({ windowId }) {
     };
   }, []);
 
-  // Synchronized Round 2 Countdown Tick Hook
+  // Individual Workstation Countdown for Round 2 - starts ONLY after entering Round 2 app
   useEffect(() => {
-    if (!backendRound2Timer) return;
+    if (!isRound2Authorized) return;
 
-    if (backendRound2Timer.action === 'start' && backendRound2Timer.ends_at) {
-      const tick = () => {
-        const rem = Math.max(0, Math.floor((new Date(backendRound2Timer.ends_at).getTime() - Date.now()) / 1000));
-        setSecondsRemaining(rem);
-        setIsTimerRunning(rem > 0);
-        if (rem <= 0 && !proctorUnlockedRound2) {
-          setIsRound2TimerExpired(true);
-        } else if (rem > 0) {
-          setIsRound2TimerExpired(false);
-        }
-      };
-      tick();
-      const interval = setInterval(tick, 1000);
-      return () => clearInterval(interval);
-    } else if (backendRound2Timer.action === 'pause') {
-      const rem = backendRound2Timer.remaining_seconds !== undefined ? backendRound2Timer.remaining_seconds : 1800;
-      setSecondsRemaining(rem);
-      setIsTimerRunning(false);
-    } else if (backendRound2Timer.action === 'reset') {
-      const dur = (backendRound2Timer.duration_minutes || 30) * 60;
-      setSecondsRemaining(dur);
-      setIsTimerRunning(false);
-      setIsRound2TimerExpired(false);
-      setProctorUnlockedRound2(false);
+    const currentTeamId = teamData?.id || (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : null) || 'team';
+    const teamSpecificKey = `cyphora_round2_started_at_${currentTeamId}`;
+
+    let storedStart = null;
+    if (teamData?.round2_started_at) {
+      storedStart = String(new Date(teamData.round2_started_at).getTime());
+      try { localStorage.setItem(teamSpecificKey, storedStart); } catch (_) {}
+    } else {
+      storedStart = localStorage.getItem(teamSpecificKey);
     }
-  }, [backendRound2Timer, proctorUnlockedRound2]);
+
+    const isNewStart = !storedStart;
+    if (!storedStart) {
+      storedStart = String(Date.now());
+      try {
+        localStorage.setItem(teamSpecificKey, storedStart);
+        localStorage.setItem('cyphora_round2_started_at', storedStart);
+      } catch (_) {}
+    }
+
+    if (isNewStart) {
+      const token = localStorage.getItem('cyphora_token') || sessionStorage.getItem('cyphora_token');
+      fetch(`${API_BASE}/api/teams/timer/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ round: 2 })
+      }).catch(() => {});
+    }
+
+    const startedAtMs = parseInt(storedStart, 10);
+    const configuredMins = backendRound2Timer?.duration_minutes || 15;
+    const totalSec = configuredMins * 60;
+
+    const tick = () => {
+      if (backendRound2Timer?.action === 'pause') {
+        setIsTimerRunning(false);
+        return;
+      }
+      const elapsed = Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000));
+      const rem = Math.max(0, totalSec - elapsed);
+      setSecondsRemaining(rem);
+      setIsTimerRunning(rem > 0);
+      if (rem <= 0 && !proctorUnlockedRound2) {
+        setIsRound2TimerExpired(true);
+      } else if (rem > 0) {
+        setIsRound2TimerExpired(false);
+      }
+    };
+
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [isRound2Authorized, backendRound2Timer?.duration_minutes, backendRound2Timer?.action, proctorUnlockedRound2, teamData?.id, teamData?.round2_started_at]);
 
   const formatTime = (totalSeconds) => {
     const mins = Math.floor(totalSeconds / 60);

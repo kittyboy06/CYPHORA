@@ -270,7 +270,9 @@ function App({ initialStage = null, defaultAppId = null }) {
       const durationMs = configuredMinutes * 60 * 1000;
 
       setRound1State(prev => {
-        const storedStart = localStorage.getItem('cyphora_round1_started_at');
+        const currentTeamId = teamDataRef.current?.id || localStorage.getItem('cyphora_team_id') || 'team';
+        const teamSpecificKey = `cyphora_round1_started_at_${currentTeamId}`;
+        const storedStart = localStorage.getItem(teamSpecificKey) || localStorage.getItem('cyphora_round1_started_at');
         if (storedStart && isDesktop) {
           const startedAtMs = parseInt(storedStart, 10);
           const elapsed = Math.max(0, Date.now() - startedAtMs);
@@ -317,11 +319,24 @@ function App({ initialStage = null, defaultAppId = null }) {
   // Automatically start Round 1 countdown timer ONLY after entering the OS desktop
   useEffect(() => {
     if (stage === 'os-desktop') {
-      let storedStart = localStorage.getItem('cyphora_round1_started_at');
+      const currentTeamId = teamData?.id || (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : null) || 'team';
+      const teamSpecificKey = `cyphora_round1_started_at_${currentTeamId}`;
+
+      let storedStart = null;
+      if (teamData?.round1_started_at) {
+        storedStart = String(new Date(teamData.round1_started_at).getTime());
+        try { localStorage.setItem(teamSpecificKey, storedStart); } catch (_) {}
+      } else {
+        storedStart = localStorage.getItem(teamSpecificKey);
+      }
+
       const isNewStart = !storedStart;
       if (!storedStart) {
         storedStart = String(Date.now());
-        localStorage.setItem('cyphora_round1_started_at', storedStart);
+        try {
+          localStorage.setItem(teamSpecificKey, storedStart);
+          localStorage.setItem('cyphora_round1_started_at', storedStart);
+        } catch (_) {}
       }
 
       // Notify backend of Round 1 initiation
@@ -375,7 +390,7 @@ function App({ initialStage = null, defaultAppId = null }) {
         return prev;
       });
     }
-  }, [stage, teamData.name, round1Timer?.duration_minutes, round1Timer?.action, proctorOverrideRound1]);
+  }, [stage, teamData?.id, teamData?.name, teamData?.round1_started_at, round1Timer?.duration_minutes, round1Timer?.action, proctorOverrideRound1]);
 
   // Tick interval for Round 1 timer ONLY while on os-desktop
   useEffect(() => {
@@ -384,7 +399,9 @@ function App({ initialStage = null, defaultAppId = null }) {
     if (round1Timer?.action === 'pause') return;
 
     const tick = () => {
-      const storedStart = localStorage.getItem('cyphora_round1_started_at');
+      const currentTeamId = teamData?.id || (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : null) || 'team';
+      const teamSpecificKey = `cyphora_round1_started_at_${currentTeamId}`;
+      const storedStart = localStorage.getItem(teamSpecificKey) || localStorage.getItem('cyphora_round1_started_at');
       if (!storedStart) return;
       const startedAtMs = parseInt(storedStart, 10);
       const configuredMinutes = round1Timer?.duration_minutes || 60;
@@ -409,7 +426,7 @@ function App({ initialStage = null, defaultAppId = null }) {
     tick();
     const intervalId = setInterval(tick, 1000);
     return () => clearInterval(intervalId);
-  }, [stage, round1Timer?.duration_minutes, round1State.round1Status, proctorOverrideRound1]);
+  }, [stage, teamData?.id, round1Timer?.duration_minutes, round1State.round1Status, proctorOverrideRound1]);
 
   useEffect(() => {
     return () => { if (wakeTimerRef.current) clearTimeout(wakeTimerRef.current); };
@@ -1423,10 +1440,13 @@ function App({ initialStage = null, defaultAppId = null }) {
       const isR2Auth = Boolean(
         isStage2Unlocked ||
         teamData?.round2Unlocked ||
-        sessionStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-        localStorage.getItem('cyphora_round2_unlocked') === 'true' ||
-        sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true' ||
-        localStorage.getItem('cyphora_round2_supervisor_override') === 'true'
+        teamData?.round2_unlocked ||
+        (typeof sessionStorage !== 'undefined' && teamData?.id && sessionStorage.getItem(`cyphora_round2_override_${teamData.id}`) === 'true') ||
+        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round2_supervisor_override') === 'true') ||
+        (isRound1Completed && (
+          (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round2_unlocked') === 'true') ||
+          (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round2_unlocked') === 'true')
+        ))
       );
       if (!isR2Auth) {
         alert('Round 2 is locked! Your team must complete Round 1 or receive administrator clearance to enter Round 2.');
@@ -1437,7 +1457,6 @@ function App({ initialStage = null, defaultAppId = null }) {
         sessionStorage.setItem('cyphora_active_round', '2');
         sessionStorage.setItem('cyphora_current_stage', 'os-desktop');
         sessionStorage.setItem('cyphora_round1_celebration_dismissed', 'true');
-        sessionStorage.setItem('cyphora_round2_unlocked', 'true');
       } catch (e) {}
       if (setRound1State) {
         setRound1State(prev => prev ? { ...prev, finalMemoryVisible: false, celebrationDismissed: true } : prev);
@@ -1453,10 +1472,13 @@ function App({ initialStage = null, defaultAppId = null }) {
       const isR3Auth = Boolean(
         isStage3Unlocked ||
         teamData?.round3Unlocked ||
-        sessionStorage.getItem('cyphora_round3_unlocked') === 'true' ||
-        localStorage.getItem('cyphora_round3_unlocked') === 'true' ||
-        sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true' ||
-        localStorage.getItem('cyphora_round3_supervisor_override') === 'true'
+        teamData?.round3_unlocked ||
+        (typeof sessionStorage !== 'undefined' && teamData?.id && sessionStorage.getItem(`cyphora_round3_override_${teamData.id}`) === 'true') ||
+        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round3_supervisor_override') === 'true') ||
+        (isRound1Completed && (
+          (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('cyphora_round3_unlocked') === 'true') ||
+          (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round3_unlocked') === 'true')
+        ))
       );
       if (!isR3Auth) {
         alert('Round 3 is locked! Your team must receive administrator clearance to enter Round 3.');

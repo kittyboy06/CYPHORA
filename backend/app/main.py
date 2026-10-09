@@ -81,7 +81,7 @@ async def get_stage3_access_status(
     if not team:
         return {"unlocked": False, "authenticated": False, "message": "No registered team session found."}
 
-    is_unlocked = bool(getattr(team, "round3_unlocked", 0) or (team.current_stage and team.current_stage >= 3))
+    is_unlocked = bool(getattr(team, "round3_unlocked", 0))
     return {
         "unlocked": is_unlocked,
         "authenticated": True,
@@ -136,6 +136,8 @@ async def websocket_endpoint(websocket: WebSocket, team: Optional[str] = None):
                         "status": "active" if ws_manager.is_team_connected(t.name) else t.status,
                         "is_connected": ws_manager.is_team_connected(t.name),
                         "current_stage": t.current_stage,
+                        "round2_unlocked": bool(getattr(t, 'round2_unlocked', 0)),
+                        "round3_unlocked": bool(getattr(t, 'round3_unlocked', 0)),
                         "notes": t.notes,
                         "last_ip": t.last_ip,
                         "started_at": t.started_at.isoformat() if t.started_at else None,

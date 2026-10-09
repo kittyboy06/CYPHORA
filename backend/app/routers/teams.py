@@ -101,8 +101,8 @@ async def get_leaderboard(db: AsyncSession = Depends(get_db)):
             status="active" if ws_manager.is_team_connected(t.name) else t.status,
             is_connected=ws_manager.is_team_connected(t.name),
             current_stage=t.current_stage,
-            round2_unlocked=bool(getattr(t, 'round2_unlocked', 0) or (t.current_stage and t.current_stage >= 2)),
-            round3_unlocked=bool(getattr(t, 'round3_unlocked', 0) or (t.current_stage and t.current_stage >= 3)),
+            round2_unlocked=bool(getattr(t, 'round2_unlocked', 0)),
+            round3_unlocked=bool(getattr(t, 'round3_unlocked', 0)),
             notes=t.notes,
             last_ip=t.last_ip,
             started_at=t.started_at.isoformat() if t.started_at else None,
@@ -124,13 +124,15 @@ async def get_leaderboard(db: AsyncSession = Depends(get_db)):
 
 @router.get("/timer")
 async def get_event_timer(round: int = None, db: AsyncSession = Depends(get_db)):
-    t1 = {"round": 1, "action": "stopped", "duration_minutes": 60, "remaining_seconds": 3600}
-    t2 = {"round": 2, "action": "stopped", "duration_minutes": 30, "remaining_seconds": 1800}
-    t3 = {"round": 3, "action": "stopped", "duration_minutes": 30, "remaining_seconds": 1800}
+    t1 = {"round": 1, "action": "configured", "duration_minutes": 60, "remaining_seconds": 3600}
+    t2 = {"round": 2, "action": "configured", "duration_minutes": 15, "remaining_seconds": 900}
+    t3 = {"round": 3, "action": "configured", "duration_minutes": 30, "remaining_seconds": 1800}
 
     now = datetime.utcnow()
 
     def _calc_live(d):
+        dur = d.get("duration_minutes") or (60 if d.get("round") == 1 else (15 if d.get("round") == 2 else 30))
+        d["duration_minutes"] = dur
         if d.get("action") == "start" and d.get("ends_at"):
             try:
                 ends_at_dt = datetime.fromisoformat(d["ends_at"])
@@ -141,7 +143,9 @@ async def get_event_timer(round: int = None, db: AsyncSession = Depends(get_db))
                 else:
                     d["remaining_seconds"] = rem
             except Exception:
-                pass
+                d["remaining_seconds"] = dur * 60
+        else:
+            d["remaining_seconds"] = dur * 60
         return d
 
     try:
