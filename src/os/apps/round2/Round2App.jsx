@@ -535,19 +535,19 @@ export function Round2App({ windowId }) {
     setIsRumbling(true);
     setCutsceneSrc('/assets/background/round3image1.png');
 
-    // Quick rumble
-    setTimeout(() => setIsRumbling(false), 500);
+    // Rumble effect
+    setTimeout(() => setIsRumbling(false), 1200);
 
     // Fade in background layer
     setTimeout(() => {
       setBgLayerSrc('/assets/background/round3image1.png');
-    }, 300);
+    }, 500);
 
-    // Show popup with score immediately so participants don't wait
+    // Let the cutscene play for 1.8s (1 to 2 seconds) before displaying the result modal
     setTimeout(() => {
       setShowFirstFragmentModal(true);
       setCutsceneSrc(null);
-    }, 350);
+    }, 1800);
   }, []);
 
   const triggerFinalFragmentEffect = useCallback((score1, score2) => {
@@ -556,19 +556,19 @@ export function Round2App({ windowId }) {
     setIsRumbling(true);
     setCutsceneSrc('/assets/background/round3image2.png');
 
-    // Quick rumble
-    setTimeout(() => setIsRumbling(false), 500);
+    // Rumble effect
+    setTimeout(() => setIsRumbling(false), 1200);
 
     // Fade in background layer
     setTimeout(() => {
       setBgLayerSrc('/assets/background/round3image2.png');
-    }, 300);
+    }, 500);
 
-    // Show popup with score & Round 3 transition immediately
+    // Let the cutscene play for 1.8s (1 to 2 seconds) before displaying the result modal
     setTimeout(() => {
       setShowFinalFragmentModal(true);
       setCutsceneSrc(null);
-    }, 350);
+    }, 1800);
   }, []);
 
   const dismissFirstModal = useCallback(() => {

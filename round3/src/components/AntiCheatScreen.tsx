@@ -91,6 +91,7 @@ export const AntiCheatScreen: React.FC<Props> = ({ reason = 'FULLSCREEN_EXIT', o
     <div
       className="blue-screen-gate"
       onContextMenu={(e) => e.preventDefault()}
+      onKeyDown={(e) => e.stopPropagation()}
     >
       <div className="blue-screen-face">:(</div>
       <h1>Your PC ran into a problem and was locked by expedition security.</h1>

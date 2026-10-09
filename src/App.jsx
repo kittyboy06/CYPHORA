@@ -807,6 +807,27 @@ function App({ initialStage = null, defaultAppId = null }) {
     }
   }, [panelOpen, fetchLeaderboard]);
 
+  // Synchronize teamData score and leaderboard when points are updated in Round 1, 2, or 3
+  useEffect(() => {
+    const handleScoreUpdated = () => {
+      const storedScore = localStorage.getItem('cyphora_team_score') || sessionStorage.getItem('cyphora_team_score');
+      if (storedScore !== null) {
+        const parsed = parseInt(storedScore, 10);
+        if (!isNaN(parsed)) {
+          setTeamData(prev => ({ ...prev, score: parsed }));
+        }
+      }
+      fetchLeaderboard();
+    };
+
+    window.addEventListener('cyphora_points_updated', handleScoreUpdated);
+    window.addEventListener('cyphora_team_score_updated', handleScoreUpdated);
+    return () => {
+      window.removeEventListener('cyphora_points_updated', handleScoreUpdated);
+      window.removeEventListener('cyphora_team_score_updated', handleScoreUpdated);
+    };
+  }, [fetchLeaderboard]);
+
   useEffect(() => {
     let reconnectTimeout;
     let pingInterval;
@@ -1377,6 +1398,7 @@ function App({ initialStage = null, defaultAppId = null }) {
     } catch (e) { }
 
     // Transition to OS boot sequence - timer only starts when player lands on OS desktop
+    setInitialAppId('tasks');
     setStage('os-boot');
 
     if (document.documentElement.requestFullscreen && !document.fullscreenElement) {

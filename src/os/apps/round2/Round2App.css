@@ -1414,13 +1414,13 @@
   pointer-events: none;
   background-size: cover;
   background-position: center;
-  animation: templeCutsceneFade 1s ease-out forwards;
+  animation: templeCutsceneFade 1.8s ease-in-out forwards;
 }
 
 @keyframes templeCutsceneFade {
   0% { opacity: 0; transform: scale(1.05); }
-  30% { opacity: 0.85; transform: scale(1.02); }
-  70% { opacity: 0.85; transform: scale(1); }
+  25% { opacity: 0.95; transform: scale(1.02); }
+  75% { opacity: 0.95; transform: scale(1); }
   100% { opacity: 0; transform: scale(0.98); }
 }
 

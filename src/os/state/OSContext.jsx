@@ -431,12 +431,24 @@ export function OSProvider({
   }, []);
 
   const openApp = (appId, options = {}) => {
-    const appDef = APP_REGISTRY[appId];
-    if (appId === 'tasks' || appId === 'task-terminal') {
-      eventBus.emit('OPEN_TASKS');
+    if (appId === 'tasks' || appId === 'task-terminal' || appId === 'taskboard' || appId === 'round1') {
+      try {
+        if (typeof sessionStorage !== 'undefined') {
+          sessionStorage.setItem('cyphora_active_round', '1');
+        }
+      } catch (e) { }
+      if (eventBus && typeof eventBus.emit === 'function') {
+        eventBus.emit('OPEN_TASKS');
+        eventBus.emit('SHOW_TASKBOARD');
+        eventBus.emit('OPEN_TASKBOARD');
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cyphora_open_tasks'));
+      }
       return;
     }
 
+    const appDef = APP_REGISTRY[appId];
     if (!appDef) {
       console.error(`[OS] App not found in registry: ${appId}`);
       return;

@@ -125,13 +125,13 @@ async def get_leaderboard(db: AsyncSession = Depends(get_db)):
 @router.get("/timer")
 async def get_event_timer(round: int = None, db: AsyncSession = Depends(get_db)):
     t1 = {"round": 1, "action": "configured", "duration_minutes": 60, "remaining_seconds": 3600}
-    t2 = {"round": 2, "action": "configured", "duration_minutes": 15, "remaining_seconds": 900}
+    t2 = {"round": 2, "action": "configured", "duration_minutes": 30, "remaining_seconds": 1800}
     t3 = {"round": 3, "action": "configured", "duration_minutes": 30, "remaining_seconds": 1800}
 
     now = datetime.utcnow()
 
     def _calc_live(d):
-        dur = d.get("duration_minutes") or (60 if d.get("round") == 1 else (15 if d.get("round") == 2 else 30))
+        dur = d.get("duration_minutes") or (60 if d.get("round") == 1 else 30)
         d["duration_minutes"] = dur
         if d.get("action") == "start" and d.get("ends_at"):
             try:
@@ -244,19 +244,7 @@ async def submit_stage3_level(
         TaskSubmission.task_key == task_key
     )
     existing = (await db.execute(stmt)).scalar_one_or_none()
-    if existing:
-        return {
-            "status": "already_submitted",
-            "message": f"Level {req.level} already recorded for team {current_team.name}.",
-            "score": current_team.score
-        }
-
-    # Cap each level score strictly at maximum 500 points
     points = min(500, max(0, req.score))
-    current_team.round3_score = (getattr(current_team, 'round3_score', 0) or 0) + points
-    current_team.score = (getattr(current_team, 'round1_score', 0) or 0) + (getattr(current_team, 'round2_score', 0) or 0) + (getattr(current_team, 'round3_score', 0) or 0)
-    current_team.current_stage = 3
-    current_team.status = "active"
 
     meta_dict = {
         "level": req.level,
@@ -271,6 +259,48 @@ async def submit_stage3_level(
     if req.time_score is not None:
         meta_dict["time_score"] = req.time_score
 
+    if existing:
+        # If the new attempt scored higher, update points and metadata
+        if points > (existing.points_awarded or 0):
+            existing.points_awarded = points
+            existing.metadata_json = json.dumps(meta_dict)
+            await db.flush()
+
+            # Recalculate total round3 score across all stage 3 submissions
+            stmt_all = select(TaskSubmission).filter(
+                TaskSubmission.team_id == current_team.id,
+                TaskSubmission.stage == 3
+            )
+            all_r3 = (await db.execute(stmt_all)).scalars().all()
+            actual_r3_total = sum(s.points_awarded or 0 for s in all_r3)
+
+            current_team.round3_score = actual_r3_total
+            current_team.score = (getattr(current_team, 'round1_score', 0) or 0) + (getattr(current_team, 'round2_score', 0) or 0) + (current_team.round3_score or 0)
+            current_team.current_stage = 3
+            current_team.status = "active"
+            await db.commit()
+            await db.refresh(current_team)
+            await ws_manager.broadcast_leaderboard(db)
+
+            return {
+                "status": "success",
+                "level": req.level,
+                "points_awarded": points,
+                "new_score": current_team.score,
+                "new_total_score": current_team.score,
+                "round3_score": current_team.round3_score
+            }
+
+        return {
+            "status": "already_submitted",
+            "message": f"Level {req.level} already recorded for team {current_team.name}.",
+            "points_awarded": existing.points_awarded,
+            "new_score": current_team.score,
+            "new_total_score": current_team.score,
+            "round3_score": current_team.round3_score or 0
+        }
+
+    # Brand new level completion
     sub = TaskSubmission(
         team_id=current_team.id,
         stage=3,
@@ -279,6 +309,20 @@ async def submit_stage3_level(
         metadata_json=json.dumps(meta_dict)
     )
     db.add(sub)
+    await db.flush()
+
+    # Recalculate round3_score from all stage 3 submissions for accuracy
+    stmt_all = select(TaskSubmission).filter(
+        TaskSubmission.team_id == current_team.id,
+        TaskSubmission.stage == 3
+    )
+    all_r3 = (await db.execute(stmt_all)).scalars().all()
+    actual_r3_total = sum(s.points_awarded or 0 for s in all_r3)
+
+    current_team.round3_score = actual_r3_total
+    current_team.score = (getattr(current_team, 'round1_score', 0) or 0) + (getattr(current_team, 'round2_score', 0) or 0) + (current_team.round3_score or 0)
+    current_team.current_stage = 3
+    current_team.status = "active"
     await db.commit()
     await db.refresh(current_team)
 
@@ -288,5 +332,6 @@ async def submit_stage3_level(
         "level": req.level,
         "points_awarded": points,
         "new_score": current_team.score,
+        "new_total_score": current_team.score,
         "round3_score": current_team.round3_score
     }

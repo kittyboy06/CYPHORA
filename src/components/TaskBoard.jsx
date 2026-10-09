@@ -9,11 +9,30 @@ import { VirtualFilePicker } from '../os/components/VirtualFilePicker.jsx';
 const formatTaskId = (task) => TASK_PRESENTATIONS[task.id]?.number || task.id.replace('r1_t', '').padStart(2, '0');
 
 export function TaskBoard({ round1State }) {
-  const { eventBus } = useOS();
+  const { eventBus, isRound2Active, isRound3Active } = useOS();
   const tasks = round1State?.tasks || [];
   const activeTask = tasks.find(task => task.status === 'ACTIVE');
   const activeTaskId = activeTask?.id || null;
-  const [objectiveMode, setObjectiveMode] = useState('minimized');
+
+  const isR2 = typeof isRound2Active === 'function' ? isRound2Active() : false;
+  const isR3 = typeof isRound3Active === 'function' ? isRound3Active() : false;
+  const isR1Completed = round1State?.round1Status === 'COMPLETED';
+
+  const checkIsRound1Active = () => {
+    if (typeof sessionStorage !== 'undefined') {
+      const activeRound = sessionStorage.getItem('cyphora_active_round');
+      if (activeRound === '2' || activeRound === '3') return false;
+    }
+    return !isR2 && !isR3 && !isR1Completed;
+  };
+
+  const [objectiveMode, setObjectiveMode] = useState(() => {
+    if (typeof sessionStorage !== 'undefined') {
+      const activeRound = sessionStorage.getItem('cyphora_active_round');
+      if (activeRound === '2' || activeRound === '3') return 'minimized';
+    }
+    return 'expanded';
+  });
   const [hintLevel, setHintLevel] = useState(0);
   const [submittedAnswer, setSubmittedAnswer] = useState('');
   const [feedbackMsg, setFeedbackMsg] = useState('');
@@ -32,6 +51,13 @@ export function TaskBoard({ round1State }) {
     };
   }, []);
 
+  // Minimize TaskBoard if Round 2 or Round 3 is active
+  useEffect(() => {
+    if (isR2 || isR3) {
+      setObjectiveMode('minimized');
+    }
+  }, [isR2, isR3]);
+
   useEffect(() => {
     if (!activeTaskId) {
       setObjectiveMode('minimized');
@@ -39,21 +65,26 @@ export function TaskBoard({ round1State }) {
     }
 
     if (previousActiveTask.current === null) {
-      // First mount: keep task terminal minimized at bottom right
+      // First mount: auto-expand task modal for participants entering Round 1
       previousActiveTask.current = activeTaskId;
+      if (checkIsRound1Active()) {
+        setObjectiveMode('expanded');
+      }
       return;
     }
 
     if (previousActiveTask.current !== activeTaskId) {
       previousActiveTask.current = activeTaskId;
-      setObjectiveMode('expanded');
+      if (checkIsRound1Active()) {
+        setObjectiveMode('expanded');
+      }
       setHintLevel(0);
       setSubmittedAnswer('');
       setFeedbackMsg('');
       setIsCorrect(false);
       setSelectedEvidencePath('');
     }
-  }, [activeTaskId]);
+  }, [activeTaskId, isR2, isR3, isR1Completed]);
 
   useEffect(() => {
     const newlyCompleted = tasks.find(task => task.status === 'COMPLETED' && !seenCompletedTasks.current.has(task.id));
@@ -93,16 +124,38 @@ export function TaskBoard({ round1State }) {
   }, [objectiveMode]);
 
   useEffect(() => {
-    if (!eventBus || typeof eventBus.on !== 'function') return;
     const handleExpandTasks = () => {
       setObjectiveMode('expanded');
     };
-    eventBus.on('OPEN_TASKS', handleExpandTasks);
-    eventBus.on('SHOW_TASKBOARD', handleExpandTasks);
+
+    const handleAppOpened = (data) => {
+      if (data?.appId && data.appId !== 'tasks' && data.appId !== 'taskboard') {
+        setObjectiveMode('minimized');
+      }
+    };
+
+    if (eventBus && typeof eventBus.on === 'function') {
+      eventBus.on('OPEN_TASKS', handleExpandTasks);
+      eventBus.on('SHOW_TASKBOARD', handleExpandTasks);
+      eventBus.on('OPEN_TASKBOARD', handleExpandTasks);
+      eventBus.on('APP_OPENED', handleAppOpened);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('cyphora_open_tasks', handleExpandTasks);
+      window.addEventListener('cyphora_show_taskboard', handleExpandTasks);
+    }
+
     return () => {
-      if (typeof eventBus.off === 'function') {
+      if (eventBus && typeof eventBus.off === 'function') {
         eventBus.off('OPEN_TASKS', handleExpandTasks);
         eventBus.off('SHOW_TASKBOARD', handleExpandTasks);
+        eventBus.off('OPEN_TASKBOARD', handleExpandTasks);
+        eventBus.off('APP_OPENED', handleAppOpened);
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('cyphora_open_tasks', handleExpandTasks);
+        window.removeEventListener('cyphora_show_taskboard', handleExpandTasks);
       }
     };
   }, [eventBus]);

@@ -90,6 +90,14 @@ export const APP_REGISTRY = {
     defaultBounds: { width: 880, height: 620 },
     component: PrologueApp
   },
+  'tasks': {
+    id: 'tasks',
+    title: 'Round 1: Tasks',
+    icon: 'CheckSquare',
+    category: 'Expedition',
+    defaultBounds: { width: 720, height: 500 },
+    component: () => null
+  },
   'terminal': {
     id: 'terminal',
     title: 'Terminal Interpreter',

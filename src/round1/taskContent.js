@@ -181,7 +181,7 @@ export const TASK_DEFINITIONS = [
     order: 7,
     title: 'TASK 07 — THE HIDDEN RECORD',
     story: 'An archival survey photograph appears ordinary, but operational data was preserved inside its descriptive technical properties.',
-    question: 'Locate archive_photo.png.\nUse a file inspector to examine its technical file properties and recover the embedded description code.\nUse a data converter to translate the character codes into readable text and enter the message below.',
+    question: 'Locate archive_photo.png.\nUse a metadata inspector to examine its technical file properties and recover the embedded description code.\nUse a data converter to translate the hexadecimal codes into readable text and enter the message below.',
     difficulty: 'medium',
     requiredInput: {
       type: 'file',
@@ -237,7 +237,7 @@ export const TASK_DEFINITIONS = [
     order: 9,
     title: 'TASK 09 — THE EVIDENCE TRAIL',
     story: 'An investigative trail spans across multiple records, beginning with an optical marking on a survey map.',
-    question: 'Locate map.png and use an image scanning inspector to recover the clue reference key.\nCross-reference that key in index.txt to determine the target log record.\nInspect activity.log to identify which file ID USER-A downloaded, and enter that number below.',
+    question: 'Locate map.png and use an image scanning inspector to recover the clue reference key.\nCross-reference that key in index.txt in clue folder to determine the target log record.\nInspect discovered log file to identify which file ID USER-A downloaded, and enter that number below.',
     difficulty: 'hard',
     requiredInput: {
       type: 'files',

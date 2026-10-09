@@ -81,6 +81,16 @@ export const GameOverlay: React.FC<Props> = ({ onRetry, onNextLevel }) => {
                 <span className="text-xs text-[var(--text-muted)] font-mono ml-1">/ 500</span>
               </div>
             </div>
+
+            {/* Total Expedition Standing Score */}
+            {typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_team_score') && (
+              <div className="flex justify-between items-center text-xs px-3 py-1.5 bg-black/20 border border-[var(--border-gold)]/20 rounded-sm">
+                <span className="text-[var(--text-muted)] font-mono">Total Expedition Score:</span>
+                <span className="font-mono font-bold text-green-400 text-sm">
+                  {localStorage.getItem('cyphora_team_score')} PTS
+                </span>
+              </div>
+            )}
           </div>
 
           {nextLevel ? (

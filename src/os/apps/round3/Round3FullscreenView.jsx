@@ -49,6 +49,16 @@ export function Round3FullscreenView({ onClose, teamData }) {
       if (e.data?.type === 'CYPHORA_ROUND3_LEVEL_COMPLETE') {
         const detail = e.data;
         console.log('[OS Round 3] Level completed:', detail);
+        const newScore = detail.new_total_score ?? detail.new_score ?? detail.score;
+        if (newScore !== undefined && newScore !== null) {
+          localStorage.setItem('cyphora_team_score', String(newScore));
+          sessionStorage.setItem('cyphora_team_score', String(newScore));
+        }
+        if (detail.round3_score !== undefined && detail.round3_score !== null) {
+          localStorage.setItem('cyphora_round3_score', String(detail.round3_score));
+          sessionStorage.setItem('cyphora_round3_score', String(detail.round3_score));
+        }
+        window.dispatchEvent(new CustomEvent('cyphora_points_updated', { detail }));
         window.dispatchEvent(new CustomEvent('cyphora_team_score_updated', { detail }));
       }
     };

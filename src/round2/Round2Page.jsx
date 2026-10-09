@@ -28,7 +28,7 @@ import { RoundTimerLockScreen } from '../components/RoundTimerLockScreen.jsx';
 import './Round2.css';
 import './Round2Page.css';
 
-const ROUND_2_DURATION_SECONDS = 15 * 60; // 15 minutes = 900 seconds
+const ROUND_2_DURATION_SECONDS = 30 * 60; // 30 minutes = 1800 seconds
 const POINTS_PER_IMAGE = 50; // 50 points for 100% Accuracy, reduced proportionally
 const MAX_ROUND_2_POINTS = 100; // 2 images * 50 points max
 
@@ -716,7 +716,10 @@ export function Round2Page({ onReturnToHub }) {
   }, []);
 
   // Accuracy-Based Points Calculation (50 PTS per Image, Max 100 PTS)
-  const elapsedSeconds = ROUND_2_DURATION_SECONDS - secondsRemaining;
+  const totalRound2Seconds = backendRound2Timer?.duration_minutes
+    ? backendRound2Timer.duration_minutes * 60
+    : ROUND_2_DURATION_SECONDS;
+  const elapsedSeconds = Math.max(0, totalRound2Seconds - secondsRemaining);
   const currentPotentialTotal = MAX_ROUND_2_POINTS;
 
   const formatTime = (secs) => {
@@ -968,7 +971,7 @@ export function Round2Page({ onReturnToHub }) {
     setFormGlobalError('');
     setIsSubmitting(true);
 
-    const finalElapsed = ROUND_2_DURATION_SECONDS - secondsRemaining;
+    const finalElapsed = Math.max(0, totalRound2Seconds - secondsRemaining);
     const formattedSpeed = formatTime(finalElapsed);
     const image1Points = image1EvaluatedData?.score || 0;
 
@@ -1092,37 +1095,37 @@ export function Round2Page({ onReturnToHub }) {
   const triggerFirstFragmentEffect = useCallback((score) => {
     // 1. Screen rumble
     setIsRumbling(true);
-    setTimeout(() => setIsRumbling(false), 600);
+    setTimeout(() => setIsRumbling(false), 1200);
 
     // 2. Swap bg to half-visible temple (round3image1)
     setBgLayerSrc('/assets/background/round3image1.png');
 
-    // 3. Show First Fragment Modal after 1 second
+    // 3. Show First Fragment Modal after 1.8 seconds cutscene
     setFragment1Score(score);
     setTimeout(() => {
       setShowFirstFragmentModal(true);
-    }, 1000);
+    }, 1800);
   }, []);
 
   /**
    * triggerFinalFragmentEffect(score1, score2)
    * Rumbles the screen, swaps background to the fully-visible temple image,
-   * and reveals the Final Fragment Modal after a 1.5-second delay.
+   * and reveals the Final Fragment Modal after a 1.8-second delay.
    */
   const triggerFinalFragmentEffect = useCallback((score1, score2) => {
     // 1. Screen rumble
     setIsRumbling(true);
-    setTimeout(() => setIsRumbling(false), 600);
+    setTimeout(() => setIsRumbling(false), 1200);
 
     // 2. Swap bg to fully-visible temple (round3image2)
     setBgLayerSrc('/assets/background/round3image2.png');
 
-    // 3. Show Final Fragment Modal after 1.5 seconds
+    // 3. Show Final Fragment Modal after 1.8 seconds cutscene
     setFragment1Score(score1);
     setFragment2Score(score2);
     setTimeout(() => {
       setShowFinalFragmentModal(true);
-    }, 1500);
+    }, 1800);
   }, []);
 
   /**
@@ -1287,7 +1290,7 @@ export function Round2Page({ onReturnToHub }) {
             <div className="hud-label-row">
               <div className="hud-title-wrap">
                 <Clock size={16} className="gold-text" />
-                <span className="hud-title">15-MINUTE GAME CLOCK</span>
+                <span className="hud-title">{Math.round(totalRound2Seconds / 60)}-MINUTE GAME CLOCK</span>
               </div>
               <span className={`hud-time-digits ${timerUrgencyClass}`}>
                 {formatTime(secondsRemaining)}
@@ -1296,7 +1299,7 @@ export function Round2Page({ onReturnToHub }) {
             <div className="hud-progress-track">
               <div 
                 className={`hud-progress-fill ${timerUrgencyClass}`}
-                style={{ width: `${(secondsRemaining / ROUND_2_DURATION_SECONDS) * 100}%` }}
+                style={{ width: `${Math.min(100, Math.max(0, (secondsRemaining / totalRound2Seconds) * 100))}%` }}
               />
             </div>
 
@@ -1774,7 +1777,7 @@ export function Round2Page({ onReturnToHub }) {
         currentTeamSpeed={
           submittedData?.timeCompleted ||
           localStorage.getItem('cyphora_round2_speed') ||
-          (secondsRemaining < ROUND_2_DURATION_SECONDS ? formatTime(elapsedSeconds) : '--:--')
+          (secondsRemaining < totalRound2Seconds ? formatTime(elapsedSeconds) : '--:--')
         }
       />
 

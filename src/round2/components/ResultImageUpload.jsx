@@ -40,7 +40,7 @@ export function ResultImageUpload({
 
   touched,
   maxSizeBytes = 10 * 1024 * 1024,
-  allowedTypes = ['image/png', 'image/jpeg', 'image/webp'],
+  allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'],
   compact = false,
 }) {
   const fileInputRef1 = useRef(null);
@@ -57,7 +57,10 @@ export function ResultImageUpload({
   const validateAndProcess = (selectedFile, onSelect) => {
     if (!selectedFile) return;
 
-    if (!allowedTypes.includes(selectedFile.type)) {
+    const fileType = selectedFile.type || '';
+    const hasValidExt = /\.(jpe?g|png|webp)$/i.test(selectedFile.name);
+
+    if (!allowedTypes.includes(fileType) && !hasValidExt) {
       onSelect(null, 'Invalid file format. Please upload a PNG, JPEG, or WebP image.');
       return;
     }

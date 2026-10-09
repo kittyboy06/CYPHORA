@@ -41,6 +41,12 @@ test.describe('CYPHORA Deep Rounds Verification (Round 2 & Round 3)', () => {
 
     await expect(page.locator('.os-taskbar')).toBeVisible({ timeout: 15000 });
 
+    // Minimize task modal if open on desktop entry
+    const taskModal = page.locator('.objective-modal');
+    if (await taskModal.isVisible()) {
+      await page.keyboard.press('Escape');
+    }
+
     // Launch Round 2 via Desktop Icon (double click)
     const r2Icon = page.locator('.desktop-icon-cell', { hasText: 'Round 2' });
     if (await r2Icon.isVisible()) {
@@ -106,6 +112,7 @@ test.describe('CYPHORA Deep Rounds Verification (Round 2 & Round 3)', () => {
 
     // 2. Landing Screen
     const landingEnterBtn = page.locator('button:has-text("Enter The Temple")');
+    await landingEnterBtn.waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
     if (await landingEnterBtn.isVisible()) {
       await expect(page.getByText(/CYPHORA/i)).toBeVisible();
       await expect(page.getByText(/The Temple Trials/i)).toBeVisible();
@@ -114,7 +121,8 @@ test.describe('CYPHORA Deep Rounds Verification (Round 2 & Round 3)', () => {
 
     // 3. Skip tutorial if visible
     const tutorialCloseBtn = page.locator('button:has-text("Got It"), button:has-text("Start Playing"), button:has-text("Skip")');
-    if (await tutorialCloseBtn.isVisible()) {
+    await tutorialCloseBtn.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+    if (await tutorialCloseBtn.first().isVisible()) {
       await tutorialCloseBtn.first().click();
     }
 

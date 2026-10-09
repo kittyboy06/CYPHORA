@@ -67,7 +67,7 @@ export function Desktop() {
   const currentSetId = activeTask?.setId || (activeTask ? ROUND_1_SETS.find(s => s.tasks.includes(activeTask.id))?.id : null) || round1State?.activeSet || 'set1';
   const setPresentation = SET_PRESENTATIONS[currentSetId];
   const subsystems = getSubsystemStatuses(round1State);
-  const remainingTimeMs = round1State?.remainingTimeMs ?? 1200000;
+  const remainingTimeMs = round1State?.remainingTimeMs ?? (round1State?.round1DurationMs || 3600000);
   const isCriticalTime = remainingTimeMs < 300000 && remainingTimeMs > 0;
   const isTimeExpired = Boolean(round1State?.isExpired || remainingTimeMs <= 0);
   const timerDisplay = formatCountdown(remainingTimeMs);
@@ -103,6 +103,12 @@ export function Desktop() {
   };
 
   const systemApps = [
+    {
+      id: 'tasks',
+      title: 'Round 1: Tasks',
+      icon: <CheckSquare size={32} className="desktop-icon-svg file-color" />,
+      action: () => openApp('tasks')
+    },
     {
       id: 'round2',
       title: 'Round 2',
@@ -214,7 +220,8 @@ export function Desktop() {
         {systemApps.map(app => (
           <div
             key={app.id}
-            className={`desktop-icon-cell ${selectedId === app.id ? 'selected' : ''}`}
+            data-app-id={app.id}
+            className={`desktop-icon desktop-icon-cell ${selectedId === app.id ? 'selected' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
               setSelectedId(app.id);

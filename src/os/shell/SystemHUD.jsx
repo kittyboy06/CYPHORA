@@ -72,7 +72,7 @@ export function SystemHUD() {
         {round1State?.round1StartedAt && (
           <div className="hud-round1-timer">
             <span className="hud-round1-label">ROUND 01</span>
-            <span className="hud-round1-value">{formatCountdown(round1State.remainingTimeMs ?? 1200000)}</span>
+            <span className="hud-round1-value">{formatCountdown(round1State.remainingTimeMs ?? (round1State?.round1DurationMs || 3600000))}</span>
           </div>
         )}
         <div className="hud-clock">

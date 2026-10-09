@@ -810,6 +810,23 @@ export default class GameScene extends Phaser.Scene {
   spawnPlayer() {
     this.pIndex = this.levelData.playerStartX;
     this.player = this.add.sprite(0, 0, this.getIdleTexture()).setOrigin(0.5, 1);
+
+    // Auto-normalize any frame height in run/jump/fall animations to prevent size glitching
+    this.player.on('animationupdate', () => {
+      if (this.player && this.player.anims && this.player.anims.currentAnim) {
+        const animKey = this.player.anims.currentAnim.key;
+        if (animKey.startsWith('run') || animKey === 'jump' || animKey === 'fall') {
+          const frameHeight = this.player.frame?.height;
+          if (frameHeight && Math.abs(frameHeight - 125) > 4) {
+            this.player.setScale(125 / frameHeight);
+          } else {
+            this.player.setScale(1.0);
+          }
+          this.player.setOrigin(0.5, 1.0);
+        }
+      }
+    });
+
     this.setPlayerIdle();
     this.updatePlayerVisuals(false);
   }

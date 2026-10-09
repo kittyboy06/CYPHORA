@@ -28,24 +28,18 @@ test.describe('CYPHORA Round 1 Technical Investigation Flow & Subsystem Restorat
     await expect(page.locator('.os-desktop-root')).toBeVisible({ timeout: 15000 });
   });
 
-  test('01. Taskboard Window Controls - Minimizing to capsule, Escape key dismiss, and clicking capsule to expand', async ({ page }) => {
-    // Initially minimized tab button at bottom-right
-    const taskTab = page.locator('button.objective-tab');
-    await expect(taskTab).toBeVisible();
-    await expect(taskTab).toContainText('TASK 01');
-
-    // Click tab button to expand modal
-    await taskTab.click();
-
-    // Verify modal is open
+  test('01. Taskboard Window Controls - Auto-expanded on entry, minimizing to capsule, Escape key dismiss, and desktop shortcut', async ({ page }) => {
+    // Automatically popped up on entering Round 1
     const modal = page.locator('.objective-modal');
-    await expect(modal).toBeVisible();
+    await expect(modal).toBeVisible({ timeout: 10000 });
     await expect(modal.locator('.objective-task-label')).toContainText('TASK 01 / 12');
 
     // Press Escape key -> should minimize
     await page.keyboard.press('Escape');
     await expect(modal).not.toBeVisible();
+    const taskTab = page.locator('button.objective-tab');
     await expect(taskTab).toBeVisible();
+    await expect(taskTab).toContainText('TASK 01');
 
     // Re-open by clicking tab button
     await taskTab.click();
@@ -56,14 +50,21 @@ test.describe('CYPHORA Round 1 Technical Investigation Flow & Subsystem Restorat
     await minusBtn.click();
     await expect(modal).not.toBeVisible();
     await expect(taskTab).toBeVisible();
+
+    // Re-open via Desktop icon 'Round 1: Tasks'
+    const desktopTaskIcon = page.locator('.desktop-icon').filter({ hasText: 'Round 1: Tasks' });
+    await expect(desktopTaskIcon).toBeVisible();
+    await desktopTaskIcon.dblclick();
+    await expect(modal).toBeVisible();
   });
 
   test('02. Task 01 - Hints, score penalty badge updates, and validation error feedback', async ({ page }) => {
-    // Open task modal
-    const taskTab = page.locator('button.objective-tab');
-    await taskTab.click();
-
+    // Modal is automatically open on entering Round 1
     const modal = page.locator('.objective-modal');
+    const taskTab = page.locator('button.objective-tab');
+    if (await taskTab.isVisible()) {
+      await taskTab.click();
+    }
     await expect(modal).toBeVisible();
 
     // 1. Initial points badge should be 20 PTS
@@ -104,9 +105,12 @@ test.describe('CYPHORA Round 1 Technical Investigation Flow & Subsystem Restorat
   });
 
   test('03. Sequential Investigation: Solving Tasks 1 through 5 restores Subsystem 1 (POWER)', async ({ page }) => {
-    // Open Task Board
-    await page.locator('button.objective-tab').click();
+    // Modal is automatically open on entering Round 1
     const modal = page.locator('.objective-modal');
+    const taskTab = page.locator('button.objective-tab');
+    if (await taskTab.isVisible()) {
+      await taskTab.click();
+    }
     await expect(modal).toBeVisible();
 
     // Helper to submit answer and advance

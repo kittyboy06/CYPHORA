@@ -103,8 +103,12 @@ export const executeCode = async (code: string, gameRef: any, blocklyRef: any, b
       const parTime = PAR_TIME_SECONDS[level] || 300;
 
       // Calculate time used to solve this level
-      const startKey = `cyphora_r3_level_${level}_start_time`;
+      const teamId = (typeof localStorage !== 'undefined' ? (localStorage.getItem('cyphora_team_id') || sessionStorage.getItem('cyphora_team_id')) : '') || 'default';
+      const startKey = `cyphora_r3_level_${level}_start_time_${teamId}`;
       let startMs = parseInt(localStorage.getItem(startKey) || '0', 10);
+      if (!startMs || isNaN(startMs)) {
+        startMs = parseInt(localStorage.getItem(`cyphora_r3_level_${level}_start_time`) || '0', 10);
+      }
       if (!startMs || isNaN(startMs)) {
         startMs = Date.now() - 10000;
         localStorage.setItem(startKey, String(startMs));
@@ -140,7 +144,7 @@ export const executeCode = async (code: string, gameRef: any, blocklyRef: any, b
         efficiency: efficiencyLabel
       });
 
-      // Automatically report level score to CYPHORA backend
+      // Automatically report level score to CYPHORA backend and sync scores
       try {
         const token = localStorage.getItem('cyphora_token') ||
                       sessionStorage.getItem('cyphora_token') ||
@@ -148,15 +152,18 @@ export const executeCode = async (code: string, gameRef: any, blocklyRef: any, b
                       sessionStorage.getItem('cyphora_auth_token') || '';
         const teamName = localStorage.getItem('cyphora_team_name') ||
                          sessionStorage.getItem('cyphora_team_name') || '';
-        const teamId = localStorage.getItem('cyphora_team_id') ||
-                       sessionStorage.getItem('cyphora_team_id') || '';
 
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        if (teamId) headers['X-Team-Id'] = teamId;
+        if (teamId && teamId !== 'default') headers['X-Team-Id'] = teamId;
         if (teamName) headers['X-Team-Name'] = teamName;
 
-        fetch('/api/teams/stage3/submit', {
+        const queryParams = new URLSearchParams();
+        if (teamName) queryParams.set('team', teamName);
+        if (teamId && teamId !== 'default') queryParams.set('team_id', teamId);
+        const submitUrl = `/api/teams/stage3/submit${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+
+        const res = await fetch(submitUrl, {
           method: 'POST',
           headers,
           body: JSON.stringify({
@@ -169,11 +176,41 @@ export const executeCode = async (code: string, gameRef: any, blocklyRef: any, b
             score: calculatedScore,
             team_name: teamName
           })
-        }).catch(() => {});
-      } catch (_) {}
+        });
 
-      // Post message to parent OS window if embedded in OS iframe
-      try {
+        let newTotalScore: number | null = null;
+        let round3TotalScore: number | null = null;
+
+        if (res.ok) {
+          const resData = await res.json();
+          newTotalScore = resData.new_score ?? resData.new_total_score ?? null;
+          round3TotalScore = resData.round3_score ?? null;
+        }
+
+        // If backend returned scores, update storage; otherwise calculate locally
+        if (newTotalScore !== null) {
+          localStorage.setItem('cyphora_team_score', String(newTotalScore));
+          sessionStorage.setItem('cyphora_team_score', String(newTotalScore));
+        } else {
+          const curTotal = parseInt(localStorage.getItem('cyphora_team_score') || '0', 10);
+          const updatedTotal = curTotal + calculatedScore;
+          localStorage.setItem('cyphora_team_score', String(updatedTotal));
+          sessionStorage.setItem('cyphora_team_score', String(updatedTotal));
+          newTotalScore = updatedTotal;
+        }
+
+        if (round3TotalScore !== null) {
+          localStorage.setItem('cyphora_round3_score', String(round3TotalScore));
+          sessionStorage.setItem('cyphora_round3_score', String(round3TotalScore));
+        } else {
+          const curR3 = parseInt(localStorage.getItem('cyphora_round3_score') || '0', 10);
+          const updatedR3 = curR3 + calculatedScore;
+          localStorage.setItem('cyphora_round3_score', String(updatedR3));
+          sessionStorage.setItem('cyphora_round3_score', String(updatedR3));
+          round3TotalScore = updatedR3;
+        }
+
+        // Post message to parent OS window if embedded in OS iframe
         if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
           window.parent.postMessage({
             type: 'CYPHORA_ROUND3_LEVEL_COMPLETE',
@@ -183,10 +220,15 @@ export const executeCode = async (code: string, gameRef: any, blocklyRef: any, b
             block_score: blockScore,
             time_score: timeScore,
             efficiency: efficiencyLabel,
-            score: calculatedScore
+            score: calculatedScore,
+            new_score: newTotalScore,
+            new_total_score: newTotalScore,
+            round3_score: round3TotalScore
           }, '*');
         }
-      } catch (_) {}
+      } catch (err) {
+        console.warn('[Round 3] Failed to submit score to backend:', err);
+      }
 
       return;
     } else {

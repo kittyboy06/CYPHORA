@@ -2107,7 +2107,10 @@
 
 .objective-backdrop {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 42px;
   display: grid;
   place-items: center;
   padding: 1.5rem;
@@ -2115,7 +2118,7 @@
   backdrop-filter: blur(6px);
   pointer-events: auto;
   animation: objective-backdrop-in 0.28s ease-out both;
-  z-index: 9500;
+  z-index: 8900;
 }
 
 .objective-modal {

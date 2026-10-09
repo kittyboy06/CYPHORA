@@ -19,7 +19,7 @@ function App() {
   const [showStory, setShowStory] = useState(() => {
     if (typeof localStorage === 'undefined') return true;
     const teamId = localStorage.getItem('cyphora_team_id') || 'default';
-    return localStorage.getItem(`cyphora_round3_story_finished_${teamId}`) !== 'true';
+    return localStorage.getItem(`cyphora_round3_story_finished_${teamId}`) !== 'true' && localStorage.getItem('cyphora_round3_story_finished') !== 'true';
   });
   const [showTutorial, setShowTutorial] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
@@ -285,16 +285,26 @@ function App() {
 
   // Initialize and track level solve timer
   useEffect(() => {
-    const isFinished = typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_round3_story_finished') === 'true';
+    const teamId = (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : '') || 'default';
+    const isFinished = typeof localStorage !== 'undefined' && (
+      localStorage.getItem(`cyphora_round3_story_finished_${teamId}`) === 'true' ||
+      localStorage.getItem('cyphora_round3_story_finished') === 'true'
+    );
     if (isFinished && !showStory && !showTutorial) {
-      const key = `cyphora_r3_level_${level}_start_time`;
+      const key = `cyphora_r3_level_${level}_start_time_${teamId}`;
       if (!localStorage.getItem(key)) {
         localStorage.setItem(key, String(Date.now()));
       }
+      if (!localStorage.getItem(`cyphora_r3_level_${level}_start_time`)) {
+        localStorage.setItem(`cyphora_r3_level_${level}_start_time`, String(Date.now()));
+      }
     }
     const updateElapsed = () => {
-      const key = `cyphora_r3_level_${level}_start_time`;
-      const startMs = parseInt(localStorage.getItem(key) || '0', 10);
+      const key = `cyphora_r3_level_${level}_start_time_${teamId}`;
+      let startMs = parseInt(localStorage.getItem(key) || '0', 10);
+      if (!startMs || isNaN(startMs)) {
+        startMs = parseInt(localStorage.getItem(`cyphora_r3_level_${level}_start_time`) || '0', 10);
+      }
       if (startMs > 0) {
         setLevelElapsedSec(Math.max(0, Math.floor((Date.now() - startMs) / 1000)));
       } else {
@@ -310,7 +320,10 @@ function App() {
     setStatus('idle');
     useGameStore.getState().setLevel(nextLevel);
     // Initialize timestamp for next level
-    localStorage.setItem(`cyphora_r3_level_${nextLevel}_start_time`, String(Date.now()));
+    const teamId = (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : '') || 'default';
+    const nowMs = String(Date.now());
+    localStorage.setItem(`cyphora_r3_level_${nextLevel}_start_time_${teamId}`, nowMs);
+    localStorage.setItem(`cyphora_r3_level_${nextLevel}_start_time`, nowMs);
     if (gameRef.current) gameRef.current.resetLevel();
   };
 
@@ -322,76 +335,98 @@ function App() {
     setStatus('idle');
   };
 
-  if (!hasEntered) {
-    return <LandingScreen onEnter={enterFullscreen} />;
-  }
+  const securityOverlay = (isTabSwitched && lockReason) ? (
+    <AntiCheatScreen
+      reason={lockReason}
+      onAdminUnlock={() => {
+        setIsTabSwitched(false);
+        setLockReason('');
+      }}
+    />
+  ) : null;
 
-  // Fullscreen is recommended but not blocking; AntiCheatScreen only for explicit security locks
-  if (isTabSwitched && lockReason) {
-    return <AntiCheatScreen reason={lockReason} onAdminUnlock={() => { setIsTabSwitched(false); setLockReason(''); }} />;
+  if (!hasEntered) {
+    return (
+      <>
+        <LandingScreen onEnter={enterFullscreen} />
+        {securityOverlay}
+      </>
+    );
   }
 
   if (showStory) {
     return (
-      <StoryIntro
-        onComplete={() => {
-          setShowStory(false);
-          setShowTutorial(true);
-          const teamId = (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : '') || 'default';
-          try {
-            localStorage.setItem('cyphora_round3_story_finished', 'true');
-            localStorage.setItem(`cyphora_round3_story_finished_${teamId}`, 'true');
-            if (!localStorage.getItem(`cyphora_round3_started_at_${teamId}`)) {
-              const nowMs = String(Date.now());
-              localStorage.setItem(`cyphora_round3_started_at_${teamId}`, nowMs);
-              localStorage.setItem('cyphora_round3_started_at', nowMs);
-            }
-          } catch (_) {}
-        }}
-      />
+      <>
+        <StoryIntro
+          isLocked={isTabSwitched && !!lockReason}
+          onComplete={() => {
+            setShowStory(false);
+            setShowTutorial(true);
+            const teamId = (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : '') || 'default';
+            try {
+              localStorage.setItem('cyphora_round3_story_finished', 'true');
+              localStorage.setItem(`cyphora_round3_story_finished_${teamId}`, 'true');
+              if (!localStorage.getItem(`cyphora_round3_started_at_${teamId}`)) {
+                const nowMs = String(Date.now());
+                localStorage.setItem(`cyphora_round3_started_at_${teamId}`, nowMs);
+                localStorage.setItem('cyphora_round3_started_at', nowMs);
+              }
+            } catch (_) {}
+          }}
+        />
+        {securityOverlay}
+      </>
     );
   }
 
   if (showTutorial) {
-    return <TutorialScreen onComplete={() => setShowTutorial(false)} />;
+    return (
+      <>
+        <TutorialScreen onComplete={() => setShowTutorial(false)} />
+        {securityOverlay}
+      </>
+    );
   }
 
   if (timeRemaining <= 0 && localStorage.getItem('cyphora_round3_story_finished') === 'true' && !isAdminUnlocked) {
     return (
-      <div className="absolute inset-0 bg-red-950/95 flex flex-col items-center justify-center p-4 md:p-8 z-[200] backdrop-blur-md">
-        <div className="max-w-3xl w-full text-center space-y-6 md:space-y-8 bg-black/80 p-8 md:p-12 border border-red-500/50 rounded-sm shadow-2xl">
-          <Clock size={64} className="text-red-500 mx-auto animate-pulse" />
-          <h1 className="text-2xl md:text-4xl font-cinzel text-red-500 tracking-widest">
-            ROUND 3 TIME EXPIRED
-          </h1>
-          <p className="text-base md:text-xl font-cinzel text-[var(--text-primary)] leading-relaxed italic">
-            "The temple gates have closed. Your trial in the Blockly Forest has concluded."
-          </p>
-          <p className="text-xs md:text-sm font-mono text-red-400/80 uppercase tracking-widest mt-2">
-            Round 3 time limit reached. Please await jury evaluation and final championship tally.
-          </p>
-          <div className="pt-6 mt-6 border-t border-red-900/30">
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const code = adminCode.trim().toUpperCase();
-              if (['JCEAIML', 'CYPHORA-ADMIN', '8080', 'ADMIN', '1234'].includes(code)) {
-                setIsAdminUnlocked(true);
-              } else {
-                alert('Invalid admin override code.');
-              }
-            }} className="flex flex-col items-center gap-2">
-              <label className="text-[10px] text-red-500/50 uppercase tracking-widest font-mono">Supervisor Proctor Unlock</label>
-              <input
-                type="password"
-                value={adminCode}
-                onChange={(e) => setAdminCode(e.target.value)}
-                placeholder="Access Code"
-                className="bg-black/50 border border-red-900/50 text-red-500 text-center text-xs font-mono px-3 py-2 outline-none focus:border-red-500 w-48 transition-colors"
-              />
-            </form>
+      <>
+        <div className="absolute inset-0 bg-red-950/95 flex flex-col items-center justify-center p-4 md:p-8 z-[200] backdrop-blur-md">
+          <div className="max-w-3xl w-full text-center space-y-6 md:space-y-8 bg-black/80 p-8 md:p-12 border border-red-500/50 rounded-sm shadow-2xl">
+            <Clock size={64} className="text-red-500 mx-auto animate-pulse" />
+            <h1 className="text-2xl md:text-4xl font-cinzel text-red-500 tracking-widest">
+              ROUND 3 TIME EXPIRED
+            </h1>
+            <p className="text-base md:text-xl font-cinzel text-[var(--text-primary)] leading-relaxed italic">
+              "The temple gates have closed. Your trial in the Blockly Forest has concluded."
+            </p>
+            <p className="text-xs md:text-sm font-mono text-red-400/80 uppercase tracking-widest mt-2">
+              Round 3 time limit reached. Please await jury evaluation and final championship tally.
+            </p>
+            <div className="pt-6 mt-6 border-t border-red-900/30">
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const code = adminCode.trim().toUpperCase();
+                if (['JCEAIML', 'CYPHORA-ADMIN', '8080', 'ADMIN', '1234'].includes(code)) {
+                  setIsAdminUnlocked(true);
+                } else {
+                  alert('Invalid admin override code.');
+                }
+              }} className="flex flex-col items-center gap-2">
+                <label className="text-[10px] text-red-500/50 uppercase tracking-widest font-mono">Supervisor Proctor Unlock</label>
+                <input
+                  type="password"
+                  value={adminCode}
+                  onChange={(e) => setAdminCode(e.target.value)}
+                  placeholder="Access Code"
+                  className="bg-black/50 border border-red-900/50 text-red-500 text-center text-xs font-mono px-3 py-2 outline-none focus:border-red-500 w-48 transition-colors"
+                />
+              </form>
+            </div>
           </div>
         </div>
-      </div>
+        {securityOverlay}
+      </>
     );
   }
 
@@ -426,8 +461,14 @@ function App() {
               </div>
               <p className="text-[10px] text-[var(--text-muted)] font-mono uppercase tracking-wider">Level {level} Score</p>
               <p className="text-lg text-[var(--accent-gold)] font-cinzel font-bold">
-                {useGameStore.getState().score ? `${useGameStore.getState().score} / 500` : '\u2014'}
+                {score ? `${score} / 500` : '\u2014'}
               </p>
+              {typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_team_score') && (
+                <div className="mt-1 pt-1 border-t border-[var(--border-gold)]/20 flex justify-between items-center text-[9px] font-mono">
+                  <span className="text-[var(--text-muted)]">Expedition:</span>
+                  <span className="text-green-400 font-bold">{localStorage.getItem('cyphora_team_score')} pts</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -582,6 +623,7 @@ function App() {
           }}
         />
       )}
+      {securityOverlay}
     </div>
   );
 }

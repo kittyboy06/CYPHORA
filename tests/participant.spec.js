@@ -279,6 +279,11 @@ test.describe('CYPHORA Participant Workstation', () => {
 
     await expect(page.locator('.os-taskbar')).toBeVisible({ timeout: 15000 });
 
+    const taskModal = page.locator('.objective-modal');
+    if (await taskModal.isVisible()) {
+      await page.keyboard.press('Escape');
+    }
+
     // 1. Open and test Terminal from Start Menu
     await page.locator('.taskbar-start-btn').click();
     const startMenu = page.locator('.os-start-menu');
@@ -395,13 +400,12 @@ test.describe('CYPHORA Participant Workstation', () => {
 
     await expect(page.locator('.os-taskbar')).toBeVisible({ timeout: 15000 });
 
-    // Open Task Board from bottom-right tab
-    const taskTab = page.locator('button.objective-tab');
-    await expect(taskTab).toBeVisible();
-    await taskTab.click();
-
-    // Task Board modal is now open
+    // Task Board modal is automatically open or open from bottom-right tab
     const taskModal = page.locator('.objective-modal');
+    const taskTab = page.locator('button.objective-tab');
+    if (await taskTab.isVisible()) {
+      await taskTab.click();
+    }
     await expect(taskModal).toBeVisible();
     await expect(taskModal.locator('h2#objective-title')).toContainText('ENCODED MESSAGE');
 
@@ -461,6 +465,11 @@ test.describe('CYPHORA Participant Workstation', () => {
     }
 
     await expect(page.locator('.os-taskbar')).toBeVisible({ timeout: 15000 });
+
+    const taskModal = page.locator('.objective-modal');
+    if (await taskModal.isVisible()) {
+      await page.keyboard.press('Escape');
+    }
 
     // Open Start Menu -> Exit Station / Return to Hub
     await page.locator('.taskbar-start-btn').click();

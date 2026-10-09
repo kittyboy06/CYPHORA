@@ -1,6 +1,6 @@
 import { TASK_DEFINITIONS } from './taskContent.js';
 
-export const ROUND_1_DURATION_MS = 20 * 60 * 1000;
+export const ROUND_1_DURATION_MS = 60 * 60 * 1000;
 export const STORAGE_KEY = 'cyphora_round1_state';
 
 export const ROUND_1_SETS = [
@@ -175,9 +175,10 @@ export function formatCountdown(ms) {
 }
 
 export function getTimeSnapshot(state) {
+  const durMs = state?.round1DurationMs || ROUND_1_DURATION_MS;
   if (!state || !state.round1StartedAt) {
     return {
-      remainingTimeMs: state?.round1DurationMs ?? ROUND_1_DURATION_MS,
+      remainingTimeMs: state?.remainingTimeMs ?? durMs,
       elapsedTimeMs: 0,
       percentageRemaining: 100,
       isExpired: false,
@@ -187,16 +188,16 @@ export function getTimeSnapshot(state) {
 
   const startedAt = new Date(state.round1StartedAt).getTime();
   const now = Date.now();
-  const remaining = Math.max(0, startedAt + state.round1DurationMs - now);
-  const elapsed = state.round1DurationMs - remaining;
-  const isExpired = remaining <= 0 || state.isExpired;
+  const remaining = Math.max(0, startedAt + durMs - now);
+  const elapsed = Math.max(0, durMs - remaining);
+  const isExpired = remaining <= 0 || Boolean(state.isExpired);
 
   return {
     remainingTimeMs: remaining,
     elapsedTimeMs: elapsed,
-    percentageRemaining: isExpired ? 0 : Math.max(0, (remaining / state.round1DurationMs) * 100),
+    percentageRemaining: isExpired ? 0 : Math.max(0, (remaining / durMs) * 100),
     isExpired,
-    isTimerRunning: state.isTimerRunning && !isExpired && !state.isCompleted
+    isTimerRunning: Boolean(state.isTimerRunning && !isExpired && !state.isCompleted)
   };
 }
 
@@ -259,13 +260,14 @@ export function loadRound1State() {
 
 export function normalizeRound1State(state) {
   const base = buildDefaultRound1State();
+  const durMs = state?.round1DurationMs || base.round1DurationMs || ROUND_1_DURATION_MS;
   const merged = {
     ...base,
     ...state,
-    round1DurationMs: ROUND_1_DURATION_MS,
-    setStates: { ...base.setStates, ...(state.setStates || {}) },
-    tasks: hydrateTasks(state.tasks || base.tasks),
-    eventLog: state.eventLog || []
+    round1DurationMs: durMs,
+    setStates: { ...base.setStates, ...(state?.setStates || {}) },
+    tasks: hydrateTasks(state?.tasks || base.tasks),
+    eventLog: state?.eventLog || []
   };
 
   const snapshot = getTimeSnapshot(merged);
@@ -562,14 +564,15 @@ export function updateRound1TimerFromNow(state) {
     return next;
   }
 
+  const durMs = next.round1DurationMs || ROUND_1_DURATION_MS;
   const startedAt = new Date(next.round1StartedAt).getTime();
-  const remaining = Math.max(0, startedAt + next.round1DurationMs - Date.now());
+  const remaining = Math.max(0, startedAt + durMs - Date.now());
 
   if (remaining <= 0) {
     const expired = {
       ...next,
       remainingTimeMs: 0,
-      elapsedTimeMs: next.round1DurationMs,
+      elapsedTimeMs: durMs,
       percentageRemaining: 0,
       isExpired: true,
       isTimerRunning: false,
@@ -583,8 +586,8 @@ export function updateRound1TimerFromNow(state) {
   const updated = {
     ...next,
     remainingTimeMs: remaining,
-    elapsedTimeMs: next.round1DurationMs - remaining,
-    percentageRemaining: (remaining / next.round1DurationMs) * 100,
+    elapsedTimeMs: Math.max(0, durMs - remaining),
+    percentageRemaining: (remaining / durMs) * 100,
     isExpired: false,
     isTimerRunning: true
   };

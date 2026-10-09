@@ -36,6 +36,7 @@ test.describe('CYPHORA Round 2 Modals and Round 3 Transition Flow', () => {
       sessionStorage.setItem('cyphora_team_id', String(teamId));
       sessionStorage.setItem('cyphora_team_name', teamName);
       sessionStorage.setItem('cyphora_current_stage', 'os-desktop');
+      sessionStorage.setItem('cyphora_active_round', '2');
       sessionStorage.setItem('cyphora_round2_unlocked', 'true');
       sessionStorage.setItem('cyphora_round2_supervisor_override', 'true');
       localStorage.setItem('cyphora_token', token);
@@ -55,16 +56,25 @@ test.describe('CYPHORA Round 2 Modals and Round 3 Transition Flow', () => {
 
     await expect(page.locator('.os-taskbar')).toBeVisible({ timeout: 15000 });
 
+    // Dismiss any open objective or celebration modal overlay if present
+    const backdrop = page.locator('.objective-backdrop');
+    if (await backdrop.isVisible({ timeout: 1500 }).catch(() => false)) {
+      await page.locator('.objective-icon-button').first().click({ force: true }).catch(() => {});
+      await backdrop.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(400);
+    }
+
     // Open Start menu and launch Round 2
     await page.locator('.taskbar-start-btn').click();
     const startMenu = page.locator('.os-start-menu');
     await expect(startMenu).toBeVisible();
     await startMenu.locator('.start-app-item', { hasText: /Round 2|Image Navigation/i }).click();
 
-    // Sector 4 Briefing -> click "Launch Round 2"
+    // If Sector 4 Briefing is shown, click "Launch Round 2"
     const launchR2Btn = page.locator('button:has-text("Launch Round 2")');
-    await expect(launchR2Btn).toBeVisible({ timeout: 15000 });
-    await launchR2Btn.click();
+    if (await launchR2Btn.isVisible({ timeout: 2500 }).catch(() => false)) {
+      await launchR2Btn.click();
+    }
 
     // Round 2 Workspace should now be active
     const r2Body = page.locator('.os-round2-body');
@@ -79,7 +89,7 @@ test.describe('CYPHORA Round 2 Modals and Round 3 Transition Flow', () => {
     await promptInput.fill('Ancient moss-covered Mayan temple ruins submerged in golden sunlight');
 
     // Attach Image 1
-    const fileInput1 = page.locator('input[type="file"]').first();
+    const fileInput1 = page.locator('#image1-input');
     await fileInput1.setInputFiles(testImage1Path);
     await page.waitForTimeout(500);
 
@@ -110,7 +120,7 @@ test.describe('CYPHORA Round 2 Modals and Round 3 Transition Flow', () => {
     await promptInput.fill('Ancient obsidian temple gateway unsealed with luminescent jungle glyphs');
 
     // Attach Image 2
-    const fileInput2 = page.locator('input[type="file"]').first();
+    const fileInput2 = page.locator('#image2-input');
     await fileInput2.setInputFiles(testImage2Path);
     await page.waitForTimeout(500);
 

@@ -59,9 +59,20 @@ process_item("Fantasy Sword .png", "item_sword.png")
 process_item("Fantasy Shield.png", "item_shield.png")
 
 # Process hero with sword
-for i in [1, 2, 3, 4, 7]:
+for i in [1, 2, 3, 4]:
     process_hero_anim(f"hero_running_with_sword_{i}.png", f"hero_run_sword_{i}.png")
+process_hero_anim("hero_running_with_sword_7.png", "hero_run_sword_5.png")
+process_hero_anim("hero_running_with_sword_7.png", "hero_run_sword_7.png")
+
+# Also ensure round3/public/assets receives the files
+r3_out_dir = 'round3/public/assets'
+if os.path.exists(r3_out_dir):
+    for f in os.listdir(out_dir):
+        if f.startswith('hero_run_sword') or f.startswith('item_'):
+            import shutil
+            shutil.copy2(os.path.join(out_dir, f), os.path.join(r3_out_dir, f))
 
 # Process hero with sword and shield
 for i in [1, 2, 3, 4]:
     process_hero_anim(f"hero_running_with_sword_and_shield_{i}.png", f"hero_run_sword_shield_{i}.png")
+
