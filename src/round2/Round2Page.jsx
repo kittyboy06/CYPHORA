@@ -507,6 +507,7 @@ export function Round2Page({ onReturnToHub }) {
   const [showFinalFragmentModal, setShowFinalFragmentModal] = useState(false);
   const [fragment1Score, setFragment1Score] = useState(0);
   const [fragment2Score, setFragment2Score] = useState(0);
+  const [timeScore, setTimeScore] = useState(0);
 
   // Final Round Unlock Code State
   const [isCodeModalOpen, setIsCodeModalOpen] = useState(false);
@@ -1031,7 +1032,20 @@ export function Round2Page({ onReturnToHub }) {
           image2Points = Math.round(50 * (simParsed / 100));
         }
       }
-      finalTotalPoints = image1Points + image2Points;
+
+      // Time taken score evaluation (max 50 points based on speed efficiency)
+      let timeBonus = 0;
+      if (resData.time_score !== undefined) {
+        timeBonus = resData.time_score;
+      } else if (secondsRemaining > 0) {
+        const speedFactor = Math.min(1, Math.max(0, secondsRemaining / totalRound2Seconds));
+        timeBonus = Math.max(5, Math.round(50 * speedFactor));
+      }
+
+      finalTotalPoints = image1Points + image2Points + timeBonus;
+      if (resData.round2_score !== undefined) {
+        finalTotalPoints = resData.round2_score;
+      }
 
       if (resData.image2_similarity) {
         image2Similarity = resData.image2_similarity;
@@ -1051,7 +1065,8 @@ export function Round2Page({ onReturnToHub }) {
         image2Similarity: image2Similarity,
         image2Points: image2Points,
         timeCompleted: formattedSpeed,
-        speedBonus: 0,
+        speedBonus: timeBonus,
+        timeScore: timeBonus,
         totalPoints: finalTotalPoints,
         timestamp: new Date().toLocaleTimeString(),
       };
@@ -1059,19 +1074,21 @@ export function Round2Page({ onReturnToHub }) {
       // Persist in local storage
       localStorage.setItem('cyphora_round2_score', finalTotalPoints.toString());
       localStorage.setItem('cyphora_round2_speed', formattedSpeed);
+      localStorage.setItem('cyphora_round2_time_score', timeBonus.toString());
       const prevSubmissions = JSON.parse(localStorage.getItem('cyphora_round2_submissions') || '[]');
       prevSubmissions.push(payload);
       localStorage.setItem('cyphora_round2_submissions', JSON.stringify(prevSubmissions));
 
       setTeamPoints(finalTotalPoints);
-      setPointsDelta(image2Points);
+      setTimeScore(timeBonus);
+      setPointsDelta(image2Points + timeBonus);
       window.dispatchEvent(new Event('cyphora_points_updated'));
       setSubmittedData(payload);
       setShowImage2Modal(true);
       setIsTimerRunning(false);
 
-      // --- Temple Effect: Final Fragment ---
-      triggerFinalFragmentEffect(image1Points, image2Points);
+      // --- Temple Effect: Final Fragment with Time Score ---
+      triggerFinalFragmentEffect(image1Points, image2Points, timeBonus);
       
       setPrompt('');
       setPromptTouched(false);
@@ -1112,7 +1129,7 @@ export function Round2Page({ onReturnToHub }) {
    * Rumbles the screen, swaps background to the fully-visible temple image,
    * and reveals the Final Fragment Modal after a 1.8-second delay.
    */
-  const triggerFinalFragmentEffect = useCallback((score1, score2) => {
+  const triggerFinalFragmentEffect = useCallback((score1, score2, timeSc = 0) => {
     // 1. Screen rumble
     setIsRumbling(true);
     setTimeout(() => setIsRumbling(false), 1200);
@@ -1123,6 +1140,7 @@ export function Round2Page({ onReturnToHub }) {
     // 3. Show Final Fragment Modal after 1.8 seconds cutscene
     setFragment1Score(score1);
     setFragment2Score(score2);
+    setTimeScore(timeSc);
     setTimeout(() => {
       setShowFinalFragmentModal(true);
     }, 1800);
@@ -1311,13 +1329,13 @@ export function Round2Page({ onReturnToHub }) {
                 <Flame size={20} className="gold-text" />
               </div>
               <div className="speed-text-wrap">
-                <span className="speed-label">ACCURACY SCORING (50 PTS / IMAGE)</span>
+                <span className="speed-label">ACCURACY & SPEED SCORING</span>
                 <div className="points-tally">
                   <span className="base-pts">50 PTS / Image</span>
-                  <span className="plus-sign">&bull;</span>
-                  <span className="bonus-pts gold-text">100% Match = 50 PTS</span>
+                  <span className="plus-sign">+</span>
+                  <span className="bonus-pts gold-text">Speed Bonus</span>
                   <span className="equals-sign">=</span>
-                  <span className="total-pts gold-text">Max 100 PTS</span>
+                  <span className="total-pts gold-text">Max 150 PTS</span>
                 </div>
               </div>
             </div>
@@ -1541,9 +1559,9 @@ export function Round2Page({ onReturnToHub }) {
 
             <div className="modal-score-banner">
               <span className="score-banner-label">FINAL EVALUATED ROUND 2 SCORE</span>
-              <span className="score-banner-val gold-text">+{evaluatedScore ?? submittedData.totalPoints} / 100 PTS</span>
+              <span className="score-banner-val gold-text">+{evaluatedScore ?? submittedData.totalPoints} / 150 PTS</span>
               <span className="score-banner-sub">
-                Completed in {submittedData.timeCompleted} &bull; Image 1: +{submittedData.image1Points} pts &bull; Image 2: +{submittedData.image2Points} pts
+                Completed in {submittedData.timeCompleted} &bull; Image 1: +{submittedData.image1Points} pts &bull; Image 2: +{submittedData.image2Points} pts &bull; Speed Bonus: +{submittedData.speedBonus ?? submittedData.timeScore ?? 0} pts
               </span>
             </div>
 
@@ -1562,6 +1580,12 @@ export function Round2Page({ onReturnToHub }) {
                 <span className="summary-label">Image 2 (Final Target):</span>
                 <span className="summary-value">
                   +{submittedData.image2Points} pts <span className="gold-text">({submittedData.image2Similarity} match)</span>
+                </span>
+              </div>
+              <div className="summary-field">
+                <span className="summary-label">Speed / Time Score:</span>
+                <span className="summary-value">
+                  +{submittedData.speedBonus ?? submittedData.timeScore ?? 0} pts <span className="gold-text">({submittedData.timeCompleted} elapsed)</span>
                 </span>
               </div>
               <div className="summary-prompt-preview">
@@ -1741,10 +1765,15 @@ export function Round2Page({ onReturnToHub }) {
                   <span className="temple-score-label">FRAGMENT II</span>
                   <span className="temple-score-value">{fragment2Score}<span className="temple-score-unit"> PTS</span></span>
                 </div>
+                <div className="temple-score-divider" aria-hidden="true">+</div>
+                <div className="temple-modal-score-stone">
+                  <span className="temple-score-label">SPEED BONUS</span>
+                  <span className="temple-score-value">{timeScore}<span className="temple-score-unit"> PTS</span></span>
+                </div>
                 <div className="temple-score-divider" aria-hidden="true">=</div>
                 <div className="temple-modal-score-stone temple-modal-score-stone--total">
-                  <span className="temple-score-label">TOTAL</span>
-                  <span className="temple-score-value">{fragment1Score + fragment2Score}<span className="temple-score-unit"> / 100</span></span>
+                  <span className="temple-score-label">TOTAL ROUND 2</span>
+                  <span className="temple-score-value">{fragment1Score + fragment2Score + timeScore}<span className="temple-score-unit"> / 150</span></span>
                 </div>
               </div>
               <p className="temple-modal-desc">

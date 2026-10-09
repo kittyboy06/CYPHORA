@@ -8,10 +8,11 @@ import { LandingScreen } from './components/LandingScreen';
 import { AntiCheatScreen } from './components/AntiCheatScreen';
 import { useGameStore } from './state/gameStore';
 import { executeCode } from './blockly/interpreter';
-import { Play, RotateCcw, Wand2, Clock } from 'lucide-react';
+import { Play, RotateCcw, Wand2, Clock, BookOpen } from 'lucide-react';
 import { SOLUTIONS } from './blockly/solutions';
 import * as Blockly from 'blockly';
 import { PromptDialog, AlertDialog } from './components/PromptDialog';
+import { BlockGuideModal } from './components/BlockGuideModal';
 
 function App() {
   const [hasEntered, setHasEntered] = useState(false);
@@ -22,6 +23,7 @@ function App() {
     return localStorage.getItem(`cyphora_round3_story_finished_${teamId}`) !== 'true' && localStorage.getItem('cyphora_round3_story_finished') !== 'true';
   });
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showBlockGuide, setShowBlockGuide] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
   const [round3DurationMinutes, setRound3DurationMinutes] = useState(30);
@@ -435,7 +437,7 @@ function App() {
       <GameOverlay onRetry={handleReset} onNextLevel={handleNextLevel} />
 
       {/* === TOP HALF: Game Canvas === */}
-      <div className="h-[40%] min-h-[200px] relative bg-[#050804] border-b border-[var(--border-gold)]">
+      <div className="h-[34%] min-h-[190px] relative bg-[#050804] border-b border-[var(--border-gold)]">
         <PhaserGame ref={gameRef} levelIndex={level} />
         
         {/* MASTER TIMER OVERLAY */}
@@ -475,7 +477,7 @@ function App() {
       </div>
 
       {/* === TASK STRIP === */}
-      <div className="px-6 py-3 bg-[rgba(14,18,12,0.95)] border-b border-[var(--border-gold)] flex items-center justify-between">
+      <div className="px-6 py-3.5 bg-[rgba(14,18,12,0.95)] border-b border-[var(--border-gold)] flex items-center justify-between">
         <div>
           {level === 1 && (
             <>
@@ -510,13 +512,25 @@ function App() {
               </p>
             </>
           )}
-          <div className="inline-flex items-center gap-2 mt-2 px-2.5 py-1 rounded bg-black/50 border border-[var(--border-gold)]/30 text-[11px] font-mono">
-            <span className="text-[var(--text-muted)] uppercase tracking-wider text-[10px]">Optimal Target:</span>
-            <span className="text-green-400 font-bold">{level === 1 ? '14' : level === 2 ? '17' : '27'} Blocks</span>
-            <span className="text-zinc-600">•</span>
-            <span className="text-yellow-400 font-bold">{level === 1 ? '3m' : level === 2 ? '5m' : '7m'} Par Time</span>
-            <span className="text-zinc-600">•</span>
-            <span className="text-[var(--accent-gold)] font-bold">Max 500 Scores</span>
+          <div className="flex flex-wrap items-center gap-3 mt-2">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-black/50 border border-[var(--border-gold)]/30 text-[11px] font-mono">
+              <span className="text-[var(--text-muted)] uppercase tracking-wider text-[10px]">Optimal Target:</span>
+              <span className="text-green-400 font-bold">{level === 1 ? '14' : level === 2 ? '17' : '27'} Blocks</span>
+              <span className="text-zinc-600">•</span>
+              <span className="text-yellow-400 font-bold">{level === 1 ? '3m' : level === 2 ? '5m' : '7m'} Par Time</span>
+              <span className="text-zinc-600">•</span>
+              <span className="text-[var(--accent-gold)] font-bold">Max 500 Scores</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowBlockGuide(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-[rgba(223,177,37,0.15)] border border-[var(--border-gold)]/70 hover:border-[var(--accent-gold)] text-[var(--accent-gold)] hover:text-white text-[11px] font-mono uppercase tracking-wider transition-all shadow-[0_0_10px_rgba(0,0,0,0.5)] hover:shadow-[0_0_12px_rgba(223,177,37,0.3)] active:scale-95 cursor-pointer"
+              title="Open complete Block Descriptions & Manual"
+            >
+              <BookOpen size={13} />
+              <span>📖 Block Guide</span>
+            </button>
           </div>
         </div>
         {/* Level Selector & Run / Reset buttons */}
@@ -623,6 +637,11 @@ function App() {
           }}
         />
       )}
+      <BlockGuideModal
+        isOpen={showBlockGuide}
+        onClose={() => setShowBlockGuide(false)}
+        initialLevel={level}
+      />
       {securityOverlay}
     </div>
   );

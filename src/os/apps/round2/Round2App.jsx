@@ -297,6 +297,14 @@ export function Round2App({ windowId }) {
   const [showFinalFragmentModal, setShowFinalFragmentModal] = useState(false);
   const [fragment1Score, setFragment1Score] = useState(0);
   const [fragment2Score, setFragment2Score] = useState(0);
+  const [timeScore, setTimeScore] = useState(() => {
+    try {
+      const saved = localStorage.getItem('cyphora_round2_time_score');
+      return saved ? parseInt(saved, 10) : 0;
+    } catch {
+      return 0;
+    }
+  });
   const [isRound2Completed, setIsRound2Completed] = useState(() => {
     if (typeof localStorage !== 'undefined') {
       return localStorage.getItem('cyphora_round2_completed') === 'true' ||
@@ -408,7 +416,7 @@ export function Round2App({ windowId }) {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  const maxTotalRound2Points = MAX_IMAGE_POINTS * 2;
+  const maxTotalRound2Points = 150; // 50 pts Fragment 1 + 50 pts Fragment 2 + 50 pts Speed Bonus
 
   // Handlers for Image 1
   const handleSelectImage1 = (file, customError) => {
@@ -550,9 +558,10 @@ export function Round2App({ windowId }) {
     }, 1800);
   }, []);
 
-  const triggerFinalFragmentEffect = useCallback((score1, score2) => {
+  const triggerFinalFragmentEffect = useCallback((score1, score2, timeSc = 0) => {
     setFragment1Score(score1);
     setFragment2Score(score2);
+    setTimeScore(timeSc);
     setIsRumbling(true);
     setCutsceneSrc('/assets/background/round3image2.png');
 
@@ -715,7 +724,8 @@ export function Round2App({ windowId }) {
     setFormGlobalError('');
     setIsSubmitting(true);
 
-    const finalElapsed = ROUND_2_DURATION_SECONDS - secondsRemaining;
+    const totalDurationSec = (backendRound2Timer?.duration_minutes ? backendRound2Timer.duration_minutes * 60 : ROUND_2_DURATION_SECONDS);
+    const finalElapsed = Math.max(0, totalDurationSec - secondsRemaining);
     const formattedSpeed = formatTime(finalElapsed);
     const image1Points = image1EvaluatedData?.score || 0;
 
@@ -775,7 +785,20 @@ export function Round2App({ windowId }) {
           image2Points = Math.round(MAX_IMAGE_POINTS * (simParsed / 100));
         }
       }
-      finalTotalPoints = image1Points + image2Points;
+
+      // Time taken score evaluation (max 50 points based on speed efficiency)
+      let timeBonus = 0;
+      if (resData.time_score !== undefined) {
+        timeBonus = resData.time_score;
+      } else if (secondsRemaining > 0) {
+        const speedFactor = Math.min(1, Math.max(0, secondsRemaining / totalDurationSec));
+        timeBonus = Math.max(5, Math.round(50 * speedFactor));
+      }
+
+      finalTotalPoints = image1Points + image2Points + timeBonus;
+      if (resData.round2_score !== undefined) {
+        finalTotalPoints = resData.round2_score;
+      }
 
       if (resData.image2_similarity) {
         image2Similarity = resData.image2_similarity;
@@ -786,8 +809,10 @@ export function Round2App({ windowId }) {
 
       setEvaluatedScore(finalTotalPoints);
       setTeamPoints(finalTotalPoints);
+      setTimeScore(timeBonus);
       localStorage.setItem('cyphora_round2_score', finalTotalPoints.toString());
       localStorage.setItem('cyphora_round2_speed', formattedSpeed);
+      localStorage.setItem('cyphora_round2_time_score', timeBonus.toString());
       setIsRound2Completed(true);
       localStorage.setItem('cyphora_round2_completed', 'true');
       localStorage.setItem('cyphora_round3_unlocked', 'true');
@@ -804,6 +829,7 @@ export function Round2App({ windowId }) {
           finalTotalPoints,
           image1Points,
           image2Points,
+          timeBonus,
           image2Similarity,
           elapsedSpeed: formattedSpeed
         }, null, 2), 'round2');
@@ -813,11 +839,12 @@ export function Round2App({ windowId }) {
       eventBus.emit('STAGE2_COMPLETED', {
         teamName,
         score: finalTotalPoints,
-        speed: formattedSpeed
+        speed: formattedSpeed,
+        timeScore: timeBonus
       });
 
-      // --- Temple Effect: Final Fragment ---
-      triggerFinalFragmentEffect(image1Points, image2Points);
+      // --- Temple Effect: Final Fragment with Time Score ---
+      triggerFinalFragmentEffect(image1Points, image2Points, timeBonus);
       if (typeof fetchLeaderboard === 'function') fetchLeaderboard();
     } finally {
       setIsSubmitting(false);
@@ -898,6 +925,8 @@ export function Round2App({ windowId }) {
     localStorage.removeItem('cyphora_round2_image1_data');
     localStorage.removeItem('cyphora_round2_image1_cached_url');
     localStorage.removeItem('cyphora_round2_score');
+    localStorage.removeItem('cyphora_round2_time_score');
+    setTimeScore(0);
     setImage1EvaluatedData(null);
     setTeamPoints(0);
     window.dispatchEvent(new Event('cyphora_points_updated'));
@@ -1096,9 +1125,9 @@ export function Round2App({ windowId }) {
               />
             </div>
           </div>
-          <div className="os-header-speed-pill" title="Round 2 Accuracy Potential">
+          <div className="os-header-speed-pill" title="Round 2 Accuracy & Speed Potential">
             <Flame size={13} color="#dfb125" />
-            <span>50 PTS / IMAGE</span>
+            <span>ACCURACY + SPEED</span>
             <span className="speed-pts-total">({maxTotalRound2Points} MAX)</span>
           </div>
         </div>
@@ -1337,10 +1366,15 @@ export function Round2App({ windowId }) {
                   <span className="temple-score-label">FRAGMENT II</span>
                   <span className="temple-score-value">{fragment2Score}<span className="temple-score-unit"> PTS</span></span>
                 </div>
+                <div className="temple-score-divider" aria-hidden="true">+</div>
+                <div className="temple-modal-score-stone">
+                  <span className="temple-score-label">SPEED BONUS</span>
+                  <span className="temple-score-value">{timeScore}<span className="temple-score-unit"> PTS</span></span>
+                </div>
                 <div className="temple-score-divider" aria-hidden="true">=</div>
                 <div className="temple-modal-score-stone temple-modal-score-stone--total">
-                  <span className="temple-score-label">ACCURACY TOTAL</span>
-                  <span className="temple-score-value">{fragment1Score + fragment2Score}<span className="temple-score-unit"> / 100</span></span>
+                  <span className="temple-score-label">TOTAL ROUND 2</span>
+                  <span className="temple-score-value">{fragment1Score + fragment2Score + timeScore}<span className="temple-score-unit"> / 150</span></span>
                 </div>
               </div>
               <p className="temple-modal-desc">

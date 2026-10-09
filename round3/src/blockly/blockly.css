@@ -1,0 +1,332 @@
+/* ==========================================================================
+   CYPHORA BLOCKLY STYLESHEET
+   Modular styles for Grid, Custom Designed Scrollbars, Designed Delete,
+   Toolbox, Flyouts, and Workspace Canvas.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. GRID & WORKSPACE CANVAS
+   -------------------------------------------------------------------------- */
+.blocklySvg {
+  background-color: transparent !important;
+}
+
+/* Ensure SVG pattern for the grid is preserved and rendered */
+.blocklyMainBackground {
+  stroke: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. DESIGNED SCROLLBARS (GOLD & OBSIDIAN RUNIC THEME)
+   -------------------------------------------------------------------------- */
+/* Scrollbar Track */
+.blocklyScrollbarBackground {
+  fill: rgba(10, 15, 8, 0.82) !important;
+  stroke: rgba(223, 177, 37, 0.22) !important;
+  stroke-width: 1px !important;
+  rx: 6px !important;
+  ry: 6px !important;
+  opacity: 0.95 !important;
+  transition: fill 0.2s ease, stroke 0.2s ease, opacity 0.2s ease;
+}
+
+.blocklyScrollbarBackground:hover {
+  fill: rgba(14, 20, 11, 0.92) !important;
+  stroke: rgba(223, 177, 37, 0.4) !important;
+}
+
+/* Scrollbar Handle (Thumb) */
+.blocklyScrollbarHandle {
+  fill: rgba(223, 177, 37, 0.38) !important;
+  stroke: rgba(223, 177, 37, 0.55) !important;
+  stroke-width: 1px !important;
+  rx: 5px !important;
+  ry: 5px !important;
+  cursor: grab;
+  transition: fill 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+              stroke 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+              filter 0.2s ease, 
+              transform 0.15s ease !important;
+}
+
+/* Handle Hover (direct hover or track hover) */
+.blocklyScrollbarHandle:hover,
+.blocklyScrollbarBackground:hover + .blocklyScrollbarHandle {
+  fill: #dfb125 !important;
+  stroke: #fff1a8 !important;
+  filter: drop-shadow(0 0 8px rgba(223, 177, 37, 0.85)) !important;
+  cursor: grab;
+}
+
+/* Handle Active / Dragging */
+.blocklyScrollbarHandle:active,
+.blocklyScrollbarBackground:active + .blocklyScrollbarHandle {
+  fill: #ffea79 !important;
+  stroke: #ffffff !important;
+  filter: drop-shadow(0 0 14px rgba(255, 234, 121, 1)) !important;
+  cursor: grabbing;
+}
+
+/* Flyout Scrollbars */
+.blocklyFlyoutScrollbar .blocklyScrollbarBackground {
+  fill: rgba(8, 12, 6, 0.85) !important;
+  stroke: rgba(223, 177, 37, 0.15) !important;
+}
+
+.blocklyFlyoutScrollbar .blocklyScrollbarHandle {
+  fill: rgba(223, 177, 37, 0.32) !important;
+  stroke: rgba(223, 177, 37, 0.45) !important;
+  rx: 4px !important;
+  ry: 4px !important;
+}
+
+.blocklyFlyoutScrollbar .blocklyScrollbarHandle:hover {
+  fill: #dfb125 !important;
+  filter: drop-shadow(0 0 6px rgba(223, 177, 37, 0.7)) !important;
+}
+
+/* Toolbox Categories WebKit Scrollbar */
+.blocklyToolboxDiv::-webkit-scrollbar {
+  width: 6px;
+}
+.blocklyToolboxDiv::-webkit-scrollbar-track {
+  background: rgba(10, 14, 8, 0.7);
+}
+.blocklyToolboxDiv::-webkit-scrollbar-thumb {
+  background: rgba(223, 177, 37, 0.35);
+  border-radius: 4px;
+  border: 1px solid rgba(223, 177, 37, 0.5);
+}
+.blocklyToolboxDiv::-webkit-scrollbar-thumb:hover {
+  background: #dfb125;
+  box-shadow: 0 0 8px rgba(223, 177, 37, 0.75);
+}
+
+/* --------------------------------------------------------------------------
+   3. DESIGNED DELETE & TRASHCAN (INCINERATOR RITE)
+   -------------------------------------------------------------------------- */
+/* Hide the default Canvas Trashcan SVG icon */
+.blocklyTrash {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. TOOLBOX, FLYOUT, AND TEXT CRAFT (CYPHORA TEMPLE CODEX UPGRADE)
+   -------------------------------------------------------------------------- */
+.blocklyToolboxDiv {
+  background: linear-gradient(180deg, rgba(14, 20, 14, 0.98) 0%, rgba(8, 12, 8, 0.99) 100%) !important;
+  border-right: 1px solid rgba(223, 177, 37, 0.35) !important;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.8), inset -1px 0 0 rgba(223, 177, 37, 0.15) !important;
+  width: 172px !important;
+  min-width: 172px !important;
+  padding: 10px 0 !important;
+  user-select: none;
+}
+
+/* Temple Codex Title Header */
+.blocklyToolboxDiv::before {
+  content: 'TEMPLE CODEX';
+  display: block;
+  font-family: 'Cinzel', serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #dfb125;
+  padding: 8px 14px 10px 14px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(223, 177, 37, 0.2);
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(223, 177, 37, 0.4);
+  background: linear-gradient(90deg, rgba(223, 177, 37, 0.1) 0%, transparent 100%);
+}
+
+.blocklyToolboxContents {
+  padding: 4px 0;
+}
+
+/* Category Wrapper */
+.blocklyToolboxCategory {
+  margin: 5px 8px !important;
+  outline: none;
+}
+
+/* Floating Card / Interactive Pill Row */
+.blocklyTreeRow {
+  height: auto !important;
+  min-height: 40px !important;
+  padding: 8px 10px !important;
+  margin: 0 !important;
+  border-radius: 8px !important;
+  background: rgba(18, 25, 17, 0.65) !important;
+  border: 1px solid rgba(223, 177, 37, 0.12) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  display: flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  position: relative !important;
+  cursor: pointer;
+}
+
+.blocklyTreeRowContentContainer {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  width: 100% !important;
+  pointer-events: none;
+}
+
+/* Category Glyphs & Icon Badges */
+.temple-category-icon {
+  visibility: visible !important;
+  width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: color-mix(in srgb, var(--cat-color, #dfb125) 18%, rgba(10, 14, 10, 0.8)) !important;
+  border: 1px solid color-mix(in srgb, var(--cat-color, #dfb125) 45%, transparent) !important;
+  color: var(--cat-color, #dfb125) !important;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--cat-color, #dfb125) 25%, transparent), inset 0 1px 1px rgba(255, 255, 255, 0.15) !important;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+.temple-category-icon svg {
+  visibility: visible !important;
+  display: block;
+  stroke: var(--cat-color, currentColor);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--cat-color, currentColor) 65%, transparent));
+}
+
+/* Category Typography */
+.blocklyTreeLabel {
+  color: #eae0c8 !important;
+  font-family: 'Montserrat', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em !important;
+  line-height: 1.2 !important;
+  transition: color 0.2s ease, text-shadow 0.2s ease !important;
+  white-space: nowrap;
+}
+
+/* Hover State */
+.blocklyTreeRow:hover {
+  background: rgba(26, 38, 24, 0.9) !important;
+  border-color: color-mix(in srgb, var(--cat-color, #dfb125) 55%, rgba(223, 177, 37, 0.4)) !important;
+  transform: translateX(3px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5), 0 0 12px color-mix(in srgb, var(--cat-color, #dfb125) 20%, transparent) !important;
+}
+
+.blocklyTreeRow:hover .temple-category-icon {
+  transform: scale(1.1);
+  box-shadow: 0 0 14px var(--cat-color, #dfb125), inset 0 1px 1px rgba(255, 255, 255, 0.3) !important;
+  background: color-mix(in srgb, var(--cat-color, #dfb125) 28%, rgba(10, 14, 10, 0.7)) !important;
+}
+
+.blocklyTreeRow:hover .blocklyTreeLabel {
+  color: #ffffff !important;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Active / Selected State */
+.blocklyTreeRow.blocklyTreeSelected {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--cat-color, #dfb125) 26%, transparent) 0%, rgba(20, 28, 18, 0.92) 100%) !important;
+  border: 1px solid var(--cat-color, #dfb125) !important;
+  box-shadow: 0 0 20px color-mix(in srgb, var(--cat-color, #dfb125) 35%, transparent), inset 0 0 12px color-mix(in srgb, var(--cat-color, #dfb125) 15%, transparent) !important;
+}
+
+.blocklyTreeRow.blocklyTreeSelected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 3.5px;
+  border-radius: 0 3px 3px 0;
+  background: var(--cat-color, #dfb125);
+  box-shadow: 0 0 10px var(--cat-color, #dfb125);
+}
+
+.blocklyTreeRow.blocklyTreeSelected .temple-category-icon {
+  transform: scale(1.12);
+  border-color: var(--cat-color, #dfb125) !important;
+  box-shadow: 0 0 16px var(--cat-color, #dfb125), inset 0 1px 1px rgba(255, 255, 255, 0.4) !important;
+}
+
+.blocklyTreeRow.blocklyTreeSelected .blocklyTreeLabel {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--cat-color, #dfb125) 55%, transparent) !important;
+}
+
+/* Category Specific Color Tuning */
+.cat-actions { --cat-color: #38bdf8 !important; }
+.cat-sensors { --cat-color: #eab308 !important; }
+.cat-logic   { --cat-color: #6366f1 !important; }
+.cat-loops   { --cat-color: #10b981 !important; }
+.cat-math    { --cat-color: #a855f7 !important; }
+.cat-variables { --cat-color: #f43f5e !important; }
+.cat-functions { --cat-color: #d946ef !important; }
+
+/* Flyout Styling */
+.blocklyFlyoutBackground {
+  fill: rgba(10, 15, 10, 0.96) !important;
+  stroke: rgba(223, 177, 37, 0.3) !important;
+  stroke-width: 1px !important;
+  filter: drop-shadow(8px 0 24px rgba(0, 0, 0, 0.85));
+}
+
+.blocklyText {
+  fill: #eae0c8 !important;
+  font-family: 'Fira Code', monospace !important;
+  font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------
+   5. FLYOUT SCROLLBAR & SVG DISPLAY RESOLUTION (TAILWIND OVERRIDE)
+   -------------------------------------------------------------------------- */
+/* Tailwind preflight sets `svg { display: block }`, overriding SVG presentation
+   attributes like display="none". We strictly enforce display none. */
+svg[display="none"],
+[display="none"],
+.blocklyFlyoutScrollbar[display="none"] {
+  display: none !important;
+}
+
+/* Flyout scrollbar is hidden by default and only visible when the flyout is open */
+.blocklyFlyoutScrollbar {
+  display: none !important;
+}
+
+.blocklyFlyout:not([style*="display: none"]):not([display="none"]) ~ .blocklyFlyoutScrollbar:not([display="none"]) {
+  display: block !important;
+}
+
+
+/* --------------------------------------------------------------------------
+   5. TOOLTIPS (RUNIC CODEX STYLING)
+   -------------------------------------------------------------------------- */
+.blocklyTooltipDiv {
+  background: rgba(11, 16, 9, 0.96) !important;
+  border: 1px solid var(--border-gold) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.85), 0 0 14px rgba(223, 177, 37, 0.3) !important;
+  color: #f3f4f6 !important;
+  font-family: 'Fira Code', monospace !important;
+  font-size: 11.5px !important;
+  line-height: 1.55 !important;
+  padding: 10px 14px !important;
+  max-width: 340px !important;
+  pointer-events: none !important;
+  z-index: 99999 !important;
+  backdrop-filter: blur(8px) !important;
+}
+

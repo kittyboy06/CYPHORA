@@ -11,7 +11,8 @@ import './CustomCursor.css';
  * - Exact (0, 0) hotspot alignment matching the green arrow tip
  * - Seamless pointer / click feedback
  * - Auto-disables on coarse touchscreens
- * - CSS native cursor fallback
+ * - Auto-hides when mouse moves over any iframe or when window blurs to an iframe
+ * - Suppressed when full-screen iframe kiosk is active
  */
 export default function CustomCursor() {
   const cursorRef = useRef(null);
@@ -34,6 +35,13 @@ export default function CustomCursor() {
     let posY = -100;
 
     const updatePosition = (x, y) => {
+      if (document.documentElement.classList.contains('kiosk-iframe-active')) {
+        if (!isHiddenRef.current) {
+          isHiddenRef.current = true;
+          cursorEl.classList.add('is-hidden');
+        }
+        return;
+      }
       posX = x;
       posY = y;
       cursorEl.style.transform = `translate3d(${posX}px, ${posY}px, 0)`;
@@ -44,6 +52,14 @@ export default function CustomCursor() {
     };
 
     const handlePointerMove = (e) => {
+      const target = e.target;
+      if (target && (target.tagName === 'IFRAME' || (target.closest && target.closest('iframe')))) {
+        if (!isHiddenRef.current) {
+          isHiddenRef.current = true;
+          cursorEl.classList.add('is-hidden');
+        }
+        return;
+      }
       updatePosition(e.clientX, e.clientY);
     };
 
@@ -60,6 +76,14 @@ export default function CustomCursor() {
     const handleMouseOver = (e) => {
       const target = e.target;
       if (!target) return;
+
+      if (target.tagName === 'IFRAME' || (target.closest && target.closest('iframe'))) {
+        if (!isHiddenRef.current) {
+          isHiddenRef.current = true;
+          cursorEl.classList.add('is-hidden');
+        }
+        return;
+      }
 
       const interactive = target.closest(
         'button, a, input, select, textarea, [role="button"], .clickable, [onclick], [tabindex]:not([tabindex="-1"])'
@@ -83,6 +107,19 @@ export default function CustomCursor() {
       cursorEl.classList.add('is-hidden');
     };
 
+    const handleMouseOut = (e) => {
+      const related = e.relatedTarget;
+      if (!related || related.tagName === 'IFRAME' || (related.closest && related.closest('iframe'))) {
+        isHiddenRef.current = true;
+        cursorEl.classList.add('is-hidden');
+      }
+    };
+
+    const handleWindowBlur = () => {
+      isHiddenRef.current = true;
+      cursorEl.classList.add('is-hidden');
+    };
+
     const handleMouseEnter = (e) => {
       if (e.clientX && e.clientY) {
         updatePosition(e.clientX, e.clientY);
@@ -91,9 +128,11 @@ export default function CustomCursor() {
 
     window.addEventListener('pointermove', handlePointerMove, { passive: true });
     window.addEventListener('mousemove', handlePointerMove, { passive: true });
-    window.addEventListener('pointerdown', handlePointerDown, { passive: true });
-    window.addEventListener('pointerup', handlePointerUp, { passive: true });
-    document.addEventListener('mouseover', handleMouseOver, { passive: true });
+    window.addEventListener('pointerdown', handlePointerDown);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('blur', handleWindowBlur);
+    document.addEventListener('mouseover', handleMouseOver);
+    document.addEventListener('mouseout', handleMouseOut);
     document.addEventListener('mouseleave', handleMouseLeave);
     document.addEventListener('mouseenter', handleMouseEnter);
 
@@ -103,7 +142,9 @@ export default function CustomCursor() {
       window.removeEventListener('mousemove', handlePointerMove);
       window.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('blur', handleWindowBlur);
       document.removeEventListener('mouseover', handleMouseOver);
+      document.removeEventListener('mouseout', handleMouseOut);
       document.removeEventListener('mouseleave', handleMouseLeave);
       document.removeEventListener('mouseenter', handleMouseEnter);
     };

@@ -1,5 +1,6 @@
 import json
 import base64
+from datetime import datetime
 from io import BytesIO
 from typing import Optional
 from pydantic import BaseModel
@@ -14,7 +15,7 @@ from PIL import Image
 
 from ..config import BASE_DIR
 from ..database import get_db
-from ..models import Team, TaskSubmission
+from ..models import Team, TaskSubmission, EventConfig
 from ..websocket_manager import ws_manager
 from ..auth_utils import decode_access_token
 
@@ -373,6 +374,44 @@ async def submit_stage2(
 
     team = await resolve_team(db, authorization, x_team_id, x_team_name, req.team_name)
 
+    # 1. Determine total round duration (default 900 seconds / 15 minutes)
+    total_duration = 900
+    try:
+        timer_row = (await db.execute(select(EventConfig).filter(EventConfig.key == "event_timer_round_2"))).scalar_one_or_none()
+        if timer_row and timer_row.value_json:
+            t_data = json.loads(timer_row.value_json)
+            if t_data.get("duration_minutes"):
+                total_duration = int(t_data["duration_minutes"]) * 60
+    except Exception:
+        pass
+
+    if req.elapsed_seconds + req.remaining_seconds > 0:
+        total_duration = max(total_duration, req.elapsed_seconds + req.remaining_seconds)
+
+    # 2. Determine elapsed seconds
+    elapsed = max(0, req.elapsed_seconds)
+    if elapsed == 0 and team and getattr(team, 'round2_started_at', None):
+        try:
+            db_elapsed = int((datetime.utcnow() - team.round2_started_at).total_seconds())
+            if db_elapsed > 0:
+                elapsed = db_elapsed
+        except Exception:
+            pass
+
+    # 3. Determine remaining seconds
+    remaining = max(0, req.remaining_seconds)
+    if remaining == 0 and elapsed > 0 and elapsed < total_duration:
+        remaining = max(0, total_duration - elapsed)
+
+    # 4. Calculate speed / time score (Max 50 points based on time efficiency)
+    if remaining > 0 and elapsed < total_duration:
+        speed_factor = min(1.0, max(0.0, remaining / float(total_duration)))
+        time_score = max(5, round(50 * speed_factor))
+    else:
+        time_score = 0
+
+    total_phase2_points = image2_points + time_score
+
     if team:
         # Check if stage 2 image 2 submission already exists for this team
         stmt = select(TaskSubmission).filter(
@@ -383,28 +422,33 @@ async def submit_stage2(
         existing = (await db.execute(stmt)).scalar_one_or_none()
 
         if not existing:
-            team.round2_score = (getattr(team, 'round2_score', 0) or 0) + image2_points
+            team.round2_score = (getattr(team, 'round2_score', 0) or 0) + total_phase2_points
             team.score = (getattr(team, 'round1_score', 0) or 0) + (getattr(team, 'round2_score', 0) or 0) + (getattr(team, 'round3_score', 0) or 0)
             team.current_stage = 3
             team.round3_unlocked = 1
             team.status = "active"
+            if not getattr(team, 'round2_completed_at', None):
+                team.round2_completed_at = datetime.utcnow()
 
-            # Create TaskSubmission entry for Image 2
+            # Create TaskSubmission entry for Image 2 (Accuracy + Time Score)
             submission = TaskSubmission(
                 team_id=team.id,
                 stage=2,
                 task_key="r2_image_2",
-                points_awarded=image2_points,
+                points_awarded=total_phase2_points,
                 metadata_json=json.dumps({
                     "prompt": req.prompt,
                     "slot2_file": req.slot2_filename,
                     "slot3_file": req.slot3_filename,
-                    "elapsed_seconds": req.elapsed_seconds,
-                    "remaining_seconds": req.remaining_seconds,
+                    "elapsed_seconds": elapsed,
+                    "remaining_seconds": remaining,
+                    "time_used_seconds": elapsed,
+                    "time_score": time_score,
                     "similarity": image2_sim_value,
                     "accuracy": image2_sim_value,
-                    "points_awarded": image2_points,
-                    "max_points": 50
+                    "image2_points": image2_points,
+                    "points_awarded": total_phase2_points,
+                    "max_points": 100
                 })
             )
             db.add(submission)
@@ -417,6 +461,27 @@ async def submit_stage2(
             team.round3_unlocked = 1
             if team.current_stage < 3:
                 team.current_stage = 3
+            if not getattr(team, 'round2_completed_at', None):
+                team.round2_completed_at = datetime.utcnow()
+
+            if total_phase2_points > (existing.points_awarded or 0):
+                existing.points_awarded = total_phase2_points
+                existing.metadata_json = json.dumps({
+                    "prompt": req.prompt,
+                    "slot2_file": req.slot2_filename,
+                    "slot3_file": req.slot3_filename,
+                    "elapsed_seconds": elapsed,
+                    "remaining_seconds": remaining,
+                    "time_used_seconds": elapsed,
+                    "time_score": time_score,
+                    "similarity": image2_sim_value,
+                    "accuracy": image2_sim_value,
+                    "image2_points": image2_points,
+                    "points_awarded": total_phase2_points,
+                    "max_points": 100
+                })
+                await db.flush()
+
             # Re-sync if team.round2_score is out of sync with stored submission
             stmt_sum = select(func.coalesce(func.sum(TaskSubmission.points_awarded), 0)).filter(
                 TaskSubmission.team_id == team.id,
@@ -432,21 +497,27 @@ async def submit_stage2(
         return {
             "success": True,
             "image2_points": image2_points,
-            "points_awarded": image2_points,
+            "time_score": time_score,
+            "time_used_seconds": elapsed,
+            "points_awarded": total_phase2_points,
             "image2_similarity": image2_similarity_str,
+            "round2_score": team.round2_score,
             "new_total_score": team.score,
             "round3_unlocked": True,
-            "message": f"Round 2 completed! Image 2 accuracy: {image2_similarity_str} (+{image2_points}/50 PTS). Round 3 is now unlocked."
+            "message": f"Round 2 completed! Image 2 accuracy: {image2_similarity_str} (+{image2_points}/50 PTS). Speed score: +{time_score}/50 PTS. Total Round 2: {team.round2_score}/150 PTS. Round 3 is now unlocked."
         }
 
     return {
         "success": True,
         "image2_points": image2_points,
-        "points_awarded": image2_points,
+        "time_score": time_score,
+        "time_used_seconds": elapsed,
+        "points_awarded": total_phase2_points,
         "image2_similarity": image2_similarity_str,
-        "new_total_score": image2_points,
+        "round2_score": total_phase2_points,
+        "new_total_score": total_phase2_points,
         "round3_unlocked": True,
-        "message": f"Round 2 completed! Image 2 accuracy: {image2_similarity_str} (+{image2_points}/50 PTS). Round 3 is now unlocked."
+        "message": f"Round 2 completed! Image 2 accuracy: {image2_similarity_str} (+{image2_points}/50 PTS). Speed score: +{time_score}/50 PTS. Round 3 is now unlocked."
     }
 
 @router.post("/unlock-round3")

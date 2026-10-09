@@ -22,6 +22,9 @@ export function Round3FullscreenView({ onClose, teamData }) {
       }
     } catch (e) { }
 
+    // Hide parent window's custom cursor so it does not freeze over the Round 3 iframe
+    document.documentElement.classList.add('kiosk-iframe-active');
+
     // Set page body overflow to hidden
     const origOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -65,6 +68,7 @@ export function Round3FullscreenView({ onClose, teamData }) {
     window.addEventListener('message', handleMessage);
 
     return () => {
+      document.documentElement.classList.remove('kiosk-iframe-active');
       window.removeEventListener('message', handleMessage);
       document.body.style.overflow = origOverflow;
       try {

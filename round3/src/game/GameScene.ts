@@ -39,9 +39,7 @@ export default class GameScene extends Phaser.Scene {
   private beastHp = 0;
   private beastVisual?: Phaser.GameObjects.Container;
   private beastCanBeHit = false;
-  private beastDefensesRemaining = 2;
-  private nextBeastAction: 'smash' | 'swipe' | 'weaken' = 'smash';
-  private beastOpeningAnimation?: Promise<void>;
+  private nextBeastAction: 'smash' | 'swipe' = 'smash';
   private beastIdleTimer?: Phaser.Time.TimerEvent;
   private beastIdleActive = false;
   private beastAttackInProgress = false;
@@ -54,6 +52,7 @@ export default class GameScene extends Phaser.Scene {
   
   // Stage 3: Totem state
   private totemsActivated = 0;
+  private totemSprites: Map<number, Phaser.GameObjects.Sprite> = new Map();
   
   // Level 2: Item state
   private hasSword = false;
@@ -89,6 +88,9 @@ export default class GameScene extends Phaser.Scene {
     // Sword & Shield Item Assets
     this.load.image('item_sword', '/assets/item_sword.png');
     this.load.image('item_shield', '/assets/item_shield.png');
+
+    // Ancient Totem Asset
+    this.load.image('totem', '/assets/Totem.png');
 
     // Run with sword
     this.load.image('char_run_sword_1', '/assets/hero_run_sword_1.png');
@@ -140,9 +142,7 @@ export default class GameScene extends Phaser.Scene {
     this.beastHp = this.levelData.beast?.hp || 0;
     this.beastVisual = undefined;
     this.beastCanBeHit = false;
-    this.beastDefensesRemaining = 2;
     this.nextBeastAction = 'smash';
-    this.beastOpeningAnimation = undefined;
     this.beastIdleActive = false;
     this.beastAttackInProgress = false;
     this.beastIdleFrameIndex = 0;
@@ -153,8 +153,13 @@ export default class GameScene extends Phaser.Scene {
     this.beastIdleTimer = undefined;
     this.hasSword = false;
     this.hasShield = false;
+    if (this.levelData.id === 'level_03') {
+      this.hasSword = true;
+      this.hasShield = true;
+    }
     this.itemSprites.clear();
     this.goblinSprites.clear();
+    this.totemSprites.clear();
     this.goblinIdleFrameIndex = 0;
     
     // Create animations from individual frames
@@ -226,8 +231,9 @@ export default class GameScene extends Phaser.Scene {
     }
     
     const h = this.scale.height;
-    // Lower groundY to give more room for larger character/tiles
-    this.groundY = h * 0.72;
+    // Anchor groundY so bridge pillars sit directly flush on the bottom border (the below tab)
+    const targetBridgeHeight = 110;
+    this.groundY = Math.max(160, h - targetBridgeHeight);
     this.startX = 150;
 
     this.drawBackground();
@@ -375,12 +381,14 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private spawnGoblin(tileIndex: number, centerX: number, floorY: number): void {
-    const goblin = this.add.image(centerX, floorY, 'goblin_idle_1');
+    // Offset +20px down so the goblin stands firmly on top of the stone platform surface instead of floating in the air
+    const groundedY = floorY + 20;
+    const goblin = this.add.image(centerX, groundedY, 'goblin_idle_1');
     this.setGoblinTexture(goblin, 'goblin_idle_1');
     this.goblinSprites.set(tileIndex, goblin);
     this.tweens.add({
       targets: goblin,
-      y: floorY - 2,
+      y: groundedY - 2,
       duration: 1250,
       yoyo: true,
       repeat: -1,
@@ -454,67 +462,145 @@ export default class GameScene extends Phaser.Scene {
     return this.beastCanBeHit;
   }
 
-  private async playBeastOpeningSwipe(): Promise<void> {
-    if (!this.beastOpeningAnimation) {
-      this.beastOpeningAnimation = this.playBeastAttackAnimation(false).then(() => {
-        if (!this.beastVisual?.active) return;
-        const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
-        this.setBeastTexture(body, 'beast_shield');
-      });
-    }
-
-    await this.beastOpeningAnimation;
-  }
-
   private setBeastVulnerable(): void {
     this.beastCanBeHit = true;
     this.updateBeastVisuals();
   }
 
-  private async resolveBeastDefense(): Promise<void> {
-    if (this.beastCanBeHit) return;
-
-    this.beastDefensesRemaining = Math.max(0, this.beastDefensesRemaining - 1);
-    if (this.beastDefensesRemaining > 0) return;
-
-    if (this.nextBeastAction === 'smash' || this.nextBeastAction === 'swipe') {
-      await this.playBeastAttackAnimation(this.nextBeastAction === 'smash');
-      if (this.beastVisual) {
-        const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
-        this.setBeastTexture(body, 'beast_shield');
-      }
-    }
-
-    this.setBeastVulnerable();
-  }
-
   private async prepareNextBeastPhase(): Promise<void> {
     this.beastCanBeHit = false;
+    this.nextBeastAction = (this.beastHp % 2 === 0) ? 'swipe' : 'smash';
+    this.updateBeastVisuals();
+  }
 
-    if (this.beastHp === 4) {
-      // After the first hit, the beast shields, smashes, then opens up.
-      this.beastDefensesRemaining = 1;
-      this.nextBeastAction = 'smash';
-    } else if (this.beastHp === 3) {
-      // After the second hit, it holds its shield before becoming vulnerable.
-      this.beastDefensesRemaining = 1;
-      this.nextBeastAction = 'weaken';
-    } else if (this.beastHp === 2) {
-      // After the third hit, it swipes once, shields, then swipes again.
-      await this.playBeastAttackAnimation(false);
-      if (this.beastVisual) {
-        const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
-        this.setBeastTexture(body, 'beast_shield');
+  private playBlockClashAudio(): void {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.2);
+    } catch {
+      // AudioContext may be restricted by browser policy before user interaction; ignore silently
+    }
+  }
+
+  private triggerShieldBlockClash(shieldX: number, shieldY: number, shield: Phaser.GameObjects.Shape): void {
+    // 1. Screen impact impulse
+    this.cameras.main.shake(280, 0.018);
+
+    // 2. Shield flare
+    shield.setFillStyle(0xffffff, 0.95);
+    shield.setStrokeStyle(8, 0x38bdf8);
+    this.tweens.add({
+      targets: shield,
+      scale: 1.25,
+      duration: 120,
+      yoyo: true,
+      onComplete: () => {
+        shield.setFillStyle(0x55aaff, 0.45);
+        shield.setStrokeStyle(5, 0x99ddff);
       }
-      this.beastDefensesRemaining = 1;
-      this.nextBeastAction = 'swipe';
-    } else {
-      // At its last health, it shields, smashes, then exposes its core.
-      this.beastDefensesRemaining = 1;
-      this.nextBeastAction = 'smash';
+    });
+
+    // 3. Shockwave ring expanding from point of clash
+    const shockwave = this.add.circle(shieldX + 15, shieldY, 20, 0x38bdf8, 0.9).setDepth(20);
+    this.tweens.add({
+      targets: shockwave,
+      scale: 4.0,
+      alpha: 0,
+      duration: 350,
+      ease: 'Cubic.easeOut',
+      onComplete: () => shockwave.destroy()
+    });
+
+    // 4. Clash sparks burst
+    for (let i = 0; i < 12; i++) {
+      const angle = (Math.random() - 0.5) * 1.6;
+      const speed = 70 + Math.random() * 80;
+      const spark = this.add.circle(
+        shieldX + 10,
+        shieldY + (Math.random() - 0.5) * 40,
+        3 + Math.random() * 4,
+        Math.random() > 0.4 ? 0xfde047 : 0xffffff,
+        1
+      ).setDepth(22);
+
+      this.tweens.add({
+        targets: spark,
+        x: spark.x + Math.cos(angle) * speed,
+        y: spark.y + Math.sin(angle) * speed,
+        alpha: 0,
+        scale: 0.2,
+        duration: 300 + Math.random() * 200,
+        onComplete: () => spark.destroy()
+      });
     }
 
-    this.updateBeastVisuals();
+    // 5. Floating text banner: 🛡️ ATTACK BLOCKED!
+    const blockText = this.add.text(this.player.x + 20, this.player.y - 125, '🛡️ ATTACK BLOCKED!', {
+      fontSize: '22px',
+      color: '#38bdf8',
+      stroke: '#0f172a',
+      strokeThickness: 5,
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(30);
+
+    this.tweens.add({
+      targets: blockText,
+      y: blockText.y - 40,
+      alpha: 0,
+      duration: 900,
+      ease: 'Power2',
+      onComplete: () => blockText.destroy()
+    });
+
+    // 6. Play synthesized clash audio
+    this.playBlockClashAudio();
+  }
+
+  private async playBeastAttackBlockedAnimation(
+    isSmash: boolean,
+    shieldX: number,
+    shieldY: number,
+    shield: Phaser.GameObjects.Shape
+  ): Promise<void> {
+    if (!this.beastVisual) return;
+
+    const frames = isSmash ? BEAST_SMASH_FRAMES : BEAST_SWIPE_FRAMES;
+    const frameDurations = isSmash
+      ? [360, 320, 280, 400, 300, 320, 360]
+      : [320, 280, 240, 360, 280, 300, 340];
+    const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
+
+    this.beastIdleActive = false;
+    this.beastAttackInProgress = true;
+    let blockTriggered = false;
+
+    try {
+      for (let index = 0; index < frames.length; index++) {
+        this.setBeastTexture(body, frames[index]);
+
+        // Frame index 3 is peak impact where beast strikes player shield
+        if (index === 3 && !blockTriggered) {
+          blockTriggered = true;
+          this.triggerShieldBlockClash(shieldX, shieldY, shield);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, frameDurations[index]));
+      }
+    } finally {
+      this.beastAttackInProgress = false;
+    }
   }
 
   private async playBeastAttackAnimation(isSmash: boolean): Promise<void> {
@@ -522,8 +608,8 @@ export default class GameScene extends Phaser.Scene {
 
     const frames = isSmash ? BEAST_SMASH_FRAMES : BEAST_SWIPE_FRAMES;
     const frameDurations = isSmash
-      ? [430, 380, 340, 430, 350, 390, 420]
-      : [400, 340, 280, 380, 320, 360, 400];
+      ? [400, 350, 300, 400, 320, 350, 380]
+      : [380, 320, 260, 350, 300, 320, 360];
     const body = this.beastVisual.list[0] as Phaser.GameObjects.Image;
 
     this.beastIdleActive = false;
@@ -603,7 +689,7 @@ export default class GameScene extends Phaser.Scene {
         
         const img = this.add.image(blockCenterX, this.tileHeights[i], texture).setOrigin(0.5, 0);
         img.displayWidth = TILE_W;
-        img.displayHeight = 110;
+        img.displayHeight = Math.max(110, this.scale.height - this.tileHeights[i]);
         
         i++;
       } else {
@@ -616,12 +702,13 @@ export default class GameScene extends Phaser.Scene {
         // Render bridge chunks using the greedy compositor (bridge_1 to bridge_6)
         let tilesRemaining = runLength;
         let currentX = this.startX + i * TILE_W;
+        const bridgeHeight = Math.max(110, this.scale.height - this.groundY);
         while (tilesRemaining > 0) {
           let chunk = Math.min(tilesRemaining, 6);
           const blockCenterX = currentX + (chunk * TILE_W) / 2;
           const img = this.add.image(blockCenterX, this.groundY, `bridge_${chunk}`).setOrigin(0.5, 0);
           img.displayWidth = chunk * TILE_W;
-          img.displayHeight = 110;
+          img.displayHeight = bridgeHeight;
           tilesRemaining -= chunk;
           currentX += chunk * TILE_W;
         }
@@ -676,17 +763,45 @@ export default class GameScene extends Phaser.Scene {
           frequency: 40
         });
 
-      } else if (tile === TileType.TOTEM_FIRE || tile === TileType.TOTEM_GOBLIN) {
-        // Totems are safe tiles and never share their cell with a hazard.
-        const diamond = this.add.polygon(cx, y - 40, [0, -12, 12, 0, 0, 12, -12, 0], 0xffd700);
-        diamond.setStrokeStyle(2, 0xffaa00);
-        this.add.circle(cx, y - 40, 18, 0xffd700).setAlpha(0.15);
+      } else if (tile === TileType.TOTEM_FIRE || tile === TileType.TOTEM_GOBLIN || tile === TileType.TOTEM_FINAL) {
+        // Ancient mystical Totem monument
+        const isFinal = tile === TileType.TOTEM_FINAL;
+        const targetHeight = isFinal ? 155 : 140;
+        const totemScale = targetHeight / 1215;
+
+        const totem = this.add.sprite(cx, y + 8, 'totem');
+        totem.setOrigin(0.5, 1.0);
+        totem.setScale(totemScale);
+        totem.setDepth(2);
+
+        // Ambient mystical glow aura around the totem
+        const aura = this.add.circle(cx, y - (targetHeight * 0.5), isFinal ? 50 : 40, isFinal ? 0xffcc00 : 0xff9900, isFinal ? 0.22 : 0.16);
+        aura.setDepth(1);
+        this.tweens.add({
+          targets: aura,
+          alpha: { from: 0.12, to: 0.32 },
+          scale: { from: 0.9, to: 1.18 },
+          duration: 1600,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+
+        // Golden rune glyph ring on the ground platform
+        const ring = this.add.ellipse(cx, y + 4, TILE_W * (isFinal ? 0.8 : 0.7), 14, 0xffd700, 0.4);
+        ring.setDepth(1);
+        this.tweens.add({
+          targets: ring,
+          alpha: { from: 0.25, to: 0.55 },
+          duration: 1200,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut'
+        });
+
+        this.totemSprites.set(j, totem);
       } else if (tile === TileType.GOBLIN) {
         this.spawnGoblin(j, cx, y);
-      } else if (tile === TileType.TOTEM_FINAL) {
-        const diamond = this.add.polygon(cx, y - 25, [0, -20, 20, 0, 0, 20, -20, 0], 0xffd700);
-        diamond.setStrokeStyle(2, 0xffaa00);
-        this.add.circle(cx, y - 25, 30, 0xffd700).setAlpha(0.1);
       } else if (tile === TileType.ITEM_SWORD) {
         const itemY = y - 40;
         const sword = this.add.sprite(cx, itemY, 'item_sword').setOrigin(0.5, 0.5);
@@ -796,13 +911,13 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private getIdleTexture(): string {
-    if (this.hasSword && this.hasShield) return 'char_run_sword_shield_1';
+    if (this.hasShield) return 'char_run_sword_shield_1';
     if (this.hasSword) return 'char_run_sword_1';
     return 'char_idle';
   }
 
   private getRunAnim(): string {
-    if (this.hasSword && this.hasShield) return 'run_sword_shield';
+    if (this.hasShield) return 'run_sword_shield';
     if (this.hasSword) return 'run_sword';
     return 'run';
   }
@@ -810,6 +925,7 @@ export default class GameScene extends Phaser.Scene {
   spawnPlayer() {
     this.pIndex = this.levelData.playerStartX;
     this.player = this.add.sprite(0, 0, this.getIdleTexture()).setOrigin(0.5, 1);
+    this.player.setDepth(10);
 
     // Auto-normalize any frame height in run/jump/fall animations to prevent size glitching
     this.player.on('animationupdate', () => {
@@ -976,7 +1092,34 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
+    if (cmd.type === 'DEFEND') {
+      await this.playDefendInPlace();
+      return 'OK';
+    }
+
+    if (cmd.type === 'ATTACK') {
+      await this.playAttackInPlace();
+      return 'OK';
+    }
+
     return 'OK';
+  }
+
+  private async playAttackInPlace(): Promise<void> {
+    const tex = (this.hasSword || !this.hasShield) ? 'char_attack_2' : 'char_defend';
+    this.setPlayerTextureScale(tex);
+    await new Promise(r => setTimeout(r, 320));
+    this.setPlayerIdle();
+  }
+
+  private async playDefendInPlace(): Promise<void> {
+    this.setPlayerTextureScale('char_defend');
+    const shield = this.add.circle(this.player.x + 25, this.player.y - 45, 32, 0x55aaff, 0.4);
+    shield.setStrokeStyle(3, 0x99ddff);
+    shield.setDepth(15);
+    await new Promise(r => setTimeout(r, 360));
+    shield.destroy();
+    this.setPlayerIdle();
   }
 
   // ──── Path of Trials Command Handler ────
@@ -993,11 +1136,59 @@ export default class GameScene extends Phaser.Scene {
         await this.playerFallDeath();
         return 'FAILED';
       }
+
+      const totemSprite = this.totemSprites.get(this.pIndex);
+
+      // Play dramatic activation surge on the Totem
+      if (totemSprite) {
+        const origScaleX = totemSprite.scaleX;
+        const origScaleY = totemSprite.scaleY;
+        this.tweens.add({
+          targets: totemSprite,
+          scaleX: origScaleX * 1.15,
+          scaleY: origScaleY * 1.15,
+          duration: 250,
+          yoyo: true,
+          ease: 'Back.easeOut'
+        });
+
+        // Radiant divine light beam surging upward into the sky
+        const beam = this.add.rectangle(totemSprite.x, totemSprite.y - 130, 48, 280, 0xffe680, 0.75);
+        beam.setBlendMode(Phaser.BlendModes.ADD);
+        beam.setDepth(15);
+        this.tweens.add({
+          targets: beam,
+          alpha: 0,
+          scaleX: 2.4,
+          duration: 750,
+          ease: 'Quad.easeOut',
+          onComplete: () => beam.destroy()
+        });
+
+        // Floating rune text indicator
+        const text = this.add.text(totemSprite.x, totemSprite.y - 150, '✨ TOTEM AWAKENED!', {
+          fontFamily: 'Cinzel, serif',
+          fontSize: '16px',
+          color: '#ffd700',
+          stroke: '#000000',
+          strokeThickness: 3
+        }).setOrigin(0.5).setDepth(20);
+
+        this.tweens.add({
+          targets: text,
+          y: text.y - 30,
+          alpha: 0,
+          duration: 900,
+          ease: 'Power1',
+          onComplete: () => text.destroy()
+        });
+      }
       
-      // Play glow animation
-      const glow = this.add.circle(this.player.x, this.player.y - 20, 40, 0xffd700, 0.6);
+      // Play glow animation on player
+      const glow = this.add.circle(this.player.x, this.player.y - 20, 45, 0xffd700, 0.7);
+      glow.setDepth(15);
       this.tweens.add({
-        targets: glow, alpha: 0, scale: 2, duration: 600,
+        targets: glow, alpha: 0, scale: 2.2, duration: 600,
         onComplete: () => glow.destroy()
       });
       await new Promise(r => setTimeout(r, 700));
@@ -1007,12 +1198,39 @@ export default class GameScene extends Phaser.Scene {
       return 'OK';
     }
 
-    // DEFEND: doesn't advance, just shows shield
+    // DEFEND: blocks goblin attack if goblin on next tile, otherwise raises shield safely
     if (cmd.type === 'DEFEND') {
-      const shield = this.add.circle(this.player.x, this.player.y - 20, 35, 0x55aaff, 0.5);
-      shield.setStrokeStyle(2, 0xaaddff);
-      await new Promise(r => setTimeout(r, 1200));
+      const nextIndex = this.pIndex + 1;
+      const nextTile = (nextIndex < this.levelData.length) ? this.levelData.tiles[nextIndex] : null;
+
+      this.setPlayerTextureScale('char_defend');
+      const shield = this.add.circle(this.player.x + 35, this.player.y - 45, 45, 0x55aaff, 0.45);
+      shield.setStrokeStyle(4, 0x99ddff);
+      shield.setDepth(15);
+
+      if (nextTile === TileType.GOBLIN || nextTile === TileType.TOTEM_GOBLIN) {
+        const goblin = this.goblinSprites.get(nextIndex);
+        if (goblin?.active) {
+          await new Promise<void>((res) => {
+            this.tweens.add({
+              targets: goblin,
+              x: goblin.x - 35,
+              duration: 180,
+              yoyo: true,
+              onComplete: () => res()
+            });
+          });
+        }
+
+        this.triggerShieldBlockClash(this.player.x + 35, this.player.y - 45, shield);
+        await this.playGoblinDefeat(nextIndex);
+        this.levelData.tiles[nextIndex] = TileType.GROUND;
+      } else {
+        await new Promise(r => setTimeout(r, 400));
+      }
+
       shield.destroy();
+      this.setPlayerIdle();
       return 'OK';
     }
 
@@ -1052,8 +1270,9 @@ export default class GameScene extends Phaser.Scene {
         await this.playerFallDeath();
         return 'FAILED';
       }
-      if (nextTile === TileType.GOBLIN) {
+      if (nextTile === TileType.GOBLIN || nextTile === TileType.TOTEM_GOBLIN) {
         await this.playGoblinDefeat(nextIndex);
+        this.levelData.tiles[nextIndex] = TileType.GROUND;
       }
       return 'OK';
 
@@ -1121,17 +1340,17 @@ export default class GameScene extends Phaser.Scene {
     }
 
     if (cmd.type === 'ATTACK') {
-      if (!this.hasSword || !this.isAtBeastCombatPosition()) {
-        await this.playerFallDeath();
-        return 'FAILED';
+      if (!this.isAtBeastCombatPosition()) {
+        await this.playAttackInPlace();
+        return 'OK';
       }
       return this.handleAttack();
     }
 
     if (cmd.type === 'DEFEND') {
-      if (!this.hasShield || !this.isAtBeastCombatPosition()) {
-        await this.playerFallDeath();
-        return 'FAILED';
+      if (!this.isAtBeastCombatPosition()) {
+        await this.playDefendInPlace();
+        return 'OK';
       }
       return this.handleDefend();
     }
@@ -1180,18 +1399,34 @@ export default class GameScene extends Phaser.Scene {
 
   private async handleAttack(): Promise<string> {
     if (!this.levelData.beast) return 'OK';
-    await this.playBeastOpeningSwipe();
 
     const vulnerable = this.isBeastVulnerable();
 
-    // Hero strikes first. A shielded beast gets a full counterattack; a vulnerable
-    // beast takes damage and never plays an attack animation.
-    this.setPlayerTextureScale('char_attack_1');
-    await new Promise(r => setTimeout(r, 600));
-    this.setPlayerTextureScale('char_attack_2');
-    await new Promise(r => setTimeout(r, 500));
-
     if (vulnerable) {
+      if (this.hasSword) {
+        this.setPlayerTextureScale('char_attack_1');
+        await new Promise(r => setTimeout(r, 380));
+        this.setPlayerTextureScale('char_attack_2');
+        await new Promise(r => setTimeout(r, 320));
+      } else if (this.hasShield) {
+        // Shield Bash attack! Player charges forward with shield
+        this.setPlayerTextureScale('char_defend');
+        const startX = this.player.x;
+        await new Promise<void>((resolve) => {
+          this.tweens.add({
+            targets: this.player,
+            x: startX + 45,
+            duration: 220,
+            yoyo: true,
+            ease: 'Back.easeOut',
+            onComplete: () => resolve()
+          });
+        });
+      } else {
+        await this.playerFallDeath();
+        return 'FAILED';
+      }
+
       this.beastHp--;
       this.beastCanBeHit = false;
       this.beastIdleActive = false;
@@ -1202,23 +1437,53 @@ export default class GameScene extends Phaser.Scene {
         body.setTintFill(0xffffff);
         this.updateBeastVisuals();
 
-        const impact = this.add.circle(this.beastVisual.x - 90, this.beastVisual.y - 130, 18, 0xffffff, 0.9);
+        const impact = this.add.circle(this.beastVisual.x - 90, this.beastVisual.y - 130, 22, 0xffffff, 0.9).setDepth(20);
         this.tweens.add({
-          targets: impact, scale: 3, alpha: 0, duration: 220,
+          targets: impact, scale: 3.5, alpha: 0, duration: 250,
           onComplete: () => impact.destroy()
         });
         this.time.delayedCall(180, () => { if (body.active) body.clearTint(); });
       }
 
+      const hitLabel = (!this.hasSword && this.hasShield)
+        ? `💥 SHIELD BASH! [HP: ${this.beastHp}]`
+        : `⚔️ STRIKE! [HP: ${this.beastHp}]`;
+      const hitText = this.add.text(this.player.x + 80, this.player.y - 120, hitLabel, {
+        fontSize: '20px',
+        color: '#facc15',
+        stroke: '#0f172a',
+        strokeThickness: 5,
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(30);
+
+      this.tweens.add({
+        targets: hitText,
+        y: hitText.y - 40,
+        alpha: 0,
+        duration: 850,
+        ease: 'Power2',
+        onComplete: () => hitText.destroy()
+      });
+
       this.setPlayerIdle();
 
       if (this.beastHp <= 0) {
-        await new Promise(r => setTimeout(r, 900));
+        await new Promise(r => setTimeout(r, 800));
         return 'LEVEL_COMPLETE';
       }
+
       await this.prepareNextBeastPhase();
     } else {
       this.setPlayerIdle();
+
+      const deflectText = this.add.text(this.player.x + 80, this.player.y - 110, '🛡️ GUARDED! (Enemy counters)', {
+        fontSize: '18px',
+        color: '#ef4444',
+        stroke: '#000',
+        strokeThickness: 4,
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(30);
+      this.tweens.add({ targets: deflectText, y: deflectText.y - 30, alpha: 0, duration: 750 });
 
       if (this.beastVisual) {
         await this.playBeastAttackAnimation(this.nextBeastAction === 'smash');
@@ -1236,22 +1501,57 @@ export default class GameScene extends Phaser.Scene {
 
     this.setPlayerTextureScale('char_defend');
 
-    const shield = this.add.circle(this.player.x + 35, this.player.y - 72, 62, 0x55aaff, 0.32);
-    shield.setStrokeStyle(5, 0xaaddff);
+    const shieldX = this.player.x + 35;
+    const shieldY = this.player.y - 72;
+    const shield = this.add.circle(shieldX, shieldY, 62, 0x55aaff, 0.35);
+    shield.setStrokeStyle(5, 0x99ddff);
+    shield.setDepth(15);
 
-    await this.playBeastOpeningSwipe();
-    await this.resolveBeastDefense();
+    // If player does NOT have the shield equipped:
+    if (!this.hasShield) {
+      const warnText = this.add.text(this.player.x, this.player.y - 110, '⚠️ NO SHIELD EQUIPPED!', {
+        fontSize: '20px', color: '#ef4444', fontStyle: 'bold', stroke: '#000', strokeThickness: 4
+      }).setOrigin(0.5).setDepth(30);
+      this.tweens.add({ targets: warnText, y: warnText.y - 30, alpha: 0, duration: 800 });
+
+      if (this.beastVisual) {
+        await this.playBeastAttackAnimation(this.nextBeastAction === 'smash');
+      }
+      shield.destroy();
+      await this.playerFallDeath();
+      return 'FAILED';
+    }
+
+    // If beast is already vulnerable:
+    if (this.beastCanBeHit) {
+      const guardText = this.add.text(shieldX, shieldY - 50, '🛡️ GUARD READY', {
+        fontSize: '18px', color: '#38bdf8', fontStyle: 'bold', stroke: '#0f172a', strokeThickness: 4
+      }).setOrigin(0.5).setDepth(30);
+      this.tweens.add({
+        targets: guardText, y: guardText.y - 30, alpha: 0, duration: 700,
+        onComplete: () => guardText.destroy()
+      });
+      await new Promise(r => setTimeout(r, 500));
+      shield.destroy();
+      this.setPlayerIdle();
+      return 'OK';
+    }
+
+    // Beast attacks, and player BLOCKS THE ATTACK!
+    const isSmash = (this.nextBeastAction === 'smash');
+    await this.playBeastAttackBlockedAnimation(isSmash, shieldX, shieldY, shield);
 
     await new Promise<void>((resolve) => {
       this.tweens.add({
-        targets: shield, alpha: 0, scale: 1.35, duration: 350,
+        targets: shield, alpha: 0, scale: 1.3, duration: 250,
         onComplete: () => resolve()
       });
     });
     shield.destroy();
     this.setPlayerIdle();
 
-    this.updateBeastVisuals();
+    // Deflected! Beast is staggered and now vulnerable!
+    this.setBeastVulnerable();
     return 'OK';
   }
 

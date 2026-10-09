@@ -25,7 +25,11 @@ html.has-custom-cursor select,
 html.has-custom-cursor textarea,
 html.has-custom-cursor a,
 html.has-custom-cursor [role="button"],
-html.has-custom-cursor label {
+html.has-custom-cursor label,
+html.has-custom-cursor svg,
+html.has-custom-cursor svg *,
+html.has-custom-cursor [class],
+html.has-custom-cursor [id] {
   cursor: none !important;
 }
 

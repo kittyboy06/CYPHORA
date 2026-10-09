@@ -70,6 +70,19 @@ export default function CustomCursor() {
       cursorEl.classList.add('is-hidden');
     };
 
+    const handleMouseOut = (e: MouseEvent) => {
+      const related = e.relatedTarget as HTMLElement | null;
+      if (!related) {
+        isHiddenRef.current = true;
+        cursorEl.classList.add('is-hidden');
+      }
+    };
+
+    const handleWindowBlur = () => {
+      isHiddenRef.current = true;
+      cursorEl.classList.add('is-hidden');
+    };
+
     const handleMouseEnter = (e: MouseEvent) => {
       if (e.clientX && e.clientY) {
         updatePosition(e.clientX, e.clientY);
@@ -80,7 +93,9 @@ export default function CustomCursor() {
     window.addEventListener('mousemove', handlePointerMove as any, { passive: true });
     window.addEventListener('pointerdown', handlePointerDown);
     window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('blur', handleWindowBlur);
     document.addEventListener('mouseover', handleMouseOver);
+    document.addEventListener('mouseout', handleMouseOut);
     document.addEventListener('mouseleave', handleMouseLeave);
     document.addEventListener('mouseenter', handleMouseEnter);
 
@@ -90,7 +105,9 @@ export default function CustomCursor() {
       window.removeEventListener('mousemove', handlePointerMove as any);
       window.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('blur', handleWindowBlur);
       document.removeEventListener('mouseover', handleMouseOver);
+      document.removeEventListener('mouseout', handleMouseOut);
       document.removeEventListener('mouseleave', handleMouseLeave);
       document.removeEventListener('mouseenter', handleMouseEnter);
     };

@@ -39,11 +39,14 @@ test.describe('CYPHORA Round 2 Modals and Round 3 Transition Flow', () => {
       sessionStorage.setItem('cyphora_active_round', '2');
       sessionStorage.setItem('cyphora_round2_unlocked', 'true');
       sessionStorage.setItem('cyphora_round2_supervisor_override', 'true');
+      sessionStorage.setItem('cyphora_round2_prologue_seen', 'true');
       localStorage.setItem('cyphora_token', token);
       localStorage.setItem('cyphora_team_id', String(teamId));
       localStorage.setItem('cyphora_team_name', teamName);
       localStorage.setItem('cyphora_round2_unlocked', 'true');
       localStorage.setItem('cyphora_round2_supervisor_override', 'true');
+      localStorage.setItem('cyphora_round2_prologue_seen', 'true');
+      localStorage.setItem('cyphora_round2_os_started', 'true');
     }, { token: regData.token, teamId, teamName: squad });
 
     // 3. Open OS Desktop
@@ -72,7 +75,7 @@ test.describe('CYPHORA Round 2 Modals and Round 3 Transition Flow', () => {
 
     // If Sector 4 Briefing is shown, click "Launch Round 2"
     const launchR2Btn = page.locator('button:has-text("Launch Round 2")');
-    if (await launchR2Btn.isVisible({ timeout: 2500 }).catch(() => false)) {
+    if (await launchR2Btn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await launchR2Btn.click();
     }
 
@@ -132,6 +135,10 @@ test.describe('CYPHORA Round 2 Modals and Round 3 Transition Flow', () => {
     await expect(finalModal).toBeVisible({ timeout: 30000 });
     await expect(page.locator('#final-fragment-modal-title')).toBeVisible();
     await expect(page.locator('.temple-modal-score-row')).toBeVisible();
+
+    // Verify Time Score / Speed Bonus is visible in the modal
+    await expect(page.locator('.temple-score-label', { hasText: 'SPEED BONUS' })).toBeVisible();
+    await expect(page.locator('.temple-score-label', { hasText: 'TOTAL ROUND 2' })).toBeVisible();
 
     // Verify "Proceed to Round 3" button is present in the modal
     const proceedRound3Btn = page.locator('#final-fragment-proceed-btn');

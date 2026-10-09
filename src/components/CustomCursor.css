@@ -22,6 +22,14 @@
   visibility: hidden;
 }
 
+/* When a fullscreen kiosk iframe (Round 3) is active, hide parent window's cursor completely */
+html.kiosk-iframe-active .pansage-cursor-container {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 .pansage-cursor-sprite {
   width: 32px;
   height: 32px;

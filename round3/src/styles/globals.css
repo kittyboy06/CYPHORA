@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Montserrat:wght@400;600&family=Fira+Code:wght@400;600&display=swap');
+@import '../blockly/blockly.css';
 
 @tailwind base;
 @tailwind components;
@@ -31,7 +32,11 @@ html.has-custom-cursor select,
 html.has-custom-cursor textarea,
 html.has-custom-cursor a,
 html.has-custom-cursor [role="button"],
-html.has-custom-cursor label {
+html.has-custom-cursor label,
+html.has-custom-cursor svg,
+html.has-custom-cursor svg *,
+html.has-custom-cursor [class],
+html.has-custom-cursor [id] {
   cursor: none !important;
 }
 
@@ -64,62 +69,6 @@ h1, h2, h3, h4, h5, h6, .cinzel {
   border-radius: 3px;
 }
 
-/* ---- Blockly Theme Overrides ---- */
-.blocklySvg {
-  background-color: transparent !important;
-}
-.blocklyMainBackground {
-  fill: transparent !important;
-  stroke: none !important;
-}
-
-#blocklyDiv {
-  background-image: url('/assets/bg_new.png');
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
-}
-.blocklyWorkspace::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.4);
-  pointer-events: none;
-}
-.blocklyToolboxDiv {
-  background-color: rgba(14, 18, 12, 0.98) !important;
-  border-right: 1px solid var(--border-gold) !important;
-}
-.blocklyTreeRow {
-  padding: 6px 12px !important;
-}
-.blocklyTreeLabel {
-  color: var(--text-primary) !important;
-  font-family: 'Fira Code', monospace !important;
-  font-size: 12px !important;
-}
-.blocklyFlyoutBackground {
-  fill: rgba(10, 14, 8, 0.97) !important;
-}
-.blocklyScrollbarHandle {
-  fill: rgba(223, 177, 37, 0.25) !important;
-}
-.blocklyScrollbarBackground:hover > .blocklyScrollbarHandle {
-  fill: rgba(223, 177, 37, 0.4) !important;
-}
-.blocklyText {
-  fill: var(--text-primary) !important;
-  font-family: 'Fira Code', monospace !important;
-}
-/* Hide the grey workspace scrollbar backgrounds */
-.blocklyScrollbarBackground > rect {
-  fill: transparent !important;
-}
-/* Hide the flyout scrollbar that persists after closing */
-.blocklyFlyoutScrollbar {
-  display: none !important;
-}
 
 /* Phaser canvas should fill its container */
 canvas {

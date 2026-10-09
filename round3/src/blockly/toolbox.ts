@@ -20,24 +20,24 @@ export function getToolboxXml(level: number): string {
 
   let sensors = '';
   if (level === 2) {
-    sensors = `<category name="Sensors" colour="#a5935b">
+    sensors = `<category name="Sensors" colour="#eab308">
       <block type="sensor_beast_vulnerable"></block>
     </category>`;
   }
 
   return `
 <xml xmlns="https://developers.google.com/blockly/xml">
-  <category name="Actions" colour="#5b80a5">
+  <category name="Actions" colour="#38bdf8">
     ${actions}
   </category>
   ${sensors}
-  <category name="Logic" colour="#5b80a5">
+  <category name="Logic" colour="#6366f1">
     <block type="controls_if"></block>
     <block type="logic_compare"></block>
     <block type="logic_operation"></block>
     <block type="logic_boolean"></block>
   </category>
-  <category name="Loops" colour="#5ba55b">
+  <category name="Loops" colour="#10b981">
     <block type="controls_repeat_ext">
       <value name="TIMES">
         <shadow type="math_number">
@@ -58,13 +58,13 @@ export function getToolboxXml(level: number): string {
       </value>
     </block>
   </category>
-  <category name="Math" colour="#5b67a5">
+  <category name="Math" colour="#a855f7">
     <block type="math_number"></block>
     <block type="math_arithmetic"></block>
     <block type="math_modulo"></block>
   </category>
-  <category name="Variables" colour="#a55b80" custom="VARIABLE"></category>
-  <category name="Functions" colour="#995ba5" custom="PROCEDURE"></category>
+  <category name="Variables" colour="#f43f5e" custom="VARIABLE"></category>
+  <category name="Functions" colour="#d946ef" custom="PROCEDURE"></category>
 </xml>
   `;
 }

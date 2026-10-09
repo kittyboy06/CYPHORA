@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { BookOpen, ChevronLeft, ChevronRight, Compass, Shield, MapPin } from 'lucide-react';
 import { useOS } from '../../state/OSContext.jsx';
 
-export function PrologueApp() {
-  const { openApp, teamData } = useOS();
+export function PrologueApp({ windowId }) {
+  const { openApp, closeWindow, teamData } = useOS();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const slides = [
@@ -149,6 +149,9 @@ export function PrologueApp() {
           onClick={() => {
             localStorage.setItem('cyphora_round2_os_started', 'true');
             openApp('round2');
+            if (windowId && typeof closeWindow === 'function') {
+              closeWindow(windowId);
+            }
           }}
           style={{
             background: 'linear-gradient(135deg, #dfb125, #b89114)',
