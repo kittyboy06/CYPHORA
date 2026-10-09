@@ -5,11 +5,12 @@ import { RefreshCcw } from 'lucide-react';
 interface Props {
   onRetry: () => void;
   onNextLevel: (next: number) => void;
+  onShowOutro?: () => void;
 }
 
 const LEVEL_ORDER = [1, 2, 3];
 
-export const GameOverlay: React.FC<Props> = ({ onRetry, onNextLevel }) => {
+export const GameOverlay: React.FC<Props> = ({ onRetry, onNextLevel, onShowOutro }) => {
   const {
     status,
     score,
@@ -41,8 +42,12 @@ export const GameOverlay: React.FC<Props> = ({ onRetry, onNextLevel }) => {
     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-8 text-center text-[var(--text-primary)]">
       {status === 'success' && (
         <div className="max-w-md w-full bg-[var(--bg-panel)] border border-[var(--border-gold)] p-8 rounded-sm shadow-2xl">
-          <h2 className="text-3xl font-cinzel text-[var(--accent-gold)] mb-2">LEVEL COMPLETE</h2>
-          <p className="text-sm text-[var(--text-muted)] tracking-widest uppercase mb-8">Destination Reached</p>
+          <h2 className="text-3xl font-cinzel text-[var(--accent-gold)] mb-2">
+            {nextLevel ? 'LEVEL COMPLETE' : '🏆 ALL TRIALS COMPLETED'}
+          </h2>
+          <p className="text-sm text-[var(--text-muted)] tracking-widest uppercase mb-8">
+            {nextLevel ? 'Destination Reached' : 'Temple Core Unsealed // The Path Is Open'}
+          </p>
 
           <div className="space-y-3 mb-6 text-sm">
             {/* Blocks Row */}
@@ -96,15 +101,29 @@ export const GameOverlay: React.FC<Props> = ({ onRetry, onNextLevel }) => {
           {nextLevel ? (
             <button 
               onClick={() => onNextLevel(nextLevel)}
-              className="w-full py-4 bg-[var(--accent-gold)] text-[var(--bg-dark)] font-bold tracking-widest hover:brightness-110 transition-all uppercase">
+              className="w-full py-4 bg-[var(--accent-gold)] text-[var(--bg-dark)] font-bold tracking-widest hover:brightness-110 transition-all uppercase cursor-pointer">
               Next Level
             </button>
           ) : (
-            <button 
-              onClick={() => window.location.reload()}
-              className="w-full py-4 bg-[var(--accent-gold)] text-[var(--bg-dark)] font-bold tracking-widest hover:brightness-110 transition-all uppercase">
-              🏆 Victory — Return to Base
-            </button>
+            <div className="space-y-2 w-full">
+              <button 
+                onClick={() => {
+                  if (onShowOutro) {
+                    onShowOutro();
+                  } else {
+                    window.location.reload();
+                  }
+                }}
+                className="w-full py-4 bg-[var(--accent-gold)] text-[var(--bg-dark)] font-bold tracking-widest hover:brightness-110 transition-all uppercase flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(223,177,37,0.4)] animate-pulse cursor-pointer">
+                ✨ Witness The Finale // Outro Story →
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full py-2 bg-transparent text-[var(--accent-gold)]/70 hover:text-[var(--accent-gold)] text-xs font-mono uppercase tracking-wider transition-colors cursor-pointer"
+              >
+                🔄 Replay Level 3
+              </button>
+            </div>
           )}
         </div>
       )}

@@ -64,6 +64,20 @@ export function Round3FullscreenView({ onClose, teamData }) {
         window.dispatchEvent(new CustomEvent('cyphora_points_updated', { detail }));
         window.dispatchEvent(new CustomEvent('cyphora_team_score_updated', { detail }));
       }
+
+      if (e.data?.type === 'CYPHORA_ROUND3_EXPEDITION_COMPLETE') {
+        console.log('[OS Round 3] Entire expedition completed:', e.data);
+        localStorage.setItem('cyphora_round3_completed', 'true');
+        sessionStorage.setItem('cyphora_round3_completed', 'true');
+        window.dispatchEvent(new CustomEvent('cyphora_round3_completed', { detail: e.data }));
+      }
+
+      if (e.data?.type === 'CYPHORA_RETURN_TO_DESKTOP') {
+        console.log('[OS Round 3] Returning to desktop requested by Round 3');
+        if (typeof onClose === 'function') {
+          onClose();
+        }
+      }
     };
     window.addEventListener('message', handleMessage);
 

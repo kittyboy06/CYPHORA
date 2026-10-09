@@ -3,16 +3,18 @@ import PhaserGame from './game/PhaserGame';
 import BlocklyEditor from './components/BlocklyEditor';
 import { GameOverlay } from './components/GameOverlay';
 import { StoryIntro } from './components/StoryIntro';
+import { StoryOutro } from './components/StoryOutro';
 import { TutorialScreen } from './components/TutorialScreen';
 import { LandingScreen } from './components/LandingScreen';
 import { AntiCheatScreen } from './components/AntiCheatScreen';
 import { useGameStore } from './state/gameStore';
 import { executeCode } from './blockly/interpreter';
-import { Play, RotateCcw, Wand2, Clock, BookOpen } from 'lucide-react';
+import { Play, RotateCcw, Wand2, Clock, BookOpen, Film } from 'lucide-react';
 import { SOLUTIONS } from './blockly/solutions';
 import * as Blockly from 'blockly';
 import { PromptDialog, AlertDialog } from './components/PromptDialog';
 import { BlockGuideModal } from './components/BlockGuideModal';
+import { FinaleLeaderboard } from './components/FinaleLeaderboard';
 
 function App() {
   const [hasEntered, setHasEntered] = useState(false);
@@ -24,6 +26,12 @@ function App() {
   });
   const [showTutorial, setShowTutorial] = useState(false);
   const [showBlockGuide, setShowBlockGuide] = useState(false);
+  const [showOutro, setShowOutro] = useState(false);
+  const [isExpeditionCompleted, setIsExpeditionCompleted] = useState(() => {
+    if (typeof localStorage === 'undefined') return false;
+    const teamId = localStorage.getItem('cyphora_team_id') || 'default';
+    return localStorage.getItem(`cyphora_round3_completed_${teamId}`) === 'true' || localStorage.getItem('cyphora_round3_completed') === 'true';
+  });
   const [isRunning, setIsRunning] = useState(false);
   const [isAdminUnlocked, setIsAdminUnlocked] = useState(false);
   const [round3DurationMinutes, setRound3DurationMinutes] = useState(30);
@@ -390,6 +398,62 @@ function App() {
     );
   }
 
+  if (showOutro) {
+    return (
+      <>
+        <StoryOutro
+          isLocked={isTabSwitched && !!lockReason}
+          onComplete={() => {
+            setShowOutro(false);
+            setIsExpeditionCompleted(true);
+            const teamId = (typeof localStorage !== 'undefined' ? localStorage.getItem('cyphora_team_id') : '') || 'default';
+            try {
+              localStorage.setItem('cyphora_round3_completed', 'true');
+              localStorage.setItem(`cyphora_round3_completed_${teamId}`, 'true');
+              localStorage.setItem('cyphora_round3_outro_finished', 'true');
+              localStorage.setItem(`cyphora_round3_outro_finished_${teamId}`, 'true');
+            } catch (_) {}
+
+            try {
+              if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                  type: 'CYPHORA_ROUND3_EXPEDITION_COMPLETE',
+                  team_id: teamId,
+                  score: localStorage.getItem('cyphora_team_score') || '0'
+                }, '*');
+              }
+            } catch (_) {}
+          }}
+        />
+        {securityOverlay}
+      </>
+    );
+  }
+
+  if (isExpeditionCompleted) {
+    const totalExpeditionScore = (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_team_score')) || '0';
+    const teamName = (typeof localStorage !== 'undefined' && localStorage.getItem('cyphora_team_name')) || 'Explorer';
+
+    return (
+      <>
+        <FinaleLeaderboard
+          currentTeamName={teamName}
+          currentTeamScore={totalExpeditionScore}
+          onReplayOutro={() => setShowOutro(true)}
+          onReviewTrials={() => setIsExpeditionCompleted(false)}
+          onReturnToDesktop={() => {
+            try {
+              if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'CYPHORA_RETURN_TO_DESKTOP' }, '*');
+              }
+            } catch (_) {}
+          }}
+        />
+        {securityOverlay}
+      </>
+    );
+  }
+
   if (timeRemaining <= 0 && localStorage.getItem('cyphora_round3_story_finished') === 'true' && !isAdminUnlocked) {
     return (
       <>
@@ -434,7 +498,11 @@ function App() {
 
   return (
     <div className="w-screen h-screen flex flex-col relative bg-[var(--bg-dark)] overflow-hidden">
-      <GameOverlay onRetry={handleReset} onNextLevel={handleNextLevel} />
+      <GameOverlay
+        onRetry={handleReset}
+        onNextLevel={handleNextLevel}
+        onShowOutro={() => setShowOutro(true)}
+      />
 
       {/* === TOP HALF: Game Canvas === */}
       <div className="h-[34%] min-h-[190px] relative bg-[#050804] border-b border-[var(--border-gold)]">
@@ -580,14 +648,24 @@ function App() {
 
           <div className="flex gap-2">
             {isAdminUnlocked && (
-              <button
-                onClick={handleSolve}
-                disabled={isRunning}
-                className="flex items-center gap-2 px-4 py-2.5 font-bold text-sm tracking-wider uppercase transition-all rounded-sm bg-purple-600/20 text-purple-400 border border-purple-500/50 hover:bg-purple-600/40"
-                title="Load Solution"
-              >
-                <Wand2 size={15} /> Solve
-              </button>
+              <>
+                <button
+                  onClick={() => setShowOutro(true)}
+                  disabled={isRunning}
+                  className="flex items-center gap-1.5 px-3 py-2.5 font-bold text-xs tracking-wider uppercase transition-all rounded-sm bg-amber-600/20 text-amber-400 border border-amber-500/50 hover:bg-amber-600/40 cursor-pointer"
+                  title="Preview Outro Story"
+                >
+                  <Film size={14} /> Outro
+                </button>
+                <button
+                  onClick={handleSolve}
+                  disabled={isRunning}
+                  className="flex items-center gap-2 px-4 py-2.5 font-bold text-sm tracking-wider uppercase transition-all rounded-sm bg-purple-600/20 text-purple-400 border border-purple-500/50 hover:bg-purple-600/40"
+                  title="Load Solution"
+                >
+                  <Wand2 size={15} /> Solve
+                </button>
+              </>
             )}
             <button
               onClick={handleRun}

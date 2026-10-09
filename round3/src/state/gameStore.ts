@@ -62,3 +62,7 @@ export const useGameStore = create<GameState>((set) => ({
   setLevel: (level) => set({ level, status: 'idle' }),
 }));
 
+if (typeof window !== 'undefined') {
+  (window as any).useGameStore = useGameStore;
+}
+
