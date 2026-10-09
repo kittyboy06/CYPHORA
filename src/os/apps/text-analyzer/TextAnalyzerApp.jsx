@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart2, Scissors, Copy, Check } from 'lucide-react';
 import { useOS } from '../../state/OSContext.jsx';
+import { copyToClipboard } from '../../utils/clipboard.js';
 import './TextAnalyzerApp.css';
 
 const SAMPLE_TEXT_FILES = [
@@ -78,11 +79,13 @@ export function TextAnalyzerApp() {
     }
   };
 
-  const handleCopyValue = (val) => {
+  const handleCopyValue = async (val) => {
     if (!val) return;
-    navigator.clipboard.writeText(val);
-    setCopiedWord(val);
-    setTimeout(() => setCopiedWord(''), 2000);
+    const ok = await copyToClipboard(val);
+    if (ok) {
+      setCopiedWord(val);
+      setTimeout(() => setCopiedWord(''), 2000);
+    }
   };
 
   return (

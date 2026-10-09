@@ -9,11 +9,12 @@ import { LandingScreen } from './components/LandingScreen';
 import { AntiCheatScreen } from './components/AntiCheatScreen';
 import { useGameStore } from './state/gameStore';
 import { executeCode } from './blockly/interpreter';
-import { Play, RotateCcw, Wand2, Clock, BookOpen, Film } from 'lucide-react';
+import { Play, RotateCcw, Wand2, Clock, BookOpen, Film, Compass } from 'lucide-react';
 import { SOLUTIONS } from './blockly/solutions';
 import * as Blockly from 'blockly';
 import { PromptDialog, AlertDialog } from './components/PromptDialog';
 import { BlockGuideModal } from './components/BlockGuideModal';
+import { StageInstructionsModal } from './components/StageInstructionsModal';
 import { FinaleLeaderboard } from './components/FinaleLeaderboard';
 import { Round3TimeExpiredLeaderboard } from './components/Round3TimeExpiredLeaderboard';
 
@@ -27,6 +28,7 @@ function App() {
   });
   const [showTutorial, setShowTutorial] = useState(false);
   const [showBlockGuide, setShowBlockGuide] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
   const [showOutro, setShowOutro] = useState(false);
   const [isExpeditionCompleted, setIsExpeditionCompleted] = useState(() => {
     if (typeof localStorage === 'undefined') return false;
@@ -121,8 +123,11 @@ function App() {
   const [isTabSwitched, setIsTabSwitched] = useState(false);
   const [lockReason, setLockReason] = useState('');
   const hadFullscreenRef = useRef(false);
+  const unlockCooldownRef = useRef(0);
 
   useEffect(() => {
+    unlockCooldownRef.current = Date.now() + 2500;
+
     const handleFullscreenChange = () => {
       let isFull = !!document.fullscreenElement;
       try {
@@ -133,7 +138,7 @@ function App() {
       setIsFullscreen(isFull);
       if (isFull) {
         hadFullscreenRef.current = true;
-      } else if (hasEntered && hadFullscreenRef.current) {
+      } else if (hadFullscreenRef.current && Date.now() >= unlockCooldownRef.current) {
         setLockReason('FULLSCREEN_EXIT');
         setIsTabSwitched(true);
         try {
@@ -144,9 +149,63 @@ function App() {
       }
     };
 
+    let visibilityTimeout: any = null;
     const handleVisibilityChange = () => {
-      if (!hasEntered) return;
+      if (Date.now() < unlockCooldownRef.current) return;
       if (document.hidden || document.visibilityState === 'hidden') {
+        if (visibilityTimeout) clearTimeout(visibilityTimeout);
+        visibilityTimeout = setTimeout(() => {
+          if ((document.hidden || document.visibilityState === 'hidden') && Date.now() >= unlockCooldownRef.current) {
+            setLockReason('TAB_SWITCH');
+            setIsTabSwitched(true);
+            setIsFullscreen(false);
+            try {
+              if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'CYPHORA_TRIGGER_LOCK', reason: 'TAB_SWITCH' }, '*');
+              }
+            } catch (e) { }
+          }
+        }, 200);
+      } else {
+        if (visibilityTimeout) {
+          clearTimeout(visibilityTimeout);
+          visibilityTimeout = null;
+        }
+      }
+    };
+
+    let blurTimeout: any = null;
+    const handleWindowBlur = () => {
+      if (Date.now() < unlockCooldownRef.current) return;
+      if (blurTimeout) clearTimeout(blurTimeout);
+      blurTimeout = setTimeout(() => {
+        if (Date.now() < unlockCooldownRef.current) return;
+        if (!document.hasFocus() || document.hidden || document.visibilityState === 'hidden') {
+          setLockReason('TAB_SWITCH');
+          setIsTabSwitched(true);
+          setIsFullscreen(false);
+          try {
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage({ type: 'CYPHORA_TRIGGER_LOCK', reason: 'TAB_SWITCH' }, '*');
+            }
+          } catch (err) { }
+        }
+      }, 250);
+    };
+
+    const handleWindowFocus = () => {
+      if (blurTimeout) {
+        clearTimeout(blurTimeout);
+        blurTimeout = null;
+      }
+    };
+
+    const handleSecurityKeyDown = (e: KeyboardEvent) => {
+      if (Date.now() < unlockCooldownRef.current) return;
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+
+      // 0a. Alt + Tab shortcut
+      if (e.altKey && (e.key === 'Tab' || e.code === 'Tab' || e.keyCode === 9)) {
         setLockReason('TAB_SWITCH');
         setIsTabSwitched(true);
         setIsFullscreen(false);
@@ -154,13 +213,24 @@ function App() {
           if (window.parent && window.parent !== window) {
             window.parent.postMessage({ type: 'CYPHORA_TRIGGER_LOCK', reason: 'TAB_SWITCH' }, '*');
           }
-        } catch (e) { }
+        } catch (err) { }
+        return;
       }
-    };
 
-    const handleSecurityKeyDown = (e: KeyboardEvent) => {
-      if (!hasEntered) return;
-      const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+      // 0b. F11 Fullscreen toggle shortcut
+      if (e.key === 'F11' || e.keyCode === 122) {
+        e.preventDefault();
+        e.stopPropagation();
+        setLockReason('FULLSCREEN_EXIT');
+        setIsTabSwitched(true);
+        setIsFullscreen(false);
+        try {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ type: 'CYPHORA_TRIGGER_LOCK', reason: 'FULLSCREEN_EXIT' }, '*');
+          }
+        } catch (err) { }
+        return;
+      }
 
       // 1. Reload shortcuts: F5, Ctrl+R, Cmd+R
       if (e.key === 'F5' || e.keyCode === 116 || (isCtrlOrMeta && (e.key === 'r' || e.key === 'R'))) {
@@ -214,6 +284,7 @@ function App() {
 
     const handleParentMessage = (e: MessageEvent) => {
       if (e.data?.type === 'CYPHORA_GATE_UNLOCKED') {
+        unlockCooldownRef.current = Date.now() + 3500;
         setIsFullscreen(true);
         setIsTabSwitched(false);
         setLockReason('');
@@ -222,6 +293,8 @@ function App() {
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('focus', handleWindowFocus);
     window.addEventListener('keydown', handleSecurityKeyDown, true);
     window.addEventListener('contextmenu', handleContextMenu, true);
     window.addEventListener('message', handleParentMessage);
@@ -236,8 +309,12 @@ function App() {
     handleFullscreenChange();
 
     return () => {
+      if (visibilityTimeout) clearTimeout(visibilityTimeout);
+      if (blurTimeout) clearTimeout(blurTimeout);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
       window.removeEventListener('keydown', handleSecurityKeyDown, true);
       window.removeEventListener('contextmenu', handleContextMenu, true);
       window.removeEventListener('message', handleParentMessage);
@@ -250,6 +327,7 @@ function App() {
   }, [hasEntered]);
 
   const enterFullscreen = async () => {
+    unlockCooldownRef.current = Date.now() + 3500;
     try {
       if (document.documentElement.requestFullscreen) {
         await document.documentElement.requestFullscreen();
@@ -350,6 +428,7 @@ function App() {
     <AntiCheatScreen
       reason={lockReason}
       onAdminUnlock={() => {
+        unlockCooldownRef.current = Date.now() + 3500;
         setIsTabSwitched(false);
         setLockReason('');
       }}
@@ -521,34 +600,46 @@ function App() {
         <div>
           {level === 1 && (
             <>
-              <h3 className="text-[11px] text-[var(--accent-gold)] tracking-[3px] uppercase mb-1 font-bold font-mono">
-                Current Task: The Broken Bridge
-              </h3>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-[11px] text-[var(--accent-gold)] tracking-[3px] uppercase font-bold font-mono">
+                  Current Task: The Broken Bridge (Stage 1 of 3)
+                </h3>
+                <span className="text-[9px] font-mono px-2 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase font-bold">
+                  Triangular Progression
+                </span>
+              </div>
               <p className="text-sm leading-relaxed text-[var(--text-primary)]">
-                The bridge gaps are expanding! First you must jump, then run 1 tile and jump, then run 2 tiles and jump, then 3 tiles, and so on... (a triangular number progression). <strong className="text-red-400">⚠️ Low-hanging branches block jumping on solid ground — you can only jump over gaps!</strong> Use variables and nested loops with <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">run()</code> and <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code> to reach the other side!
+                The bridge chasms expand triangularly: <strong>Run 1 & Jump</strong> → <strong>Run 2 & Jump</strong> → <strong>Run 3 & Jump</strong> → <strong>Run 4 & Jump</strong> → <strong>Run 5 to Portal</strong>. <strong className="text-red-400">⚠️ Low-hanging canopy vines block jumping on solid ground — you can ONLY jump over gaps!</strong> Use a variable loop to increment run steps each iteration.
               </p>
             </>
           )}
           {level === 2 && (
             <>
-              <h3 className="text-[11px] text-[var(--accent-gold)] tracking-[3px] uppercase mb-1 font-bold font-mono">
-                Current Task: The Beast's Lair
-              </h3>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-[11px] text-[var(--accent-gold)] tracking-[3px] uppercase font-bold font-mono">
+                  Current Task: The Beast's Lair (Stage 2 of 3)
+                </h3>
+                <span className="text-[9px] font-mono px-2 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase font-bold">
+                  Equipment & Sensor Stance
+                </span>
+              </div>
               <p className="text-sm leading-relaxed text-[var(--text-primary)]">
-                Run right to collect the Sword at the 3rd tile and the Shield at the 5th tile with <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">equip()</code>. Keep moving right until the guardian is revealed, then stop exactly 3 blocks before it.
-                Then check its shield: if <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">is_beast_vulnerable()</code>, use <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">attack()</code>. 
-                Otherwise, <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">defend()</code>. Repeat the check until the guardian is defeated.
+                1) Run 2 tiles and <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">equip()</code> Sword (Tile 2). 2) Run 2 tiles and <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">equip()</code> Shield (Tile 4). 3) Run 14 tiles to halt at the standoff line (Tile 18). 4) Check sensor <code className="text-yellow-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">is_beast_vulnerable()</code>: if true, <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">attack()</code>; else, <code className="text-blue-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">defend()</code>.
               </p>
             </>
           )}
           {level === 3 && (
             <>
-              <h3 className="text-[11px] text-[var(--accent-gold)] tracking-[3px] uppercase mb-1 font-bold font-mono">
-                Current Task: The Path of Trials (FizzBuzz)
-              </h3>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-[11px] text-[var(--accent-gold)] tracking-[3px] uppercase font-bold font-mono">
+                  Current Task: The Path of Trials (Stage 3 of 3)
+                </h3>
+                <span className="text-[9px] font-mono px-2 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/40 uppercase font-bold">
+                  FizzBuzz Modulo & Totems
+                </span>
+              </div>
               <p className="text-sm leading-relaxed text-[var(--text-primary)]">
-                Traverse 3 zones. Each zone has a 17-tile path that takes 14 action steps, followed by a Totem. In the path, tiles are 1-indexed. If index is divisible by 3, it's FIRE (jump). If divisible by 5, GOBLIN (attack). If both, well there's no 15! Rest are GROUND (run). After 14 action steps, use{' '}
-                <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">activate_totem()</code>.
+                Repeat for 3 Zones. For steps 1 to 14: if <code className="text-amber-400 font-mono text-xs">i % 3 == 0</code>, Fire Pit $\rightarrow$ <code className="text-cyan-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">jump()</code>. If <code className="text-green-400 font-mono text-xs">i % 5 == 0</code>, Goblin $\rightarrow$ <code className="text-green-400 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">attack()</code>. Otherwise solid ground $\rightarrow$ <code className="text-white bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">run()</code>. Directly after 14 steps, call <code className="text-purple-300 bg-black/40 px-1.5 py-0.5 rounded font-mono text-xs">activate_totem()</code> to unseal each altar!
               </p>
             </>
           )}
@@ -561,6 +652,16 @@ function App() {
               <span className="text-zinc-600">•</span>
               <span className="text-[var(--accent-gold)] font-bold">Max 500 Scores</span>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setShowInstructions(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-[rgba(223,177,37,0.25)] border border-[var(--accent-gold)] text-[var(--accent-gold)] hover:text-white text-[11px] font-mono uppercase tracking-wider font-bold transition-all shadow-[0_0_12px_rgba(223,177,37,0.25)] hover:brightness-110 active:scale-95 cursor-pointer"
+              title="Open Detailed Stage Instructions & Field Guide"
+            >
+              <Compass size={13} className="text-amber-400" />
+              <span>📜 Stage Instructions</span>
+            </button>
 
             <button
               type="button"
@@ -691,6 +792,13 @@ function App() {
         isOpen={showBlockGuide}
         onClose={() => setShowBlockGuide(false)}
         initialLevel={level}
+        onOpenStageInstructions={() => setShowInstructions(true)}
+      />
+      <StageInstructionsModal
+        isOpen={showInstructions}
+        onClose={() => setShowInstructions(false)}
+        currentLevel={level}
+        onOpenBlockGuide={() => setShowBlockGuide(true)}
       />
       {securityOverlay}
     </div>

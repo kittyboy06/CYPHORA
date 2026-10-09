@@ -129,8 +129,9 @@
   outline: none;
   color: #c9d1d9;
   font-family: 'Fira Code', 'Courier New', Courier, monospace;
-  font-size: 0.82rem;
-  line-height: 1.5;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  line-height: 1.55;
   padding: 0.6rem 0.8rem;
   resize: none;
   caret-color: #dfb125;

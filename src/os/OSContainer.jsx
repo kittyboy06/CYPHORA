@@ -184,8 +184,8 @@ function OSContent({ stage, setStage, teamData, round1State, initialAppId }) {
         </>
       )}
 
-      {/* Suppress blue screen gate during protected rounds (Round 2 & Round 3) */}
-      {!isProtected && showExitBanner && (
+      {/* Suppress blue screen gate during Round 2; Round 1 and Round 3 enforce blue screen */}
+      {!isR2 && showExitBanner && (
         <BlueScreenGate
           reason={exitReason}
           onUnlock={unlockGate}

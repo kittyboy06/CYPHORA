@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Info, FileSearch, Copy, Check, Folder, Image as ImageIcon } from 'lucide-react';
 import { useOS } from '../../state/OSContext.jsx';
 import { VirtualFilePicker } from '../../components/VirtualFilePicker.jsx';
+import { copyToClipboard } from '../../utils/clipboard.js';
 import './MetadataInspectorApp.css';
 
 export function MetadataInspectorApp({ meta = {} }) {
@@ -63,11 +64,13 @@ export function MetadataInspectorApp({ meta = {} }) {
     handleInspectVFS(virtualNode.path);
   };
 
-  const handleCopyVal = (key, val) => {
+  const handleCopyVal = async (key, val) => {
     if (!val) return;
-    navigator.clipboard.writeText(val);
-    setCopiedKey(key);
-    setTimeout(() => setCopiedKey(''), 2000);
+    const ok = await copyToClipboard(val);
+    if (ok) {
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(''), 2000);
+    }
   };
 
   return (

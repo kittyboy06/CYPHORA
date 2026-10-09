@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { QrCode, Scan, Copy, ExternalLink, Folder } from 'lucide-react';
 import { useOS } from '../../state/OSContext.jsx';
 import { VirtualFilePicker } from '../../components/VirtualFilePicker.jsx';
+import { copyToClipboard } from '../../utils/clipboard.js';
 import './QRScannerApp.css';
 
 export function QRScannerApp() {
@@ -53,9 +54,9 @@ export function QRScannerApp() {
     handleScan(virtualNode.path);
   };
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (!qrOutput) return;
-    navigator.clipboard.writeText(qrOutput);
+    await copyToClipboard(qrOutput);
     setStatusMsg('✓ Payload copied to clipboard!');
     setTimeout(() => setStatusMsg(''), 2500);
   };

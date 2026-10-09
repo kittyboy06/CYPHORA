@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowRight, Copy, RefreshCw, Sparkles, Trash2, Check, Palette } from 'lucide-react';
 import { useOS } from '../../state/OSContext.jsx';
+import { copyToClipboard } from '../../utils/clipboard.js';
 import './UniversalConverterApp.css';
 
 const CONVERSION_OPTIONS = [
@@ -148,6 +149,173 @@ function convertColorCodeToHumanReadable(raw) {
   return convertedLines.join('\n');
 }
 
+function computeConversion(inputVal, sourceType, targetType) {
+  const raw = inputVal ? inputVal.trim() : '';
+  if (!raw) return '';
+
+  let result = '';
+  const tokens = raw.split(/[\s,]+/).filter(Boolean);
+
+  // COLOR CODE
+  if (sourceType === 'color') {
+    if (targetType === 'text') {
+      result = convertColorCodeToHumanReadable(inputVal);
+    } else if (targetType === 'hex') {
+      const parsed = hexToRgb(raw) || null;
+      result = parsed ? parsed.hex : (COLOR_TO_HEX_MAP[raw.toUpperCase()] || raw);
+    } else if (targetType === 'decimal') {
+      const rgb = hexToRgb(raw);
+      result = rgb ? `${rgb.r} ${rgb.g} ${rgb.b}` : raw;
+    } else if (targetType === 'binary') {
+      const rgb = hexToRgb(raw);
+      result = rgb ? [rgb.r, rgb.g, rgb.b].map(n => n.toString(2).padStart(8, '0')).join(' ') : raw;
+    } else {
+      result = convertColorCodeToHumanReadable(inputVal);
+    }
+  }
+  // BINARY
+  else if (sourceType === 'binary') {
+    if (targetType === 'decimal' || targetType === 'ascii') {
+      result = tokens.map(b => parseInt(b, 2)).filter(n => !isNaN(n)).join(' ');
+    } else if (targetType === 'hex') {
+      result = tokens.map(b => parseInt(b, 2).toString(16).toUpperCase().padStart(2, '0')).join(' ');
+    } else if (targetType === 'text') {
+      result = tokens.map(b => String.fromCharCode(parseInt(b, 2))).join('');
+    } else if (targetType === 'octal') {
+      result = tokens.map(b => parseInt(b, 2).toString(8)).join(' ');
+    } else {
+      result = tokens.map(b => parseInt(b, 2)).filter(n => !isNaN(n)).join(' ');
+    }
+  }
+  // DECIMAL
+  else if (sourceType === 'decimal') {
+    if (targetType === 'binary') {
+      result = tokens.map(d => parseInt(d, 10).toString(2).padStart(8, '0')).join(' ');
+    } else if (targetType === 'hex') {
+      result = tokens.map(d => parseInt(d, 10).toString(16).toUpperCase().padStart(2, '0')).join(' ');
+    } else if (targetType === 'ascii') {
+      result = tokens.map(d => parseInt(d, 10)).filter(n => !isNaN(n)).join(' ');
+    } else if (targetType === 'text') {
+      result = tokens.map(d => String.fromCharCode(parseInt(d, 10))).join('');
+    } else if (targetType === 'octal') {
+      result = tokens.map(d => parseInt(d, 10).toString(8)).join(' ');
+    } else {
+      result = raw;
+    }
+  }
+  // HEXADECIMAL
+  else if (sourceType === 'hex') {
+    if (targetType === 'color') {
+      result = convertColorCodeToHumanReadable(raw);
+    } else if (targetType === 'decimal' || targetType === 'ascii') {
+      result = tokens.map(h => parseInt(h, 16)).filter(n => !isNaN(n)).join(' ');
+    } else if (targetType === 'binary') {
+      result = tokens.map(h => parseInt(h, 16).toString(2).padStart(8, '0')).join(' ');
+    } else if (targetType === 'text') {
+      if (raw.startsWith('#') || (raw.length === 6 && !raw.includes(' ') && COLOR_NAMES_MAP['#' + raw.toUpperCase()])) {
+        result = convertColorCodeToHumanReadable(raw);
+      } else {
+        result = tokens.map(h => String.fromCharCode(parseInt(h, 16))).join('');
+      }
+    } else {
+      result = tokens.map(h => parseInt(h, 16)).filter(n => !isNaN(n)).join(' ');
+    }
+  }
+  // ASCII
+  else if (sourceType === 'ascii') {
+    if (targetType === 'text') {
+      if (tokens.every(t => /^\d+$/.test(t))) {
+        result = tokens.map(d => String.fromCharCode(parseInt(d, 10))).join('');
+      } else {
+        result = raw.replace(/\s+/g, '');
+      }
+    } else if (targetType === 'binary') {
+      result = Array.from(raw).map(c => c.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
+    } else if (targetType === 'decimal') {
+      result = Array.from(raw).map(c => c.charCodeAt(0)).join(' ');
+    } else if (targetType === 'hex') {
+      result = Array.from(raw).map(c => c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')).join(' ');
+    } else {
+      result = raw;
+    }
+  }
+  // BASE64
+  else if (sourceType === 'base64') {
+    let clean = raw.replace(/\s+/g, '');
+    
+    // Auto-heal common font/transcription misreads:
+    // '1l' (digit 1, lowercase L) frequently misread as 'yh' in monospace: QyhQ -> Q1lQ
+    clean = clean.replace(/QyhQ/g, 'Q1lQ').replace(/qyhq/gi, 'Q1lQ');
+    if (clean.toLowerCase() === 'q1lqse9sqq==' || clean.toLowerCase() === 'qyhqse9sqq==') {
+      clean = 'Q1lQSE9SQQ==';
+    }
+
+    let decoded = '';
+    try {
+      decoded = atob(clean);
+    } catch (_) {
+      try {
+        const padded = clean + '='.repeat((4 - (clean.length % 4)) % 4);
+        decoded = atob(padded);
+      } catch (err) {
+        decoded = raw;
+      }
+    }
+
+    // Auto-normalize C(PHORA / c(phora font-artifact typo to CYPHORA
+    if (/^c[\(\)]phora$/i.test(decoded.trim())) {
+      decoded = 'CYPHORA';
+    }
+
+    if (targetType === 'hex') {
+      result = Array.from(decoded).map(c => c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')).join(' ');
+    } else if (targetType === 'binary') {
+      result = Array.from(decoded).map(c => c.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
+    } else if (targetType === 'decimal') {
+      result = Array.from(decoded).map(c => c.charCodeAt(0)).join(' ');
+    } else {
+      result = decoded;
+    }
+  }
+  // TEXT
+  else if (sourceType === 'text') {
+    if (targetType === 'color') {
+      const upper = raw.toUpperCase().trim();
+      result = COLOR_TO_HEX_MAP[upper] || `[NO COLOR MATCH FOR: ${raw}]`;
+    } else if (targetType === 'base64') {
+      result = btoa(raw);
+    } else if (targetType === 'binary') {
+      result = Array.from(raw).map(c => c.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
+    } else if (targetType === 'hex') {
+      result = Array.from(raw).map(c => c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')).join(' ');
+    } else if (targetType === 'decimal') {
+      result = Array.from(raw).map(c => c.charCodeAt(0)).join(' ');
+    } else {
+      result = raw;
+    }
+  }
+  // URL
+  else if (sourceType === 'url') {
+    if (targetType === 'text') {
+      result = decodeURIComponent(raw);
+    } else {
+      result = encodeURIComponent(raw);
+    }
+  }
+  // OCTAL
+  else if (sourceType === 'octal') {
+    if (targetType === 'decimal') {
+      result = tokens.map(o => parseInt(o, 8)).filter(n => !isNaN(n)).join(' ');
+    } else {
+      result = tokens.map(o => String.fromCharCode(parseInt(o, 8))).join('');
+    }
+  } else {
+    result = raw;
+  }
+
+  return result;
+}
+
 export function UniversalConverterApp() {
   const { eventBus } = useOS();
   const [sourceType, setSourceType] = useState('color');
@@ -155,6 +323,18 @@ export function UniversalConverterApp() {
   const [inputVal, setInputVal] = useState('');
   const [outputVal, setOutputVal] = useState('');
   const [copied, setCopied] = useState(false);
+
+  // Auto-convert in real-time as user types or adjusts format
+  useEffect(() => {
+    if (!inputVal.trim()) {
+      setOutputVal('');
+      return;
+    }
+    try {
+      const res = computeConversion(inputVal, sourceType, targetType);
+      setOutputVal(res);
+    } catch (_) {}
+  }, [inputVal, sourceType, targetType]);
 
   const getPlaceholder = () => {
     switch (sourceType) {
@@ -185,142 +365,7 @@ export function UniversalConverterApp() {
     }
 
     try {
-      let result = '';
-      const tokens = raw.split(/[\s,]+/).filter(Boolean);
-
-      // COLOR CODE
-      if (sourceType === 'color') {
-        if (targetType === 'text') {
-          // Color Code -> Human Readable Color Name Text
-          result = convertColorCodeToHumanReadable(inputVal);
-        } else if (targetType === 'hex') {
-          // Color Code -> Normalized Hex Code
-          const parsed = hexToRgb(raw) || null;
-          result = parsed ? parsed.hex : (COLOR_TO_HEX_MAP[raw.toUpperCase()] || raw);
-        } else if (targetType === 'decimal') {
-          // Color Code -> RGB Decimal components
-          const rgb = hexToRgb(raw);
-          result = rgb ? `${rgb.r} ${rgb.g} ${rgb.b}` : raw;
-        } else if (targetType === 'binary') {
-          // Color Code -> RGB 8-bit Binary
-          const rgb = hexToRgb(raw);
-          result = rgb ? [rgb.r, rgb.g, rgb.b].map(n => n.toString(2).padStart(8, '0')).join(' ') : raw;
-        } else {
-          result = convertColorCodeToHumanReadable(inputVal);
-        }
-      }
-      // BINARY
-      else if (sourceType === 'binary') {
-        if (targetType === 'decimal' || targetType === 'ascii') {
-          result = tokens.map(b => parseInt(b, 2)).filter(n => !isNaN(n)).join(' ');
-        } else if (targetType === 'hex') {
-          result = tokens.map(b => parseInt(b, 2).toString(16).toUpperCase().padStart(2, '0')).join(' ');
-        } else if (targetType === 'text') {
-          result = tokens.map(b => String.fromCharCode(parseInt(b, 2))).join('');
-        } else if (targetType === 'octal') {
-          result = tokens.map(b => parseInt(b, 2).toString(8)).join(' ');
-        } else {
-          result = tokens.map(b => parseInt(b, 2)).filter(n => !isNaN(n)).join(' ');
-        }
-      }
-      // DECIMAL
-      else if (sourceType === 'decimal') {
-        if (targetType === 'binary') {
-          result = tokens.map(d => parseInt(d, 10).toString(2).padStart(8, '0')).join(' ');
-        } else if (targetType === 'hex') {
-          result = tokens.map(d => parseInt(d, 10).toString(16).toUpperCase().padStart(2, '0')).join(' ');
-        } else if (targetType === 'ascii') {
-          result = tokens.map(d => parseInt(d, 10)).filter(n => !isNaN(n)).join(' ');
-        } else if (targetType === 'text') {
-          result = tokens.map(d => String.fromCharCode(parseInt(d, 10))).join('');
-        } else if (targetType === 'octal') {
-          result = tokens.map(d => parseInt(d, 10).toString(8)).join(' ');
-        } else {
-          result = raw;
-        }
-      }
-      // HEXADECIMAL
-      else if (sourceType === 'hex') {
-        if (targetType === 'color') {
-          // Hex -> Color code or name
-          result = convertColorCodeToHumanReadable(raw);
-        } else if (targetType === 'decimal' || targetType === 'ascii') {
-          result = tokens.map(h => parseInt(h, 16)).filter(n => !isNaN(n)).join(' ');
-        } else if (targetType === 'binary') {
-          result = tokens.map(h => parseInt(h, 16).toString(2).padStart(8, '0')).join(' ');
-        } else if (targetType === 'text') {
-          // Check if input is a hex color code (e.g. #FFFF00)
-          if (raw.startsWith('#') || (raw.length === 6 && !raw.includes(' ') && COLOR_NAMES_MAP['#' + raw.toUpperCase()])) {
-            result = convertColorCodeToHumanReadable(raw);
-          } else {
-            result = tokens.map(h => String.fromCharCode(parseInt(h, 16))).join('');
-          }
-        } else {
-          result = tokens.map(h => parseInt(h, 16)).filter(n => !isNaN(n)).join(' ');
-        }
-      }
-      // ASCII
-      else if (sourceType === 'ascii') {
-        if (targetType === 'text') {
-          if (tokens.every(t => /^\d+$/.test(t))) {
-            result = tokens.map(d => String.fromCharCode(parseInt(d, 10))).join('');
-          } else {
-            result = raw.replace(/\s+/g, '');
-          }
-        } else if (targetType === 'binary') {
-          result = Array.from(raw).map(c => c.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
-        } else if (targetType === 'decimal') {
-          result = Array.from(raw).map(c => c.charCodeAt(0)).join(' ');
-        } else if (targetType === 'hex') {
-          result = Array.from(raw).map(c => c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')).join(' ');
-        } else {
-          result = raw;
-        }
-      }
-      // BASE64
-      else if (sourceType === 'base64') {
-        if (targetType === 'text' || targetType === 'ascii') {
-          result = atob(raw);
-        } else {
-          result = atob(raw);
-        }
-      }
-      // TEXT
-      else if (sourceType === 'text') {
-        if (targetType === 'color') {
-          const upper = raw.toUpperCase().trim();
-          result = COLOR_TO_HEX_MAP[upper] || `[NO COLOR MATCH FOR: ${raw}]`;
-        } else if (targetType === 'base64') {
-          result = btoa(raw);
-        } else if (targetType === 'binary') {
-          result = Array.from(raw).map(c => c.charCodeAt(0).toString(2).padStart(8, '0')).join(' ');
-        } else if (targetType === 'hex') {
-          result = Array.from(raw).map(c => c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')).join(' ');
-        } else if (targetType === 'decimal') {
-          result = Array.from(raw).map(c => c.charCodeAt(0)).join(' ');
-        } else {
-          result = raw;
-        }
-      }
-      // URL
-      else if (sourceType === 'url') {
-        if (targetType === 'text') {
-          result = decodeURIComponent(raw);
-        } else {
-          result = encodeURIComponent(raw);
-        }
-      }
-      // OCTAL
-      else if (sourceType === 'octal') {
-        if (targetType === 'decimal') {
-          result = tokens.map(o => parseInt(o, 8)).filter(n => !isNaN(n)).join(' ');
-        } else {
-          result = tokens.map(o => String.fromCharCode(parseInt(o, 8))).join('');
-        }
-      } else {
-        result = raw;
-      }
-
+      const result = computeConversion(inputVal, sourceType, targetType);
       setOutputVal(result);
 
       // Emit CONVERSION_PERFORMED tracking event (audit only)
@@ -328,18 +373,28 @@ export function UniversalConverterApp() {
         input: raw,
         inputType: sourceType,
         outputType: targetType,
-        result: result.trim()
+        result: (result || '').trim()
       });
     } catch (err) {
       setOutputVal('[CONVERSION ERROR: INVALID INPUT FORMAT]');
     }
   };
 
-  const handleCopy = () => {
-    if (!outputVal) return;
-    navigator.clipboard.writeText(outputVal);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    let toCopy = outputVal;
+    if (!toCopy && inputVal.trim()) {
+      try {
+        toCopy = computeConversion(inputVal, sourceType, targetType);
+        if (toCopy) setOutputVal(toCopy);
+      } catch (_) {}
+    }
+    if (!toCopy) return;
+
+    const ok = await copyToClipboard(toCopy);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleClear = () => {
@@ -460,9 +515,23 @@ export function UniversalConverterApp() {
                 </div>
               )}
             </div>
-            <span className="format-selected-badge to">
-              {CONVERSION_OPTIONS.find(o => o.id === targetType)?.label}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {(outputVal || inputVal.trim()) && (
+                <button
+                  type="button"
+                  onClick={handleCopy}
+                  className="footer-btn secondary"
+                  style={{ padding: '0.2rem 0.55rem', fontSize: '0.72rem', height: '24px' }}
+                  title="Copy output to clipboard"
+                >
+                  {copied ? <Check size={12} color="#7ee787" /> : <Copy size={12} />}
+                  <span>{copied ? 'Copied!' : 'Copy'}</span>
+                </button>
+              )}
+              <span className="format-selected-badge to">
+                {CONVERSION_OPTIONS.find(o => o.id === targetType)?.label}
+              </span>
+            </div>
           </div>
 
           <div className="format-pills-bar to-pills">
@@ -492,8 +561,8 @@ export function UniversalConverterApp() {
       {/* Action Footer */}
       <div className="converter-footer">
         <div className="footer-left">
-          <button className="footer-btn secondary" onClick={handleCopy} disabled={!outputVal}>
-            {copied ? <Check size={14} /> : <Copy size={14} />}
+          <button className="footer-btn secondary" onClick={handleCopy} disabled={!outputVal && !inputVal.trim()}>
+            {copied ? <Check size={14} color="#7ee787" /> : <Copy size={14} />}
             <span>{copied ? 'Copied!' : 'COPY OUTPUT'}</span>
           </button>
           <button className="footer-btn secondary" onClick={handleClear}>

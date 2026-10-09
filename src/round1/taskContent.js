@@ -163,7 +163,7 @@ export const TASK_DEFINITIONS = [
     },
     answer: {
       expected: 'CYPHORA',
-      accepted: ['CYPHORA', 'JUMP'],
+      accepted: ['CYPHORA', 'JUMP', 'C(PHORA', 'c(phora', 'C)PHORA', 'c)phora'],
       type: 'text',
       caseSensitive: false,
       trimWhitespace: true
@@ -181,7 +181,7 @@ export const TASK_DEFINITIONS = [
     order: 7,
     title: 'TASK 07 — THE HIDDEN RECORD',
     story: 'An archival survey photograph appears ordinary, but operational data was preserved inside its descriptive technical properties.',
-    question: 'Locate archive_photo.png.\nUse a metadata inspector to examine its technical file properties and recover the embedded description code.\nUse a data converter to translate the hexadecimal codes into readable text and enter the message below.',
+    question: 'Locate archive_photo.png.\nUse a metadata inspector to examine its technical file properties and recover the embedded description code.\nUse a data converter to translate the ASCII codes into readable text and enter the message below.',
     difficulty: 'medium',
     requiredInput: {
       type: 'file',

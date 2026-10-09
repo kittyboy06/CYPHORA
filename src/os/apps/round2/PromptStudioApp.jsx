@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useOS } from '../../state/OSContext.jsx';
 import { VirtualFilePicker } from '../../components/VirtualFilePicker.jsx';
+import { copyToClipboard } from '../../utils/clipboard.js';
 
 export function PromptStudioApp() {
   const { vfs, openApp } = useOS();
@@ -91,10 +92,13 @@ export function PromptStudioApp() {
     window.dispatchEvent(new Event('cyphora_round2_prompt_updated'));
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(prompt);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    if (!prompt) return;
+    const ok = await copyToClipboard(prompt);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleSaveToVfs = () => {

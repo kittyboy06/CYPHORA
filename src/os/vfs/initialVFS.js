@@ -547,7 +547,7 @@ END_LOG
     path: '/Documents/fragment_01.txt',
     mimeType: 'text/plain',
     size: 30,
-    content: `Q1lQ\n[TIMESTAMP: 09:10]`,
+    content: `Q1lQ\n[TIMESTAMP: 09:10]\n// NOTE: Characters are Q-1-l-Q (Base64 for CYP)`,
     updatedAt: '2026-09-29T09:10:00.000Z'
   },
   '/Documents/fragment_02.txt': {

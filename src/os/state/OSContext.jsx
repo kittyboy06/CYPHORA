@@ -22,38 +22,6 @@ export const ROUND3_APP_IDS = [
   'temple-trials'
 ];
 
-export const isRound2ActiveHelper = (windows = [], initialAppId = null) => {
-  // 1. Initial app parameter indicates Round 2
-  if (initialAppId && ROUND2_APP_IDS.includes(initialAppId)) {
-    return true;
-  }
-
-  // 2. Open windows contain any Round 2 application
-  if (Array.isArray(windows) && windows.some(w => ROUND2_APP_IDS.includes(w.appId))) {
-    return true;
-  }
-
-  // 3. Browser environment checks (URL or Session Storage)
-  if (typeof window !== 'undefined') {
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const roundParam = params.get('round');
-      const stageParam = params.get('stage');
-      const appParam = params.get('app');
-
-      if (roundParam === '2' || stageParam === 'round2' || appParam === 'round2' || (appParam && ROUND2_APP_IDS.includes(appParam))) {
-        return true;
-      }
-
-      if (sessionStorage.getItem('cyphora_active_round') === '2') {
-        return true;
-      }
-    } catch (e) { }
-  }
-
-  return false;
-};
-
 export const isRound3ActiveHelper = (windows = [], initialAppId = null) => {
   // 1. Initial app parameter indicates Round 3
   if (initialAppId && ROUND3_APP_IDS.includes(initialAppId)) {
@@ -77,7 +45,52 @@ export const isRound3ActiveHelper = (windows = [], initialAppId = null) => {
         return true;
       }
 
+      if (window.location.pathname && window.location.pathname.includes('/round3')) {
+        return true;
+      }
+
       if (sessionStorage.getItem('cyphora_active_round') === '3') {
+        return true;
+      }
+    } catch (e) { }
+  }
+
+  return false;
+};
+
+export const isRound2ActiveHelper = (windows = [], initialAppId = null) => {
+  // If Round 3 is explicitly active, it is not Round 2
+  if (isRound3ActiveHelper(windows, initialAppId)) {
+    return false;
+  }
+
+  // 1. Initial app parameter indicates Round 2
+  if (initialAppId && ROUND2_APP_IDS.includes(initialAppId)) {
+    return true;
+  }
+
+  // 2. Open windows contain any Round 2 application
+  if (Array.isArray(windows) && windows.some(w => ROUND2_APP_IDS.includes(w.appId))) {
+    return true;
+  }
+
+  // 3. Browser environment checks (URL or Session Storage)
+  if (typeof window !== 'undefined') {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const roundParam = params.get('round');
+      const stageParam = params.get('stage');
+      const appParam = params.get('app');
+
+      if (roundParam === '2' || stageParam === 'round2' || appParam === 'round2' || (appParam && ROUND2_APP_IDS.includes(appParam))) {
+        return true;
+      }
+
+      if (window.location.pathname && window.location.pathname.includes('/round2')) {
+        return true;
+      }
+
+      if (sessionStorage.getItem('cyphora_active_round') === '2') {
         return true;
       }
     } catch (e) { }
@@ -173,13 +186,13 @@ export function OSProvider({
   };
 
   const isProtectedRoundActive = () => {
-    // Round 2 and Round 3 manage their own full-screen views and security policies
-    return isRound2Active() || isRound3Active();
+    // Round 2 is strictly exempt from blue screen warnings; Round 1 and Round 3 enforce security
+    return isRound2Active();
   };
 
   const triggerLock = (reason = 'FULLSCREEN_EXIT') => {
-    // If Round 2 is active, do not lock
-    if (isProtectedRoundActive()) {
+    // If Round 2 is active, never trigger blue screen (Round 2 is strictly exempt)
+    if (isRound2Active()) {
       return;
     }
 
@@ -236,46 +249,51 @@ export function OSProvider({
     } catch (e) { }
   };
 
-  // Track security triggers: Fullscreen exit, Screenshots, Tab Switch, DevTools Inspector, Page Reload
+  // Track security triggers: Fullscreen exit, Screenshots, Tab Switch / Alt+Tab, DevTools Inspector, Page Reload
   useEffect(() => {
-    // 1. Clear any stale lock flags on mount so page refreshes never get stuck in a bluescreen
+    // 1. Clear any stale lock flags on mount and set initial grace period
     try {
       if (typeof sessionStorage !== 'undefined') {
         sessionStorage.removeItem('cyphora_os_locked');
       }
     } catch (e) { }
 
+    unlockCooldownRef.current = Date.now() + 2500;
     dispatch({ type: OS_ACTIONS.SET_EXIT_BANNER, payload: { visible: false } });
     if (typeof document !== 'undefined' && document.fullscreenElement) {
       hasEnteredFullscreenRef.current = true;
       dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: true });
     }
 
-    // 2. Fullscreen monitor: Update OS taskbar/state without locking the station on exit
+    // 2. Fullscreen monitor: Update OS taskbar/state and trigger lock on exit in Round 1 & Round 3
     const handleFullscreenChange = () => {
       const isFull = !!document.fullscreenElement;
       dispatch({ type: OS_ACTIONS.SET_FULLSCREEN, payload: isFull });
       if (isFull) {
         hasEnteredFullscreenRef.current = true;
+      } else {
+        // Exiting fullscreen in Round 1 or Round 3 triggers blue screen; Round 2 is exempt
+        if (!isRound2Active() && hasEnteredFullscreenRef.current && Date.now() >= unlockCooldownRef.current) {
+          triggerLock('FULLSCREEN_EXIT');
+        }
       }
     };
 
-    // 3. Tab switch / visibility monitor with 2.5-second debounce
-    // (Prevents false triggers from brief OS blips, browser alerts, or focus switches)
+    // 3. Tab switch / visibility monitor with quick 200ms debounce
     let visibilityTimeout = null;
     const handleVisibilityChange = () => {
-      if (isProtectedRoundActive()) return;
+      if (isRound2Active()) return;
       if (Date.now() < unlockCooldownRef.current) return;
 
       if (document.hidden || document.visibilityState === 'hidden') {
         if (visibilityTimeout) clearTimeout(visibilityTimeout);
         visibilityTimeout = setTimeout(() => {
           if ((document.hidden || document.visibilityState === 'hidden') &&
-              !isProtectedRoundActive() &&
+              !isRound2Active() &&
               Date.now() >= unlockCooldownRef.current) {
             triggerLock('TAB_SWITCH');
           }
-        }, 2500);
+        }, 200);
       } else {
         if (visibilityTimeout) {
           clearTimeout(visibilityTimeout);
@@ -284,14 +302,59 @@ export function OSProvider({
       }
     };
 
-    // 6. Security keyboard shortcuts: Screenshots, Reload, DevTools Inspector
+    // 4. Window blur monitor (catches Alt+Tab / window switching when visibilitychange is delayed or not fired)
+    let blurTimeout = null;
+    const handleWindowBlur = () => {
+      if (isRound2Active()) return;
+      if (Date.now() < unlockCooldownRef.current) return;
+
+      if (blurTimeout) clearTimeout(blurTimeout);
+      blurTimeout = setTimeout(() => {
+        if (isRound2Active()) return;
+        if (Date.now() < unlockCooldownRef.current) return;
+
+        const activeEl = typeof document !== 'undefined' ? document.activeElement : null;
+        const isInternalIframe = activeEl && activeEl.tagName === 'IFRAME';
+
+        // Check if workstation window actually lost focus to another app or OS switcher
+        if (!document.hasFocus() || document.hidden || document.visibilityState === 'hidden') {
+          // If focus did not merely move into an internal iframe while remaining on page
+          if (!isInternalIframe || document.hidden) {
+            triggerLock('TAB_SWITCH');
+          }
+        }
+      }, 250);
+    };
+
+    const handleWindowFocus = () => {
+      if (blurTimeout) {
+        clearTimeout(blurTimeout);
+        blurTimeout = null;
+      }
+    };
+
+    // 5. Security keyboard shortcuts: Alt+Tab, F11, Screenshots, Reload, DevTools Inspector
     const handleSecurityKeyDown = (e) => {
-      if (isProtectedRoundActive()) return;
+      if (isRound2Active()) return;
       if (Date.now() < unlockCooldownRef.current) return;
 
       const isCtrlOrMeta = e.ctrlKey || e.metaKey;
 
-      // 6a. Page Reload shortcuts: F5, Ctrl+R, Ctrl+Shift+R, Cmd+R
+      // 5a. Alt + Tab shortcut detection
+      if (e.altKey && (e.key === 'Tab' || e.code === 'Tab' || e.keyCode === 9)) {
+        triggerLock('TAB_SWITCH');
+        return;
+      }
+
+      // 5b. F11 Fullscreen toggle shortcut
+      if (e.key === 'F11' || e.keyCode === 122) {
+        e.preventDefault();
+        e.stopPropagation();
+        triggerLock('FULLSCREEN_EXIT');
+        return;
+      }
+
+      // 5c. Page Reload shortcuts: F5, Ctrl+R, Ctrl+Shift+R, Cmd+R
       if (e.key === 'F5' || e.keyCode === 116 || (isCtrlOrMeta && (e.key === 'r' || e.key === 'R'))) {
         e.preventDefault();
         e.stopPropagation();
@@ -299,7 +362,7 @@ export function OSProvider({
         return;
       }
 
-      // 6b. Screenshot shortcut: PrintScreen
+      // 5d. Screenshot shortcut: PrintScreen
       if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
         e.preventDefault();
         e.stopPropagation();
@@ -307,7 +370,7 @@ export function OSProvider({
         return;
       }
 
-      // 6c. Screenshot shortcut: Win+Shift+S or Ctrl+Shift+S (Snipping Tool)
+      // 5e. Screenshot shortcut: Win+Shift+S or Ctrl+Shift+S (Snipping Tool)
       if ((e.key === 'S' || e.key === 's') && e.shiftKey && isCtrlOrMeta) {
         e.preventDefault();
         e.stopPropagation();
@@ -315,7 +378,7 @@ export function OSProvider({
         return;
       }
 
-      // 6d. Mac screenshot: Cmd+Shift+3, 4, 5
+      // 5f. Mac screenshot: Cmd+Shift+3, 4, 5
       if (e.metaKey && e.shiftKey && ['3', '4', '5'].includes(e.key)) {
         e.preventDefault();
         e.stopPropagation();
@@ -323,7 +386,7 @@ export function OSProvider({
         return;
       }
 
-      // 6e. DevTools Inspector shortcut: F12
+      // 5g. DevTools Inspector shortcut: F12
       if (e.key === 'F12' || e.keyCode === 123) {
         e.preventDefault();
         e.stopPropagation();
@@ -331,7 +394,7 @@ export function OSProvider({
         return;
       }
 
-      // 6f. DevTools Inspector shortcut: Ctrl+Shift+I, J, C, K
+      // 5h. DevTools Inspector shortcut: Ctrl+Shift+I, J, C, K
       if (isCtrlOrMeta && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c', 'K', 'k'].includes(e.key)) {
         e.preventDefault();
         e.stopPropagation();
@@ -339,7 +402,7 @@ export function OSProvider({
         return;
       }
 
-      // 6g. Mac DevTools Inspector: Cmd+Option+I, J, C, K, U
+      // 5i. Mac DevTools Inspector: Cmd+Option+I, J, C, K, U
       if (e.metaKey && e.altKey && ['I', 'i', 'J', 'j', 'C', 'c', 'K', 'k', 'U', 'u'].includes(e.key)) {
         e.preventDefault();
         e.stopPropagation();
@@ -347,7 +410,7 @@ export function OSProvider({
         return;
       }
 
-      // 6h. View Source shortcut: Ctrl+U
+      // 5j. View Source shortcut: Ctrl+U
       if (isCtrlOrMeta && (e.key === 'U' || e.key === 'u')) {
         e.preventDefault();
         e.stopPropagation();
@@ -357,16 +420,16 @@ export function OSProvider({
     };
 
     const handleSecurityKeyUp = (e) => {
-      if (isProtectedRoundActive()) return;
+      if (isRound2Active()) return;
       if (Date.now() < unlockCooldownRef.current) return;
       if (e.key === 'PrintScreen' || e.code === 'PrintScreen') {
         triggerLock('SCREENSHOT_ATTEMPT');
       }
     };
 
-    // 7. Global Context Menu Block (Blocks native browser right-click Inspect menu)
+    // 6. Global Context Menu Block (Blocks native browser right-click Inspect menu)
     const handleGlobalContextMenu = (e) => {
-      if (isProtectedRoundActive()) return;
+      if (isRound2Active()) return;
       // Allow legitimate custom in-app context menus (File Manager)
       if (e.target && e.target.closest && e.target.closest('.fm-container, .fm-content-pane, .fm-sidebar, .fm-context-menu')) {
         return;
@@ -375,9 +438,9 @@ export function OSProvider({
       e.stopPropagation();
     };
 
-    // 8. Docked DevTools Inspector Detection (Outer vs Inner Viewport Dimension Delta)
+    // 7. Docked DevTools Inspector Detection (Outer vs Inner Viewport Dimension Delta)
     const checkDevTools = () => {
-      if (isProtectedRoundActive()) return;
+      if (isRound2Active()) return;
       if (Date.now() < unlockCooldownRef.current) return;
 
       const widthDelta = window.outerWidth - window.innerWidth;
@@ -410,6 +473,8 @@ export function OSProvider({
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('focus', handleWindowFocus);
     document.addEventListener('contextmenu', handleGlobalContextMenu, true);
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('resize', checkDevTools);
@@ -419,8 +484,12 @@ export function OSProvider({
 
     return () => {
       clearInterval(devToolsInterval);
+      if (visibilityTimeout) clearTimeout(visibilityTimeout);
+      if (blurTimeout) clearTimeout(blurTimeout);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
       document.removeEventListener('contextmenu', handleGlobalContextMenu, true);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('resize', checkDevTools);

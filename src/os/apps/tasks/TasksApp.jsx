@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, AlertCircle, HelpCircle, ChevronRight, CheckSquare, Sparkles } from 'lucide-react';
+import { CheckCircle, AlertCircle, HelpCircle, ChevronRight, CheckSquare, Sparkles, Clipboard, Check } from 'lucide-react';
 import { useOS } from '../../state/OSContext.jsx';
 import { TASK_DEFINITIONS, TASK_PRESENTATIONS, SET_PRESENTATIONS } from '../../../round1/taskContent.js';
 import { ROUND_1_SETS } from '../../../round1/round1Engine.js';
+import { readFromClipboard } from '../../utils/clipboard.js';
 import './TasksApp.css';
 
 export function TasksApp() {
@@ -14,6 +15,16 @@ export function TasksApp() {
   const [answerInput, setAnswerInput] = useState('');
   const [feedback, setFeedback] = useState({ text: '', type: '' });
   const [hintLevel, setHintLevel] = useState(0);
+  const [pasted, setPasted] = useState(false);
+
+  const handlePaste = async () => {
+    const text = await readFromClipboard();
+    if (text) {
+      setAnswerInput(text.trim());
+      setPasted(true);
+      setTimeout(() => setPasted(false), 1500);
+    }
+  };
 
   // Reset form when active task changes
   useEffect(() => {
@@ -194,6 +205,15 @@ export function TasksApp() {
               onChange={(e) => setAnswerInput(e.target.value)}
               autoFocus
             />
+            <button
+              type="button"
+              className="tasks-paste-btn"
+              onClick={handlePaste}
+              title="Paste from clipboard or last copied tool output"
+            >
+              {pasted ? <Check size={14} color="#7ee787" /> : <Clipboard size={14} />}
+              <span>{pasted ? 'PASTED' : 'PASTE'}</span>
+            </button>
             <button type="submit" className="tasks-submit-btn">
               <CheckSquare size={16} />
               <span>SUBMIT</span>

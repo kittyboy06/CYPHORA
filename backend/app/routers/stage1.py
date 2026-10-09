@@ -92,7 +92,7 @@ STAGE1_TASKS = {
             "The three fragment files are located in the Documents folder.",
             "Check the timestamps of all three fragments and arrange them from earliest to latest. Combine the fragments and decode the resulting string using Base64."
         ],
-        "accepted": ["CYPHORA", "JUMP"]
+        "accepted": ["CYPHORA", "JUMP", "C(PHORA", "C)PHORA"]
     },
     "r1_t07": {
         "title": "Task 07 — The Hidden Record",

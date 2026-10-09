@@ -13,7 +13,8 @@ export const RECOVERY_PASSWORDS = [
   '8080', // Password 4 (Length: 4)
   'NOVA', // Password 5 (Length: 4)
   'JCEAIML', // Master Supervisor Code
-  'ADMIN' // Administrator Override
+  'ADMIN', // Administrator Override
+  '1234'
 ];
 
 const REASON_CONFIGS = {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GitCompare, ArrowRight, Copy, Check, Folder } from 'lucide-react';
 import { useOS } from '../../state/OSContext.jsx';
 import { VirtualFilePicker } from '../../components/VirtualFilePicker.jsx';
+import { copyToClipboard } from '../../utils/clipboard.js';
 import './FileComparatorApp.css';
 
 export function FileComparatorApp() {
@@ -80,11 +81,13 @@ export function FileComparatorApp() {
     }
   };
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (!diffResult?.diffValue) return;
-    navigator.clipboard.writeText(diffResult.diffValue);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const ok = await copyToClipboard(diffResult.diffValue);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (

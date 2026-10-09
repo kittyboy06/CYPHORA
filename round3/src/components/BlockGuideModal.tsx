@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { BLOCK_DESCRIPTIONS, BlockDescription } from '../blockly/blockDescriptions';
-import { Search, X, BookOpen, Layers, ShieldAlert, Sparkles, Filter, Code2 } from 'lucide-react';
+import { Search, X, BookOpen, Layers, ShieldAlert, Sparkles, Filter, Code2, Compass } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   initialLevel?: number;
+  onOpenStageInstructions?: () => void;
 }
 
-export const BlockGuideModal: React.FC<Props> = ({ isOpen, onClose, initialLevel }) => {
+export const BlockGuideModal: React.FC<Props> = ({ isOpen, onClose, initialLevel, onOpenStageInstructions }) => {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [selectedLevel, setSelectedLevel] = useState<number | 'all'>(initialLevel || 'all');
@@ -67,14 +68,29 @@ export const BlockGuideModal: React.FC<Props> = ({ isOpen, onClose, initialLevel
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800/60 rounded border border-transparent hover:border-neutral-700 transition-colors"
-            title="Close Codex (Esc)"
-          >
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-2.5">
+            {onOpenStageInstructions && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenStageInstructions();
+                }}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[rgba(223,177,37,0.15)] border border-[var(--border-gold)]/70 hover:border-[var(--accent-gold)] text-[var(--accent-gold)] text-xs font-mono uppercase tracking-wider transition-all hover:bg-[rgba(223,177,37,0.25)] cursor-pointer"
+              >
+                <Compass size={13} />
+                <span>Stage Instructions</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 text-neutral-400 hover:text-white hover:bg-neutral-800/60 rounded border border-transparent hover:border-neutral-700 transition-colors"
+              title="Close Codex (Esc)"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Search & Filter Controls */}

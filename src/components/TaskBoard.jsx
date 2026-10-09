@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronUp, Maximize2, Minus, CheckCircle, CheckSquare, X } from 'lucide-react';
+import { ChevronUp, Maximize2, Minus, CheckCircle, CheckSquare, X, Clipboard, Check } from 'lucide-react';
 import { useOS } from '../os/state/OSContext.jsx';
 import { SET_PRESENTATIONS, TASK_PRESENTATIONS, TASK_DEFINITIONS } from '../round1/taskContent.js';
 import { ROUND_1_SETS } from '../round1/round1Engine.js';
 import { TaskCompletionCelebration } from './TaskCompletionCelebration.jsx';
 import { VirtualFilePicker } from '../os/components/VirtualFilePicker.jsx';
+import { readFromClipboard } from '../os/utils/clipboard.js';
 
 const formatTaskId = (task) => TASK_PRESENTATIONS[task.id]?.number || task.id.replace('r1_t', '').padStart(2, '0');
 
@@ -40,6 +41,16 @@ export function TaskBoard({ round1State }) {
   const [selectedEvidencePath, setSelectedEvidencePath] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const [celebratedTask, setCelebratedTask] = useState(null);
+  const [pasted, setPasted] = useState(false);
+
+  const handlePaste = async () => {
+    const text = await readFromClipboard();
+    if (text) {
+      setSubmittedAnswer(text.trim());
+      setPasted(true);
+      setTimeout(() => setPasted(false), 1500);
+    }
+  };
   const previousActiveTask = useRef(null);
   const seenCompletedTasks = useRef(new Set(tasks.filter(task => task.status === 'COMPLETED').map(task => task.id)));
   const celebrationTimeout = useRef(null);
@@ -342,6 +353,15 @@ export function TaskBoard({ round1State }) {
                     onChange={(e) => setSubmittedAnswer(e.target.value)}
                     style={{ flex: 1, background: '#0d1117', border: '1px solid #30363d', color: '#7ee787', padding: '0.65rem 0.85rem', borderRadius: '4px', fontSize: '0.95rem', fontFamily: 'monospace', outline: 'none' }}
                   />
+                  <button
+                    type="button"
+                    onClick={handlePaste}
+                    title="Paste from clipboard or last copied output"
+                    style={{ background: '#21262d', color: '#c9d1d9', border: '1px solid #30363d', padding: '0.65rem 0.95rem', borderRadius: '4px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}
+                  >
+                    {pasted ? <Check size={14} color="#7ee787" /> : <Clipboard size={14} />}
+                    <span>{pasted ? 'PASTED' : 'PASTE'}</span>
+                  </button>
                   <button
                     type="submit"
                     className="objective-submit-button"
